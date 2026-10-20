@@ -14,6 +14,18 @@ const paperCount = computed(() => (papers.value?.length ?? 0))
 
 onMounted(() => { loggedIn.value = api.hasToken() })
 
+/** 课程/技能码 → 中文名 */
+const COURSE_NAMES: Record<string, string> = {
+  A: '计算机应用基础',
+  B: '信息技术导论',
+  S1: 'C 语言程序设计',
+  S2: '数据库（MySQL）',
+  S3: 'UML 建模',
+  S4: '局域网组建',
+  S5: 'Windows 10 管理',
+  S6: 'CentOS 7 管理',
+}
+
 const entries = [
   { to: '/chapters', title: '按章节刷题', desc: '理论 A/B、实操技能一~六，逐章推进', tone: 'blue' },
   { to: '/papers',   title: '历年真题',   desc: '27 套真题，按卷面分节练习',      tone: 'indigo' },
@@ -71,8 +83,9 @@ const entries = [
       <h2 class="text-sm font-semibold text-slate-700">课程题量</h2>
       <div class="mt-3 flex flex-wrap gap-2">
         <NuxtLink v-for="c in courses ?? []" :key="c.course" :to="`/practice?mode=course&target=${c.course}`"
-                  class="rounded-lg border border-slate-200 px-3 py-1.5 text-xs text-slate-600 hover:border-blue-400">
-          {{ c.course }} · {{ c.cnt.toLocaleString() }} 题
+                  class="flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-1.5 text-xs text-slate-600 hover:border-blue-400">
+          <span class="font-medium text-slate-700">{{ COURSE_NAMES[c.course] ?? c.course }}</span>
+          <span class="text-slate-400">{{ c.cnt.toLocaleString() }} 题</span>
         </NuxtLink>
       </div>
     </div>

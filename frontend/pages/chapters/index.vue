@@ -21,6 +21,13 @@ const open = ref<Record<number, boolean>>({})
 function toggle(id: number) {
   open.value[id] = !open.value[id]
 }
+
+/** 从 code 取标题序号：A1-1.1 → 1.1；A1-1.1.3 → 1.1.3 */
+function num(code: string | null): string {
+  if (!code) return ''
+  const i = code.indexOf('-')
+  return i >= 0 ? code.slice(i + 1) : ''
+}
 </script>
 
 <template>
@@ -52,6 +59,7 @@ function toggle(id: number) {
               <div class="flex items-center justify-between py-2 pl-12 pr-5">
                 <button class="flex items-center gap-2 text-left" @click="toggle(sec.id)">
                   <span class="w-4 text-slate-400">{{ sec.children.length ? (open[sec.id] ? '−' : '+') : '' }}</span>
+                  <span v-if="num(sec.code)" class="font-mono text-xs text-slate-400">{{ num(sec.code) }}</span>
                   <span class="text-xs text-slate-600">{{ sec.name }}</span>
                 </button>
                 <NuxtLink :to="`/chapters/${sec.id}`" class="shrink-0 text-xs text-blue-600 hover:underline">
@@ -61,6 +69,7 @@ function toggle(id: number) {
               <ul v-if="open[sec.id]">
                 <li v-for="leaf in sec.children" :key="leaf.id"
                     class="flex items-center justify-between py-1.5 pl-20 pr-5">
+                  <span v-if="num(leaf.code)" class="font-mono text-xs text-slate-400">{{ num(leaf.code) }}</span>
                   <span class="text-xs text-slate-500">{{ leaf.name }}</span>
                   <NuxtLink :to="`/chapters/${leaf.id}`" class="shrink-0 text-xs text-blue-600 hover:underline">
                     {{ leaf.questionCount }} 题 ›
