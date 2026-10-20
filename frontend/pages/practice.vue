@@ -270,8 +270,9 @@ onUnmounted(() => { if (timer) clearInterval(timer) })
         </div>
 
         <div v-else class="mt-4">
-          <input v-model="fill" :disabled="!!feedback" placeholder="多空用中文分号「；」分隔"
-                 class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
+          <textarea v-model="fill" :disabled="!!feedback" :rows="question.questionType === 5 ? 5 : 3"
+                    placeholder="多空用中文分号「；」分隔；程序题可直接按行输入"
+                    class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
         </div>
 
         <button v-if="!feedback" :disabled="!answer && !multi.length && !fill"

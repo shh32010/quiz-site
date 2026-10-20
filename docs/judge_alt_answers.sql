@@ -49,6 +49,10 @@ begin
       n int := greatest(coalesce(array_length(cor_parts, 1), 1), 1);
       m int := 0;
     begin
+      -- 用户按行输入时也视作分空（仅在分号分出的数量对不上时启用）
+      if coalesce(array_length(ans_parts, 1), 1) <> n then
+        ans_parts := regexp_split_to_array(coalesce(p_answer, ''), '[；\r\n]+');
+      end if;
       if coalesce(array_length(ans_parts, 1), 1) = n then
         for i in 1 .. n loop
           -- 每个空可用 ¦ 分隔多个等价写法，命中任一即算对
@@ -121,6 +125,10 @@ begin
       n int := greatest(coalesce(array_length(cor_parts, 1), 1), 1);
       m int := 0;
     begin
+      -- 用户按行输入时也视作分空（仅在分号分出的数量对不上时启用）
+      if coalesce(array_length(ans_parts, 1), 1) <> n then
+        ans_parts := regexp_split_to_array(coalesce(p_answer, ''), '[；\r\n]+');
+      end if;
       if coalesce(array_length(ans_parts, 1), 1) = n then
         for i in 1 .. n loop
           -- 每个空可用 ¦ 分隔多个等价写法，命中任一即算对
