@@ -16,6 +16,8 @@ const review = ref<any>(null)           // 答案+解析
 const finished = ref<any>(null)
 const loading = ref(true)
 const error = ref('')
+const ai = ref<{ loading: boolean; content: string; err: string }>({ loading: false, content: '', err: '' })
+const fb = ref({ type: 'other', content: '', msg: '' })
 
 const TYPE_LABEL: Record<number, string> = { 1: '单选', 2: '多选', 3: '判断', 4: '填空', 5: '综合' }
 const options = computed<[string, string][]>(() => {
@@ -31,16 +33,47 @@ function resetAnswer() {
   fill.value = ''
   feedback.value = null
   review.value = null
+  ai.value = { loading: false, content: '', err: '' }
+  fb.value = { type: 'other', content: '', msg: '' }
+}
+
+async function askAi(guide = false) {
+  ai.value = { loading: true, content: '', err: '' }
+  try {
+    const r = await api.post<{ content: string; cached: boolean }>('/api/ai/explain', {
+      questionId: question.value.id, mode: guide ? 'guide' : 'explain',
+    })
+    ai.value = { loading: false, content: r.content, err: '' }
+  } catch (e: any) {
+    ai.value = { loading: false, content: '', err: e.message }
+  }
+}
+
+async function sendFeedback() {
+  if (!fb.value.content.trim()) { fb.value.msg = '请填写问题描述'; return }
+  try {
+    await api.post('/api/feedback', {
+      questionId: question.value.id, type: fb.value.type, content: fb.value.content,
+    })
+    fb.value = { type: 'other', content: '', msg: '✓ 已提交，谢谢反馈' }
+  } catch (e: any) {
+    fb.value.msg = e.message
+  }
 }
 
 async function start() {
-  const mode = String(route.query.mode || 'chapter')
-  const target = String(route.query.target || '')
   if (!api.hasToken()) { router.push('/login'); return }
   try {
-    const r = await api.post('/api/practice/start', { mode, target, limit: 50 })
-    sessionId.value = r.sessionId
-    total.value = r.count
+    // 已有会话（组卷页创建的）直接用
+    if (route.query.session) {
+      sessionId.value = Number(route.query.session)
+    } else {
+      const mode = String(route.query.mode || 'chapter')
+      const target = String(route.query.target || '')
+      const r = await api.post('/api/practice/start', { mode, target, limit: 50 })
+      sessionId.value = r.sessionId
+      total.value = r.count
+    }
     await next()
   } catch (e: any) {
     error.value = e.message
@@ -158,7 +191,34 @@ onMounted(start)
         <p v-if="review?.analysis" class="mt-1 whitespace-pre-wrap text-slate-600">
           <b>解析：</b>{{ review.analysis }}
         </p>
-        <button class="mt-3 rounded-lg bg-slate-800 px-5 py-2 text-sm text-white" @click="next">下一题</button>
+        <div class="mt-3 flex flex-wrap items-center gap-2">
+          <button class="rounded-lg bg-slate-800 px-5 py-2 text-sm text-white" @click="next">下一题</button>
+          <button class="rounded-lg border border-slate-300 px-3 py-2 text-xs" @click="askAi(false)">AI 讲解</button>
+          <button class="rounded-lg border border-slate-300 px-3 py-2 text-xs" @click="askAi(true)">引导思考</button>
+        </div>
+
+        <div v-if="ai.loading" class="mt-3 text-xs text-slate-500">AI 思考中…</div>
+        <div v-if="ai.err" class="mt-3 text-xs text-red-600">{{ ai.err }}</div>
+        <div v-if="ai.content" class="mt-3 whitespace-pre-wrap rounded-lg bg-white/70 p-3 text-sm text-slate-700">
+          {{ ai.content }}
+        </div>
+
+        <details class="mt-3 text-xs">
+          <summary class="cursor-pointer text-slate-500">题目有误？点此反馈</summary>
+          <div class="mt-2 space-y-2">
+            <select v-model="fb.type" class="rounded border border-slate-300 px-2 py-1">
+              <option value="answer">答案错误</option>
+              <option value="stem">题干错误</option>
+              <option value="option">选项错误</option>
+              <option value="image">图片问题</option>
+              <option value="other">其他</option>
+            </select>
+            <textarea v-model="fb.content" rows="2" placeholder="请描述问题"
+                      class="w-full rounded border border-slate-300 px-2 py-1" />
+            <button class="rounded bg-slate-700 px-3 py-1 text-white" @click="sendFeedback">提交反馈</button>
+            <span v-if="fb.msg" class="ml-2 text-slate-600">{{ fb.msg }}</span>
+          </div>
+        </details>
       </div>
     </template>
 

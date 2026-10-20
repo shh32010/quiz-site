@@ -44,6 +44,10 @@ quiz:
     expire-seconds: 604800           # 7 天
   cors:
     allowed-origins: ${QUIZ_CORS:http://localhost:3000}
+  ai:
+    base-url: ${QUIZ_AI_URL:https://api.deepseek.com}
+    key: ${QUIZ_AI_KEY:${DEEPSEEK_API_KEY:}}
+    model: ${QUIZ_AI_MODEL:deepseek-chat}
 
 management:
   endpoints:

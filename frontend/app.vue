@@ -7,6 +7,9 @@
           <NuxtLink to="/" class="hover:text-blue-600">首页</NuxtLink>
           <NuxtLink to="/chapters" class="hover:text-blue-600">按章节</NuxtLink>
           <NuxtLink to="/papers" class="hover:text-blue-600">真题</NuxtLink>
+          <NuxtLink to="/compose" class="hover:text-blue-600">组卷</NuxtLink>
+          <NuxtLink to="/wrong" class="hover:text-blue-600">错题本</NuxtLink>
+          <NuxtLink to="/report" class="hover:text-blue-600">学习报告</NuxtLink>
         </nav>
       </div>
     </header>
