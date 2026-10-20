@@ -18,6 +18,17 @@ const rate = computed(() => {
   if (!s || !s.answered) return 0
   return Math.round((s.correct / s.answered) * 100)
 })
+
+const weekly = ref<{ loading: boolean; content: string; err: string }>({ loading: false, content: '', err: '' })
+async function loadWeekly() {
+  weekly.value = { loading: true, content: '', err: '' }
+  try {
+    const r = await api.get<{ content: string }>('/api/ai/weekly')
+    weekly.value = { loading: false, content: r.content, err: '' }
+  } catch (e: any) {
+    weekly.value = { loading: false, content: '', err: e.message }
+  }
+}
 </script>
 
 <template>
@@ -45,6 +56,21 @@ const rate = computed(() => {
         <div class="rounded-xl border border-slate-200 p-4">
           <p class="text-xs text-slate-500">待复习错题</p>
           <p class="mt-1 text-2xl font-bold text-amber-600">{{ data.wrong.pending }}</p>
+        </div>
+      </div>
+
+      <div>
+        <div class="mb-2 flex items-center gap-3">
+          <h2 class="text-sm font-semibold text-slate-700">错题周报</h2>
+          <button class="rounded-lg border border-slate-300 px-3 py-1 text-xs"
+                  :disabled="weekly.loading" @click="loadWeekly">
+            {{ weekly.loading ? '生成中…' : '生成近 7 天分析' }}
+          </button>
+        </div>
+        <p v-if="weekly.err" class="text-xs text-red-600">{{ weekly.err }}</p>
+        <div v-if="weekly.content"
+             class="whitespace-pre-wrap rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
+          {{ weekly.content }}
         </div>
       </div>
 

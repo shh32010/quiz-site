@@ -42,7 +42,8 @@ public class SecurityConfig {
                 // 需登录
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
                 .requestMatchers("/api/practice/**", "/api/wrong/**", "/api/feedback/**",
-                        "/api/compose/**", "/api/exam/**", "/api/ai/**", "/api/report/**").authenticated()
+                        "/api/compose/**", "/api/exam/**", "/api/ai/**", "/api/report/**",
+                        "/api/favorites/**").authenticated()
                 .anyRequest().denyAll()
             )
             .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);

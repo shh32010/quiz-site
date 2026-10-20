@@ -24,6 +24,8 @@ const ai = ref<{ loading: boolean; content: string; err: string }>({ loading: fa
 const fb = ref({ type: 'other', content: '', msg: '' })
 const remain = ref(-1)
 let timer: ReturnType<typeof setInterval> | null = null
+const favorited = ref(false)
+const variant = ref<{ loading: boolean; content: string; err: string }>({ loading: false, content: '', err: '' })
 
 const TYPE_LABEL: Record<number, string> = { 1: '单选', 2: '多选', 3: '判断', 4: '填空', 5: '综合' }
 const options = computed<[string, string][]>(() => {
@@ -147,6 +149,28 @@ async function askAi(guide = false) {
   }
 }
 
+async function toggleFav() {
+  if (guest.value) return
+  try {
+    const id = question.value.id
+    const r: any = favorited.value
+      ? await api.del(`/api/favorites/${id}`)
+      : await api.post(`/api/favorites/${id}`, {})
+    favorited.value = Boolean(r.favorited)
+  } catch { /* 忽略 */ }
+}
+
+async function askVariant() {
+  if (guest.value) { variant.value = { loading: false, content: '', err: '登录后可使用' }; return }
+  variant.value = { loading: true, content: '', err: '' }
+  try {
+    const r = await api.post<{ content: string }>('/api/ai/variant', { questionId: question.value.id })
+    variant.value = { loading: false, content: r.content, err: '' }
+  } catch (e: any) {
+    variant.value = { loading: false, content: '', err: e.message }
+  }
+}
+
 async function sendFeedback() {
   if (guest.value) { fb.value.msg = '登录后可提交反馈'; return }
   if (!fb.value.content.trim()) { fb.value.msg = '请填写问题描述'; return }
@@ -155,6 +179,14 @@ async function sendFeedback() {
     fb.value = { type: 'other', content: '', msg: '✓ 已提交，谢谢反馈' }
   } catch (e: any) { fb.value.msg = e.message }
 }
+
+watch(() => question.value?.id, async (id) => {
+  if (!id || guest.value) { favorited.value = false; return }
+  try {
+    const r = await api.get<any>(`/api/favorites/${id}`)
+    favorited.value = Boolean(r.favorited)
+  } catch { favorited.value = false }
+})
 
 onMounted(start)
 onUnmounted(() => { if (timer) clearInterval(timer) })
@@ -259,6 +291,16 @@ onUnmounted(() => { if (timer) clearInterval(timer) })
           <button class="rounded-lg bg-slate-800 px-5 py-2 text-sm text-white" @click="next">下一题</button>
           <button class="rounded-lg border border-slate-300 px-3 py-2 text-xs" @click="askAi(false)">AI 讲解</button>
           <button class="rounded-lg border border-slate-300 px-3 py-2 text-xs" @click="askAi(true)">引导思考</button>
+          <button class="rounded-lg border border-slate-300 px-3 py-2 text-xs" @click="askVariant">举一反三</button>
+          <button class="rounded-lg border border-slate-300 px-3 py-2 text-xs" @click="toggleFav">
+            {{ favorited ? '★ 已收藏' : '☆ 收藏' }}
+          </button>
+        </div>
+
+        <div v-if="variant.loading" class="mt-3 text-xs text-slate-500">正在生成变式题…</div>
+        <div v-if="variant.err" class="mt-3 text-xs text-red-600">{{ variant.err }}</div>
+        <div v-if="variant.content" class="mt-3 whitespace-pre-wrap rounded-lg bg-white/70 p-3 text-sm text-slate-700">
+          <b>同考点变式题：</b>{{ variant.content }}
         </div>
 
         <div v-if="ai.loading" class="mt-3 text-xs text-slate-500">AI 思考中…</div>

@@ -29,6 +29,19 @@ public class AiController {
         return ai.explain(uid, req.questionId(), req.mode());
     }
 
+    @PostMapping("/variant")
+    public Map<String, Object> variant(@AuthenticationPrincipal UUID uid, @RequestBody Req req) {
+        if (req.questionId() == null) {
+            throw new IllegalArgumentException("questionId 必填");
+        }
+        return ai.variant(uid, req.questionId());
+    }
+
+    @GetMapping("/weekly")
+    public Map<String, Object> weekly(@AuthenticationPrincipal UUID uid) {
+        return ai.weekly(uid);
+    }
+
     @ExceptionHandler(IllegalStateException.class)
     public org.springframework.http.ResponseEntity<Map<String, String>> handle(IllegalStateException e) {
         return org.springframework.http.ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));

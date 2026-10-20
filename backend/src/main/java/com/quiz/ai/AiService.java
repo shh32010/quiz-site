@@ -65,10 +65,7 @@ public class AiService {
 
         // 2) 配额
         jdbc.queryForObject("select set_config('request.jwt.claim.sub', ?, true)", String.class, uid.toString());
-        Boolean ok = jdbc.queryForObject("select (ai_quota_take(50) ->> 'ok')::boolean", Boolean.class);
-        if (!Boolean.TRUE.equals(ok)) {
-            throw new IllegalStateException("今日 AI 答疑次数已用完");
-        }
+        takeQuota();
 
         // 3) 组织题目上下文（不含用户答案）
         Map<String, Object> q = jdbc.queryForMap("""
@@ -89,6 +86,90 @@ public class AiService {
                 """, questionId, m, content, model);
 
         return Map.of("content", content, "cached", false, "model", model);
+    }
+
+    private static final String SYS_VARIANT = """
+            你是江苏专转本（计算机专业大类）的命题老师。
+            基于给定题目出一道**同考点变式题**：改变数字/情境/表述，但考查知识点相同，难度相当。
+            只输出一个 JSON 对象（不要 markdown）：
+            {"stem":"题干","options":{"A":"...","B":"...","C":"...","D":"..."},"answer":"A","explanation":"一句解析"}
+            判断题 options 留空、answer 用「对」或「错」；填空题 options 留空、answer 填答案文本。
+            """;
+
+    /** 举一反三：生成同考点变式题（按题目缓存，不占用户配额以外的资源） */
+    @Transactional
+    public Map<String, Object> variant(UUID uid, int questionId) {
+        List<Map<String, Object>> hit = jdbc.queryForList(
+                "select answer_md from ai_explain_cache where question_id = ? and mode = 'variant'", questionId);
+        if (!hit.isEmpty()) {
+            return Map.of("content", hit.get(0).get("answer_md"), "cached", true);
+        }
+        if (apiKey == null || apiKey.isBlank()) {
+            throw new IllegalStateException("AI 未配置密钥");
+        }
+        jdbc.queryForObject("select set_config('request.jwt.claim.sub', ?, true)", String.class, uid.toString());
+        takeQuota();
+
+        Map<String, Object> q = jdbc.queryForMap(
+                "select stem, option_json, analysis, correct from t_question where id = ? and not deleted", questionId);
+        String user = "原题：\n" + q.get("stem")
+                + "\n选项：" + (q.get("option_json") == null ? "（无）" : q.get("option_json"))
+                + "\n答案：" + q.get("correct")
+                + "\n解析：" + (q.get("analysis") == null ? "（无）" : q.get("analysis"));
+
+        String content = callModel(SYS_VARIANT, user);
+        jdbc.update("""
+                insert into ai_explain_cache (question_id, mode, answer_md, model) values (?, 'variant', ?, ?)
+                on conflict (question_id, mode) do update set answer_md = excluded.answer_md
+                """, questionId, content, model);
+        return Map.of("content", content, "cached", false);
+    }
+
+    private static final String SYS_WEEKLY = """
+            你是江苏专转本（计算机专业大类）的学习顾问。
+            根据学生最近 7 天的错题清单，用简明中文输出：
+            1）薄弱知识点（按错误次数排序，最多 5 条）
+            2）针对性建议（具体到该练什么）
+            不要泛泛而谈，不要编造清单里没有的知识点。
+            """;
+
+    /** 错题周报：基于最近 7 天错题让模型做薄弱点分析（不缓存，按用户即时生成） */
+    public Map<String, Object> weekly(UUID uid) {
+        if (apiKey == null || apiKey.isBlank()) {
+            throw new IllegalStateException("AI 未配置密钥");
+        }
+        List<Map<String, Object>> wrongs = jdbc.queryForList("""
+                select w.wrong_count as "wrongCount", left(q.stem, 60) as "stem",
+                       coalesce(q.cat_l1, '') as "catL1", coalesce(q.cat_l3, '') as "catL3"
+                  from wrong_question w join t_question q on q.id = w.question_id
+                 where w.user_id = ? and w.last_wrong_at > now() - interval '7 days'
+                 order by w.wrong_count desc limit 40
+                """, uid);
+        if (wrongs.isEmpty()) {
+            return Map.of("content", "最近 7 天没有错题，保持得不错。", "count", 0);
+        }
+        StringBuilder sb = new StringBuilder("错题清单（错误次数 | 考点 | 题干）：\n");
+        for (Map<String, Object> w : wrongs) {
+            sb.append(w.get("wrongCount")).append(" | ")
+              .append(w.get("catL1")).append(" ").append(w.get("catL3")).append(" | ")
+              .append(w.get("stem")).append("\n");
+        }
+        String content = callModel(SYS_WEEKLY, sb.toString());
+        return Map.of("content", content, "count", wrongs.size());
+    }
+
+
+    /** 扣减当日 AI 配额；超限时数据库会 raise，这里转成友好提示 */
+    private void takeQuota() {
+        try {
+            jdbc.queryForObject("select ai_quota_take(50)", Integer.class);
+        } catch (org.springframework.dao.DataAccessException e) {
+            String msg = String.valueOf(e.getMostSpecificCause().getMessage());
+            if (msg.contains("上限")) {
+                throw new IllegalStateException("今日 AI 次数已用完（50 次/天）");
+            }
+            throw e;
+        }
     }
 
     private String callModel(String system, String user) {

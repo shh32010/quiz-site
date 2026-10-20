@@ -11,6 +11,7 @@
           <NuxtLink to="/wrong" class="hover:text-blue-600">错题本</NuxtLink>
           <NuxtLink to="/report" class="hover:text-blue-600">学习报告</NuxtLink>
           <NuxtLink to="/search" class="hover:text-blue-600">搜索</NuxtLink>
+          <NuxtLink to="/favorites" class="hover:text-blue-600">收藏</NuxtLink>
         </nav>
       </div>
     </header>
