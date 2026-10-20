@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// 章节树：课程 → 章 → 节 → 目
+// 章节树：理论按课程 A/B 分组，实操按技能一~六；未归类节点单独折叠
 interface Node {
   id: number
   subjectId: number
@@ -22,64 +22,97 @@ function toggle(id: number) {
   open.value[id] = !open.value[id]
 }
 
-/** 从 code 取标题序号：A1-1.1 → 1.1；A1-1.1.3 → 1.1.3 */
-function num(code: string | null): string {
-  if (!code) return ''
-  const i = code.indexOf('-')
-  return i >= 0 ? code.slice(i + 1) : ''
+/** 课程/技能定义与展示顺序 */
+const COURSES = [
+  { code: 'A', name: '计算机应用基础' },
+  { code: 'B', name: '信息技术导论' },
+]
+const SKILLS = [
+  { code: 'S1', name: 'C 语言程序设计', label: '技能一' },
+  { code: 'S2', name: '数据库（MySQL）', label: '技能二' },
+  { code: 'S3', name: 'UML 建模', label: '技能三' },
+  { code: 'S4', name: '局域网组建', label: '技能四' },
+  { code: 'S5', name: 'Windows 10 管理', label: '技能五' },
+  { code: 'S6', name: 'CentOS 7 管理', label: '技能六' },
+]
+
+function sortByCode(nodes: Node[]): Node[] {
+  return [...nodes].sort((a, b) =>
+    (a.code ?? '').localeCompare(b.code ?? '', 'en', { numeric: true }))
 }
+
+/** 理论课程 A/B：各自名下的章 */
+const theoryCourses = computed(() => COURSES.map(c => {
+  const nodes = sortByCode((theory.value ?? []).filter(n =>
+    n.code != null && /^[AB]\d/.test(n.code) && n.code.startsWith(c.code) && n.questionCount > 0))
+  return { ...c, nodes, total: nodes.reduce((s, n) => s + n.questionCount, 0) }
+}))
+
+/** 实操技能 S1~S6 */
+const skills = computed(() => SKILLS.map(s => ({
+  ...s,
+  node: (practical.value ?? []).find(n => n.code === s.code) ?? null,
+})))
+
+/** 未归入课程 A/B 或技能一~六的节点（保留原有分类与入口） */
+const otherNodes = computed(() => {
+  const t = (theory.value ?? [])
+    .filter(n => n.questionCount > 0 && !(n.code != null && /^[AB]\d/.test(n.code)))
+    .map(n => ({ ...n, bank: '理论' }))
+  const p = (practical.value ?? [])
+    .filter(n => n.questionCount > 0 && !(n.code != null && /^S[1-6]$/.test(n.code)))
+    .map(n => ({ ...n, bank: '实操' }))
+  return [...sortByCode(t), ...sortByCode(p)]
+})
+const otherTotal = computed(() => otherNodes.value.reduce((s, n) => s + n.questionCount, 0))
 </script>
 
 <template>
   <section class="space-y-6">
-    <h1 class="text-2xl font-bold text-slate-900">按章节刷题</h1>
-    <p class="text-slate-600">理论按课程 A/B 分组，实操按技能一~六；数字为可练习题数。</p>
+    <div>
+      <h1 class="text-2xl font-bold text-slate-900">按章节刷题</h1>
+      <p class="mt-1 text-slate-600">理论按课程 A/B 分组，实操按技能一~六；数字为可练习题数。</p>
+    </div>
 
-    <div v-for="group in [
-      { title: '理论题库', nodes: theory ?? [] },
-      { title: '实操题库', nodes: practical ?? [] },
-    ]" :key="group.title" class="rounded-xl border border-slate-200">
-      <h2 class="border-b border-slate-200 px-5 py-3 text-sm font-semibold text-slate-700">
-        {{ group.title }}
-      </h2>
-      <ul class="divide-y divide-slate-100">
-        <li v-for="node in group.nodes" :key="node.id">
-          <div class="flex items-center justify-between px-5 py-3">
-            <button class="flex items-center gap-2 text-left" @click="toggle(node.id)">
-              <span class="w-4 text-slate-400">{{ node.children.length ? (open[node.id] ? '−' : '+') : '' }}</span>
-              <span class="rounded bg-slate-100 px-1.5 py-0.5 text-xs text-slate-600">{{ node.code }}</span>
-              <span class="text-sm text-slate-800">{{ node.name }}</span>
-            </button>
-            <NuxtLink :to="`/chapters/${node.id}`" class="shrink-0 text-xs text-blue-600 hover:underline">
-              {{ node.questionCount }} 题 ›
-            </NuxtLink>
+    <div class="overflow-hidden rounded-xl border border-slate-200">
+      <h2 class="border-b border-slate-200 px-5 py-3 text-sm font-semibold text-slate-700">理论题库</h2>
+      <div v-for="course in theoryCourses" :key="course.code" class="border-b border-slate-100 last:border-b-0">
+        <div class="flex items-center justify-between bg-slate-50 px-5 py-2.5">
+          <div class="flex items-center gap-2">
+            <span class="rounded bg-white px-1.5 py-0.5 text-xs text-slate-500">课程 {{ course.code }}</span>
+            <span class="text-sm font-semibold text-slate-800">{{ course.name }}</span>
           </div>
-          <ul v-if="open[node.id]" class="bg-slate-50/60 pb-2">
-            <li v-for="sec in node.children" :key="sec.id" class="border-t border-slate-100">
-              <div class="flex items-center justify-between py-2 pl-12 pr-5">
-                <button class="flex items-center gap-2 text-left" @click="toggle(sec.id)">
-                  <span class="w-4 text-slate-400">{{ sec.children.length ? (open[sec.id] ? '−' : '+') : '' }}</span>
-                  <span v-if="num(sec.code)" class="font-mono text-xs text-slate-400">{{ num(sec.code) }}</span>
-                  <span class="text-xs text-slate-600">{{ sec.name }}</span>
-                </button>
-                <NuxtLink :to="`/chapters/${sec.id}`" class="shrink-0 text-xs text-blue-600 hover:underline">
-                  {{ sec.questionCount }} 题 ›
-                </NuxtLink>
-              </div>
-              <ul v-if="open[sec.id]">
-                <li v-for="leaf in sec.children" :key="leaf.id"
-                    class="flex items-center justify-between py-1.5 pl-20 pr-5">
-                  <span v-if="num(leaf.code)" class="font-mono text-xs text-slate-400">{{ num(leaf.code) }}</span>
-                  <span class="text-xs text-slate-500">{{ leaf.name }}</span>
-                  <NuxtLink :to="`/chapters/${leaf.id}`" class="shrink-0 text-xs text-blue-600 hover:underline">
-                    {{ leaf.questionCount }} 题 ›
-                  </NuxtLink>
-                </li>
-              </ul>
-            </li>
-          </ul>
-        </li>
+          <span class="text-xs text-slate-400">{{ course.total.toLocaleString() }} 题</span>
+        </div>
+        <ul class="divide-y divide-slate-100">
+          <ChapterTreeItem v-for="node in course.nodes" :key="node.id"
+                           :node="node" :open="open" :depth="0" @toggle="toggle" />
+        </ul>
+      </div>
+    </div>
+
+    <div class="overflow-hidden rounded-xl border border-slate-200">
+      <h2 class="border-b border-slate-200 px-5 py-3 text-sm font-semibold text-slate-700">实操题库</h2>
+      <ul class="divide-y divide-slate-100">
+        <template v-for="s in skills" :key="s.code">
+          <ChapterTreeItem v-if="s.node" :node="s.node" :open="open" :depth="0"
+                           :label="s.label" :display-name="s.name" @toggle="toggle" />
+        </template>
       </ul>
     </div>
+
+    <details class="overflow-hidden rounded-xl border border-slate-200">
+      <summary class="cursor-pointer px-5 py-3 text-sm font-semibold text-slate-700">
+        其他题目（未归入课程 A/B 或技能一~六）
+        <span class="ml-1 font-normal text-slate-400">共 {{ otherTotal.toLocaleString() }} 题</span>
+      </summary>
+      <p class="border-t border-slate-100 px-5 py-2 text-xs text-slate-400">
+        这些题目暂未归入标准章节，按原有分类保留，可正常练习。
+      </p>
+      <ul class="divide-y divide-slate-100 border-t border-slate-100">
+        <ChapterTreeItem v-for="n in otherNodes" :key="`${n.bank}-${n.id}`"
+                         :node="n" :open="open" :depth="0" :label="n.bank" @toggle="toggle" />
+      </ul>
+    </details>
   </section>
 </template>
