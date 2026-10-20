@@ -101,7 +101,7 @@ const otherTotal = computed(() => otherNodes.value.reduce((s, n) => s + n.questi
       </ul>
     </div>
 
-    <details class="overflow-hidden rounded-xl border border-slate-200">
+    <details v-if="otherTotal > 0" class="overflow-hidden rounded-xl border border-slate-200">
       <summary class="cursor-pointer px-5 py-3 text-sm font-semibold text-slate-700">
         其他题目（未归入课程 A/B 或技能一~六）
         <span class="ml-1 font-normal text-slate-400">共 {{ otherTotal.toLocaleString() }} 题</span>

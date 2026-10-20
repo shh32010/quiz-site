@@ -21,7 +21,7 @@
 ## 结果
 
 - 跑完 1,598 题，**0 失败、0 规则兜底**，全部由模型给出合法节代码
-- 落库 **1,595 题**；**3 道金标题保留原貌**（367533、388534、390505）
+- 落库 **1,598 题**：先落 1,595 道普通题；另 3 道金标题（367533、388534、390505）按用户明确指示单独归位
 - 置信度：high 765 / medium 698 / low 135
 
 落库字段：
@@ -33,18 +33,19 @@
 | `cat_l1` | 课程码（A / B / S1~S6） |
 
 - 落库前快照：`/opt/quiz-backups/other_reclass_backup_20261020.csv`
-- 映射明细：`map.csv`（id, chapter_id, subject_id, cat_l1）
-- 逐题结果：`results.jsonl`（section / confidence / reason / channel / model）
+- 3 道金标题快照：`/opt/quiz-backups/golden3_reclass_backup_20261021.csv`
+- 映射明细：`map.csv`（id, chapter_id, subject_id, cat_l1；不含 3 道金标）
+- 逐题结果：`results.jsonl`（section / confidence / reason / channel / model，含 3 道金标）
 
 ## 效果
 
 | 项 | 归位前 | 归位后 |
 |---|---:|---:|
-| 其他题目 | 1,598 | **3**（金标） |
-| 课程 A | 23,073 | 24,142 |
+| 其他题目 | 1,598 | **0** |
+| 课程 A | 23,073 | 24,144 |
 | 课程 B | 8,565 | 8,950 |
 | 技能一 S1 | 4,217 | 4,231 |
-| 技能二 S2 | 2,698 | 2,759 |
+| 技能二 S2 | 2,698 | 2,760 |
 | 技能三 S3 | 1,125 | 1,126 |
 | 技能四 S4 | 528 | 530 |
 | 技能五 S5 | 1,355 | 1,411 |
