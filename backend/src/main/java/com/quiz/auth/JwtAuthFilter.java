@@ -31,10 +31,13 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
         String header = req.getHeader("Authorization");
         if (header != null && header.startsWith("Bearer ")) {
-            UUID uid = jwtService.parseSubject(header.substring(7));
+            String token = header.substring(7);
+            UUID uid = jwtService.parseSubject(token);
             if (uid != null) {
+                String role = jwtService.parseRole(token);
+                String authority = "admin".equals(role) ? "ROLE_ADMIN" : "ROLE_USER";
                 var auth = new UsernamePasswordAuthenticationToken(
-                        uid, null, List.of(new SimpleGrantedAuthority("ROLE_USER")));
+                        uid, null, List.of(new SimpleGrantedAuthority(authority)));
                 SecurityContextHolder.getContext().setAuthentication(auth);
             }
         }

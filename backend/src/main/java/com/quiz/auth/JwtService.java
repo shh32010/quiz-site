@@ -51,4 +51,14 @@ public class JwtService {
             return null;
         }
     }
+
+    /** 取角色（user / admin），无效返回 null */
+    public String parseRole(String token) {
+        try {
+            Claims c = Jwts.parser().verifyWith(key).build().parseSignedClaims(token).getPayload();
+            return c.get("role", String.class);
+        } catch (Exception e) {
+            return null;
+        }
+    }
 }

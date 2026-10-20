@@ -47,6 +47,11 @@ public class PracticeController {
         return practice.finish(sessionId, uid);
     }
 
+    @GetMapping("/{sessionId}/status")
+    public Map<String, Object> status(@AuthenticationPrincipal UUID uid, @PathVariable long sessionId) {
+        return practice.status(sessionId, uid);
+    }
+
     @GetMapping("/{sessionId}/review/{questionId}")
     public Map<String, Object> review(@AuthenticationPrincipal UUID uid, @PathVariable long sessionId,
                                       @PathVariable int questionId) {

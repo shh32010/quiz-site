@@ -18,6 +18,32 @@ const loading = ref(true)
 const error = ref('')
 const ai = ref<{ loading: boolean; content: string; err: string }>({ loading: false, content: '', err: '' })
 const fb = ref({ type: 'other', content: '', msg: '' })
+const remain = ref(-1)
+let timer: ReturnType<typeof setInterval> | null = null
+
+const remainText = computed(() => {
+  if (remain.value < 0) return ''
+  const m = Math.floor(remain.value / 60)
+  const s = remain.value % 60
+  return `${m}:${String(s).padStart(2, '0')}`
+})
+
+async function loadStatus() {
+  try {
+    const st = await api.get<any>(`/api/practice/${sessionId.value}/status`)
+    remain.value = st.remainingSec
+    if (st.limitSec > 0 && !st.finished) {
+      timer = setInterval(async () => {
+        remain.value = Math.max(0, remain.value - 1)
+        if (remain.value === 0) {
+          clearInterval(timer!)
+          try { finished.value = await api.post(`/api/practice/${sessionId.value}/finish`, {}) } catch { /* 已结束 */ }
+          question.value = null
+        }
+      }, 1000)
+    }
+  } catch { /* 忽略 */ }
+}
 
 const TYPE_LABEL: Record<number, string> = { 1: '单选', 2: '多选', 3: '判断', 4: '填空', 5: '综合' }
 const options = computed<[string, string][]>(() => {
@@ -74,6 +100,7 @@ async function start() {
       sessionId.value = r.sessionId
       total.value = r.count
     }
+    await loadStatus()
     await next()
   } catch (e: any) {
     error.value = e.message
@@ -81,6 +108,8 @@ async function start() {
     loading.value = false
   }
 }
+
+onUnmounted(() => { if (timer) clearInterval(timer) })
 
 async function next() {
   resetAnswer()
@@ -132,7 +161,12 @@ onMounted(start)
     <template v-else-if="question">
       <div class="flex items-center justify-between text-sm text-slate-500">
         <span>第 {{ question.itemOrder }} / {{ total }} 题</span>
-        <span>{{ TYPE_LABEL[question.questionType] }} · {{ question.score }} 分</span>
+        <span class="flex items-center gap-3">
+          <span v-if="remain >= 0" class="font-mono" :class="remain < 300 ? 'text-red-600' : ''">
+            ⏱ {{ remainText }}
+          </span>
+          <span>{{ TYPE_LABEL[question.questionType] }} · {{ question.score }} 分</span>
+        </span>
       </div>
 
       <div class="rounded-xl border border-slate-200 p-5">

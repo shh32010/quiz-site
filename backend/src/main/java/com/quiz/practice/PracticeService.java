@@ -138,6 +138,32 @@ public class PracticeService {
         return readJson(json);
     }
 
+    /** 会话状态：计时以服务端 started_at 为准 */
+    public Map<String, Object> status(long sessionId, UUID uid) {
+        requireOwn(sessionId, uid);
+        Map<String, Object> row = jdbc.queryForMap("""
+                select s.started_at as "startedAt",
+                       s.finished_at as "finishedAt",
+                       s.mode,
+                       p.suggest_time as "limitSec",
+                       extract(epoch from (now() - s.started_at))::int as "elapsedSec"
+                  from practice_session s
+                  left join t_exam_paper p on p.id = s.target_id and s.mode = 'paper'
+                 where s.id = ?
+                """, sessionId);
+        Integer limit = (Integer) row.get("limitSec");
+        Integer elapsed = (Integer) row.get("elapsedSec");
+        boolean expired = limit != null && elapsed != null && elapsed >= limit;
+        return Map.of(
+                "startedAt", row.get("startedAt") == null ? "" : row.get("startedAt").toString(),
+                "finished", row.get("finishedAt") != null,
+                "mode", row.get("mode"),
+                "limitSec", limit == null ? 0 : limit,
+                "elapsedSec", elapsed == null ? 0 : elapsed,
+                "remainingSec", limit == null ? -1 : Math.max(0, limit - elapsed),
+                "expired", expired);
+    }
+
     /** 受控复盘：仅本会话已作答的题 */
     @Transactional
     public Map<String, Object> review(long sessionId, int questionId, UUID uid) {
