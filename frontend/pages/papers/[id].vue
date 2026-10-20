@@ -17,6 +17,10 @@ const { data } = await useFetch<any>(() => `/api/papers/${id.value}`)
           · 建议 {{ Math.round(data.paper.suggestTime / 60) }} 分钟
         </template>
       </p>
+      <NuxtLink :to="`/practice?mode=paper&target=${id}`"
+                class="inline-block rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white">
+        开始刷这套卷
+      </NuxtLink>
 
       <ul class="divide-y divide-slate-100 rounded-xl border border-slate-200">
         <li v-for="s in data.sections" :key="s.sectionNo"

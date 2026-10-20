@@ -16,7 +16,13 @@ const TYPE_LABEL: Record<number, string> = { 1: '单选', 2: '多选', 3: '判�
   <section class="space-y-4">
     <NuxtLink to="/chapters" class="text-sm text-blue-600 hover:underline">← 返回章节</NuxtLink>
     <h1 class="text-xl font-bold text-slate-900">章节题目</h1>
-    <p class="text-sm text-slate-500">共 {{ data?.total ?? 0 }} 题</p>
+    <div class="flex items-center gap-3">
+      <p class="text-sm text-slate-500">共 {{ data?.total ?? 0 }} 题</p>
+      <NuxtLink :to="`/practice?mode=chapter&target=${chapterId}`"
+                class="rounded-lg bg-blue-600 px-4 py-1.5 text-sm font-medium text-white">
+        开始练习
+      </NuxtLink>
+    </div>
 
     <ul class="divide-y divide-slate-100 rounded-xl border border-slate-200">
       <li v-for="q in data?.rows ?? []" :key="q.id" class="flex items-start gap-3 px-5 py-3">
