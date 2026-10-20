@@ -29,8 +29,10 @@ const variant = ref<{ loading: boolean; content: string; err: string }>({ loadin
 
 const TYPE_LABEL: Record<number, string> = { 1: '单选', 2: '多选', 3: '判断', 4: '填空', 5: '综合' }
 const options = computed<[string, string][]>(() => {
-  try { return Object.entries(JSON.parse(question.value?.optionJson || '{}')) as [string, string][] }
-  catch { return [] }
+  try {
+    return (Object.entries(JSON.parse(question.value?.optionJson || '{}')) as [string, string][])
+      .map(([k, v]) => [k, formatText(v)])
+  } catch { return [] }
 })
 const remainText = computed(() => {
   if (remain.value < 0) return ''
@@ -235,7 +237,7 @@ onUnmounted(() => { if (timer) clearInterval(timer) })
       </div>
 
       <div class="rounded-xl border border-slate-200 p-5">
-        <p class="whitespace-pre-wrap text-base leading-7 text-slate-800">{{ question.stem }}</p>
+        <p class="whitespace-pre-wrap text-base leading-7 text-slate-800">{{ formatText(question.stem) }}</p>
 
         <div v-if="question.questionType === 1 || question.questionType === 3" class="mt-4 space-y-2">
           <template v-if="options.length">
@@ -283,9 +285,9 @@ onUnmounted(() => { if (timer) clearInterval(timer) })
           {{ feedback.is_correct ? '✓ 回答正确' : '✗ 回答错误' }}
           （得分 {{ feedback.score_got }} / {{ feedback.max_score }}）
         </p>
-        <p v-if="review" class="mt-2 text-slate-700"><b>正确答案：</b>{{ review.correct }}</p>
+        <p v-if="review" class="mt-2 whitespace-pre-wrap text-slate-700"><b>正确答案：</b>{{ formatText(review.correct) }}</p>
         <p v-if="review?.analysis" class="mt-1 whitespace-pre-wrap text-slate-600">
-          <b>解析：</b>{{ review.analysis }}
+          <b>解析：</b>{{ formatText(review.analysis) }}
         </p>
         <div class="mt-3 flex flex-wrap items-center gap-2">
           <button class="rounded-lg bg-slate-800 px-5 py-2 text-sm text-white" @click="next">下一题</button>

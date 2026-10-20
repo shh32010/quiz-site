@@ -29,7 +29,7 @@ const TYPE_LABEL: Record<number, string> = { 1: '单选', 2: '多选', 3: '判�
         <span class="mt-0.5 shrink-0 rounded bg-slate-100 px-1.5 py-0.5 text-xs text-slate-600">
           {{ TYPE_LABEL[q.questionType] ?? q.questionType }}
         </span>
-        <span class="min-w-0 flex-1 text-sm leading-6 text-slate-800">{{ q.stem }}</span>
+        <span class="min-w-0 flex-1 text-sm leading-6 text-slate-800">{{ formatText(q.stem) }}</span>
         <span v-if="q.hasImage" class="shrink-0 text-xs text-slate-400">含图</span>
         <span class="shrink-0 text-xs text-slate-400">#{{ q.id }}</span>
       </li>

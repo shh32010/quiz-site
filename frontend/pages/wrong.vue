@@ -43,7 +43,7 @@ function printPage() {
           <span class="mt-0.5 shrink-0 rounded bg-slate-100 px-1.5 py-0.5 text-xs text-slate-600">
             {{ TYPE_LABEL[q.questionType] ?? q.questionType }}
           </span>
-          <span class="min-w-0 flex-1 text-sm leading-6 text-slate-800">{{ q.stem }}</span>
+          <span class="min-w-0 flex-1 text-sm leading-6 text-slate-800">{{ formatText(q.stem) }}</span>
           <span class="shrink-0 text-xs" :class="q.resolved ? 'text-green-600' : 'text-amber-600'">
             {{ q.resolved ? '已掌握' : '待复习' }}
           </span>

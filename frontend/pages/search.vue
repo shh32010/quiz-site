@@ -54,7 +54,7 @@ const totalPages = computed(() => Math.max(1, Math.ceil((data.value?.total ?? 0)
         <span class="mt-0.5 shrink-0 rounded bg-slate-100 px-1.5 py-0.5 text-xs text-slate-600">
           {{ TYPE_LABEL[r.questionType] ?? r.questionType }}
         </span>
-        <span class="min-w-0 flex-1 text-sm leading-6 text-slate-800">{{ r.stem }}</span>
+        <span class="min-w-0 flex-1 text-sm leading-6 text-slate-800">{{ formatText(r.stem) }}</span>
         <span class="shrink-0 text-xs text-slate-400">#{{ r.id }}</span>
       </li>
       <li v-if="data && !data.rows.length" class="px-5 py-6 text-sm text-slate-500">

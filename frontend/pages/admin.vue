@@ -52,7 +52,7 @@ onMounted(load)
             <span class="text-xs text-slate-400">{{ (f.createdAt || '').slice(0, 16).replace('T', ' ') }}</span>
           </div>
           <p class="text-slate-600">{{ f.content }}</p>
-          <p class="text-xs text-slate-400">题干：{{ f.stemPreview }}</p>
+          <p class="text-xs text-slate-400">题干：{{ formatText(f.stemPreview) }}</p>
           <div class="flex gap-2">
             <input v-model="note[f.id]" placeholder="处理备注" class="flex-1 rounded border px-2 py-1 text-xs" />
             <button class="rounded bg-slate-700 px-3 py-1 text-xs text-white" @click="resolve(f.id)">标记已处理</button>
