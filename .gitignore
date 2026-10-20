@@ -1,0 +1,24 @@
+# 依赖与构建产物
+node_modules/
+target/
+.output/
+.nuxt/
+dist/
+.next/
+
+# 环境变量（禁止提交）
+.env
+.env.*
+!.env.example
+
+# IDE / 系统
+.idea/
+.vscode/
+*.iml
+.DS_Store
+Thumbs.db
+
+# 日志与临时文件
+*.log
+*.tmp
+/backups/

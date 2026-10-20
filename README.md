@@ -1,0 +1,86 @@
+# 专转本计算机刷题
+
+江苏专转本（计算机专业大类）刷题网站。**Vue 3 + Spring Boot + PostgreSQL** 全自建架构。
+
+## 技术栈
+
+| 层 | 选型 |
+|---|---|
+| 前端 | Nuxt 3（Vue 3 + SSR） + Tailwind |
+| 后端 | Spring Boot 3.3 + Java 21 + Spring Security(JWT) |
+| 数据库 | PostgreSQL 17 |
+| 缓存 | Redis 8 |
+
+## 目录
+
+```
+quiz-v2/
+├── backend/        Spring Boot 后端（端口 8080）
+│   ├── src/main/java/com/quiz/
+│   │   ├── auth/       注册登录（JWT + BCrypt）
+│   │   ├── chapter/    章节树 / 课程统计
+│   │   ├── paper/      真题卷
+│   │   ├── question/   题目浏览（不含答案）
+│   │   └── config/     安全 / 缓存
+│   └── src/main/resources/application.yml
+├── frontend/       Nuxt 3 前端（端口 3100）
+│   ├── pages/chapters/  章节树 + 题目列表
+│   ├── pages/papers/    真题列表 + 详情
+│   └── nuxt.config.ts   /api 反代到后端
+└── docs/
+```
+
+## 本地开发
+
+### 后端
+
+```bash
+cd backend
+# 需要环境变量：QUIZ_DB_URL / QUIZ_DB_USER / QUIZ_DB_PASSWORD / QUIZ_JWT_SECRET
+mvn spring-boot:run
+```
+
+### 前端
+
+```bash
+cd frontend
+npm install
+npm run dev          # http://localhost:3000
+```
+
+## 生产部署（阿里云 ECS）
+
+| 服务 | 方式 | 端口 |
+|---|---|---|
+| 后端 | systemd `quiz-backend`，jar 在 `/opt/quiz-backend` | 8080 |
+| 前端 | systemd `quiz-frontend`，`.output` 在 `/opt/quiz-frontend` | 3100 |
+| 数据库 | PostgreSQL 17 本机 | 5432 |
+| 缓存 | Redis | 6379 |
+
+环境变量通过 `EnvironmentFile` 注入（`/opt/quiz-site/.dbapp.env`、`.backend.env`），**不入库**。
+
+## 接口一览
+
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| GET | `/api/health` | 健康检查 |
+| POST | `/api/auth/register` | 注册 `{username,password}` |
+| POST | `/api/auth/login` | 登录，返回 JWT |
+| GET | `/api/auth/me` | 当前用户（需 Bearer） |
+| GET | `/api/chapters/tree?subject=4` | 章节树（三级，含子树题数） |
+| GET | `/api/courses` | 课程题数统计 |
+| GET | `/api/papers` | 真题卷列表 |
+| GET | `/api/papers/{id}` | 卷面分节 |
+| GET | `/api/questions?chapter=&course=&page=&size=` | 题目浏览（**不含答案**） |
+
+## 数据来源
+
+题库 54,216 行（活跃 44,820），来自江苏专转本真题与配套题库，
+经大模型逐题精读（分类/难度/质检/答案四维）后入库。
+数据工程详见 `题库交付/04-项目文档/`。
+
+## 约定
+
+- **答案永不下发**：`correct` 不出现在任何浏览接口中，只在作答后经受控接口返回
+- 密钥只走环境变量，仓库不含任何凭据
+- 中文注释，代码风格见 `CLAUDE.md`

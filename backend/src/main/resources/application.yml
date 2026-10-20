@@ -1,0 +1,60 @@
+# 本地开发配置；生产用环境变量覆盖（见 application-prod.yml）
+server:
+  port: 8080
+  compression:
+    enabled: true
+
+spring:
+  application:
+    name: quiz-backend
+
+  datasource:
+    # 生产环境在阿里云 ECS 上连本机 PostgreSQL
+    url: ${QUIZ_DB_URL:jdbc:postgresql://127.0.0.1:5432/quiz}
+    username: ${QUIZ_DB_USER:quiz_app}
+    password: ${QUIZ_DB_PASSWORD:}
+    hikari:
+      maximum-pool-size: 15
+      minimum-idle: 3
+      connection-timeout: 5000
+
+  jpa:
+    hibernate:
+      ddl-auto: none          # 表结构由既有数据库决定，禁止自动建表
+    open-in-view: false
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: Asia/Shanghai
+        format_sql: false
+
+  data:
+    redis:
+      host: ${QUIZ_REDIS_HOST:127.0.0.1}
+      port: ${QUIZ_REDIS_PORT:6379}
+      timeout: 2s
+
+  jackson:
+    default-property-inclusion: non_null
+
+# 应用自定义配置
+quiz:
+  jwt:
+    secret: ${QUIZ_JWT_SECRET:}      # 生产由环境变量注入，禁止硬编码
+    expire-seconds: 604800           # 7 天
+  cors:
+    allowed-origins: ${QUIZ_CORS:http://localhost:3000}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always
+
+logging:
+  level:
+    root: INFO
+    com.quiz: DEBUG
