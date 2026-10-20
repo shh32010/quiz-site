@@ -10,6 +10,7 @@
           <NuxtLink to="/compose" class="hover:text-blue-600">组卷</NuxtLink>
           <NuxtLink to="/wrong" class="hover:text-blue-600">错题本</NuxtLink>
           <NuxtLink to="/report" class="hover:text-blue-600">学习报告</NuxtLink>
+          <NuxtLink to="/search" class="hover:text-blue-600">搜索</NuxtLink>
         </nav>
       </div>
     </header>

@@ -21,12 +21,30 @@ public class QuestionService {
     }
 
     private static final String COLS = """
-            id, question_type as "questionType", stem, score,
-            has_image as "hasImage", chapter_id as "chapterId", cat_l1 as "catL1"
+            id, question_type as "questionType", stem, option_json as "optionJson", score,
+            blank_count as "blankCount", has_image as "hasImage",
+            chapter_id as "chapterId", cat_l1 as "catL1"
             """;
 
-    /** 某章节（含全部子孙）下的题；chapterId 为空则不限章节 */
-    public Map<String, Object> page(Integer chapterId, String course, int page, int size) {
+    /** 题干关键词搜索（pg_trgm 索引加速） */
+    public Map<String, Object> search(String q, int page, int size) {
+        String kw = q == null ? "" : q.trim();
+        if (kw.length() < 2) {
+            return Map.of("total", 0, "page", page, "size", size, "rows", List.of());
+        }
+        int offset = Math.max(0, (page - 1) * size);
+        String like = "%" + kw + "%";
+        Integer total = jdbc.queryForObject(
+                "select count(*) from t_question where not deleted and review_status = 'ok' and stem ilike ?",
+                Integer.class, like);
+        List<Map<String, Object>> rows = jdbc.queryForList(
+                "select " + COLS + " from v_question_public where review_status = 'ok' and stem ilike ?"
+                        + " order by id limit ? offset ?", like, size, offset);
+        return Map.of("total", total == null ? 0 : total, "page", page, "size", size, "rows", rows);
+    }
+
+    /** 某章节（含全部子孙）/ 课程 / 试卷下的题 */
+    public Map<String, Object> page(Integer chapterId, String course, Integer paperId, int page, int size) {
         int offset = Math.max(0, (page - 1) * size);
         List<Object> args = new ArrayList<>();
         String where = "where review_status = 'ok'";
@@ -44,6 +62,12 @@ public class QuestionService {
         if (course != null && !course.isBlank()) {
             where += " and cat_l1 = ?";
             args.add(course);
+        }
+        if (paperId != null) {
+            where += """
+                     and id in (select question_id from exam_paper_question where paper_id = ? and is_active)
+                    """;
+            args.add(paperId);
         }
 
         Integer total = jdbc.queryForObject(

@@ -50,6 +50,27 @@ public class ReportController {
                   from wrong_question where user_id = ?
                 """, uid);
 
-        return Map.of("summary", summary, "recent", recent, "wrong", wrong);
+        // 章节掌握度（按 L1 章/技能汇总，已答题目正确率）
+        List<Map<String, Object>> mastery = jdbc.queryForList("""
+                with recursive anc as (
+                  select id, parent_id, id as root from t_chapter where level = 1 and not deleted
+                  union all
+                  select c.id, c.parent_id, a.root from t_chapter c join anc a on c.parent_id = a.id
+                 where not c.deleted
+                )
+                select l.code, l.name,
+                       count(*) as "total",
+                       count(*) filter (where pa.is_correct) as "correct",
+                       round(100.0 * count(*) filter (where pa.is_correct) / count(*)) as "rate"
+                  from practice_answer pa
+                  join t_question q on q.id = pa.question_id
+                  join anc on anc.id = q.chapter_id
+                  join t_chapter l on l.id = anc.root
+                 where pa.user_id = ?
+                 group by l.code, l.name
+                 order by l.code
+                """, uid);
+
+        return Map.of("summary", summary, "recent", recent, "wrong", wrong, "mastery", mastery);
     }
 }

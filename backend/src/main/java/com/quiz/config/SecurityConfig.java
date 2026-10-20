@@ -37,7 +37,8 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 // 公开
                 .requestMatchers("/api/health", "/api/auth/**", "/actuator/**").permitAll()
-                .requestMatchers("/api/chapters/**", "/api/courses", "/api/papers/**", "/api/questions").permitAll()
+                .requestMatchers("/api/chapters/**", "/api/courses", "/api/papers/**", "/api/questions/**",
+                        "/api/guest/**").permitAll()
                 // 需登录
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
                 .requestMatchers("/api/practice/**", "/api/wrong/**", "/api/feedback/**",

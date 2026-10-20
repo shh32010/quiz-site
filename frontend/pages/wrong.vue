@@ -14,6 +14,11 @@ onMounted(async () => {
 })
 
 const TYPE_LABEL: Record<number, string> = { 1: '单选', 2: '多选', 3: '判断', 4: '填空', 5: '综合' }
+
+/** 浏览器的原生打印（配 Tailwind 的 print: 变体） */
+function printPage() {
+  if (typeof window !== 'undefined') window.print()
+}
 </script>
 
 <template>
@@ -26,9 +31,13 @@ const TYPE_LABEL: Record<number, string> = { 1: '单选', 2: '多选', 3: '判�
     </p>
 
     <template v-else-if="data">
-      <p class="text-sm text-slate-500">
-        共 {{ data.total }} 题，待复习 {{ data.pending }} 题
-      </p>
+      <div class="flex items-center gap-3">
+        <p class="text-sm text-slate-500">
+          共 {{ data.total }} 题，待复习 {{ data.pending }} 题
+        </p>
+        <button class="print:hidden rounded-lg border border-slate-300 px-3 py-1 text-xs"
+                @click="printPage">打印错题</button>
+      </div>
       <ul class="divide-y divide-slate-100 rounded-xl border border-slate-200">
         <li v-for="q in data.rows" :key="q.questionId" class="flex items-start gap-3 px-5 py-3">
           <span class="mt-0.5 shrink-0 rounded bg-slate-100 px-1.5 py-0.5 text-xs text-slate-600">

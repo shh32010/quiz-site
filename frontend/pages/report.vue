@@ -48,6 +48,23 @@ const rate = computed(() => {
         </div>
       </div>
 
+      <div v-if="data.mastery?.length">
+        <h2 class="mb-2 text-sm font-semibold text-slate-700">章节掌握度</h2>
+        <ul class="space-y-2 rounded-xl border border-slate-200 p-4">
+          <li v-for="m in data.mastery" :key="m.code" class="text-sm">
+            <div class="flex items-center justify-between text-xs">
+              <span class="text-slate-700">{{ m.code }} {{ m.name }}</span>
+              <span class="text-slate-500">{{ m.correct }}/{{ m.total }}（{{ m.rate }}%）</span>
+            </div>
+            <div class="mt-1 h-2 w-full rounded bg-slate-100">
+              <div class="h-2 rounded"
+                   :class="m.rate >= 80 ? 'bg-green-500' : m.rate >= 60 ? 'bg-amber-500' : 'bg-red-500'"
+                   :style="{ width: (m.rate || 0) + '%' }" />
+            </div>
+          </li>
+        </ul>
+      </div>
+
       <div>
         <h2 class="mb-2 text-sm font-semibold text-slate-700">最近练习</h2>
         <ul class="divide-y divide-slate-100 rounded-xl border border-slate-200">
