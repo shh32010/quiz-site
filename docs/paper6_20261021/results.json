@@ -1,0 +1,38 @@
+[
+  {
+    "id": 388739,
+    "section": "B1-1.5",
+    "confidence": "medium",
+    "reason": "视图概念属关系数据库系统基础"
+  },
+  {
+    "id": 388808,
+    "section": "A1-1.1",
+    "confidence": "high",
+    "reason": "地址线决定寻址空间，属计算机基本原理"
+  },
+  {
+    "id": 389850,
+    "section": "A1-1.5",
+    "confidence": "high",
+    "reason": "VGA为显示器输出接口，属常用输出设备"
+  },
+  {
+    "id": 390250,
+    "section": "S5-4",
+    "confidence": "high",
+    "reason": "Windows10网络设置中IPv4/IPv6属性配置"
+  },
+  {
+    "id": 390255,
+    "section": "S1-2",
+    "confidence": "high",
+    "reason": "C语言算术表达式与运算符书写"
+  },
+  {
+    "id": 390526,
+    "section": "A3-3.1",
+    "confidence": "high",
+    "reason": "TCP/IP协议分层属计算机网络基础"
+  }
+]

@@ -7,6 +7,12 @@ const username = ref('')
 const password = ref('')
 const error = ref('')
 const loading = ref(false)
+const insecure = ref(false)
+
+onMounted(() => {
+  // IP 直连没有 HTTPS，提示用户不要用常用密码
+  insecure.value = location.protocol === 'http:'
+})
 
 async function submit() {
   error.value = ''
@@ -29,6 +35,11 @@ async function submit() {
 <template>
   <section class="mx-auto max-w-sm space-y-5">
     <h1 class="text-2xl font-bold text-slate-900">{{ mode === 'login' ? '登录' : '注册' }}</h1>
+
+    <p v-if="insecure"
+       class="rounded-lg border border-amber-300 bg-amber-50 px-4 py-2 text-xs text-amber-800">
+      当前为 HTTP 明文传输，请不要使用常用密码。
+    </p>
 
     <form class="space-y-3" @submit.prevent="submit">
       <input v-model="username" placeholder="用户名（3-32 位字母数字下划线）" autocomplete="username"
