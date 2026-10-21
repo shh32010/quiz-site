@@ -71,6 +71,23 @@ public class ReportController {
                  order by l.code
                 """, uid);
 
-        return Map.of("summary", summary, "recent", recent, "wrong", wrong, "mastery", mastery);
+        // 知识点掌握度（已答题关联知识点，至少答过 2 次）
+        List<Map<String, Object>> kps = jdbc.queryForList("""
+                select k.id, k.title,
+                       count(*) as "total",
+                       count(*) filter (where pa.is_correct) as "correct",
+                       round(100.0 * count(*) filter (where pa.is_correct) / count(*)) as "rate"
+                  from practice_answer pa
+                  join t_question_kp x on x.question_id = pa.question_id
+                  join t_knowledge_point k on k.id = x.kp_id and not k.deleted
+                 where pa.user_id = ?
+                 group by k.id, k.title
+                having count(*) >= 2
+                 order by count(*) desc, k.id
+                 limit 20
+                """, uid);
+
+        return Map.of("summary", summary, "recent", recent, "wrong", wrong,
+                "mastery", mastery, "kps", kps);
     }
 }

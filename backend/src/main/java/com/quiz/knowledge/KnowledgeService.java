@@ -128,4 +128,45 @@ public class KnowledgeService {
 
         return Map.of("total", total == null ? 0 : total, "page", page, "size", safeSize, "rows", rows);
     }
+
+    /** 单条知识点（用于题目页跳转定位） */
+    public Map<String, Object> detail(int id) {
+        List<Map<String, Object>> rows = jdbc.queryForList("""
+                select k.id, k.title, k.section, k.content, k.importance,
+                       k.node_id as "nodeId", c.code as "nodeCode", c.name as "nodeName"
+                  from t_knowledge_point k
+                  left join t_chapter c on c.id = k.node_id
+                 where k.id = ? and not k.deleted
+                """, id);
+        return rows.isEmpty() ? null : rows.get(0);
+    }
+
+    /** 全库搜索知识点 */
+    public Map<String, Object> search(String q, int page, int size) {
+        int safeSize = Math.min(Math.max(size, 1), 200);
+        int offset = Math.max(0, (page - 1) * safeSize);
+        String kw = q == null ? "" : q.trim();
+        String like = "%" + kw + "%";
+        String where = " where not k.deleted and (? = '' or k.title ilike ? or k.content ilike ?) ";
+
+        Integer total = jdbc.queryForObject(
+                "select count(*) from t_knowledge_point k" + where,
+                Integer.class, kw, like, like);
+
+        List<Map<String, Object>> rows = jdbc.queryForList("""
+                select k.id, k.title, k.section, k.content, k.importance,
+                       c.code as "nodeCode", c.name as "nodeName",
+                       (select count(*)
+                          from t_question_kp x
+                          join t_question q on q.id = x.question_id
+                         where x.kp_id = k.id and not q.deleted and q.review_status = 'ok') as "questionCount"
+                  from t_knowledge_point k
+                  left join t_chapter c on c.id = k.node_id
+                """ + where + """
+                 order by k.id
+                 limit ? offset ?
+                """, kw, like, like, safeSize, offset);
+
+        return Map.of("total", total == null ? 0 : total, "page", page, "size", safeSize, "rows", rows);
+    }
 }

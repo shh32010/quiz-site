@@ -35,4 +35,18 @@ public class KnowledgeController {
                                     @RequestParam(defaultValue = "50") int size) {
         return service.list(chapter, q, page, size);
     }
+
+    /** 全库搜索知识点：GET /api/knowledge/search?q=关键字 */
+    @GetMapping("/search")
+    public Map<String, Object> search(@RequestParam(defaultValue = "") String q,
+                                      @RequestParam(defaultValue = "1") int page,
+                                      @RequestParam(defaultValue = "50") int size) {
+        return service.search(q, page, size);
+    }
+
+    /** 单条知识点：GET /api/knowledge/123 */
+    @GetMapping("/{id}")
+    public Map<String, Object> detail(@org.springframework.web.bind.annotation.PathVariable int id) {
+        return service.detail(id);
+    }
 }

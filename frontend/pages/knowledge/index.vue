@@ -33,6 +33,7 @@ interface KP {
   questionCount: number
 }
 
+const route = useRoute()
 const { data: tree } = await useFetch<KNode[]>('/api/knowledge/tree')
 
 const COURSES = [
@@ -61,6 +62,8 @@ const groups = computed(() => COURSES.map(c => {
 }))
 
 const selected = ref<KNode | null>(null)
+const allMode = ref(false)
+const sidebarOpen = ref(false)
 const rows = ref<KP[]>([])
 const total = ref(0)
 const page = ref(1)
@@ -72,13 +75,17 @@ const size = 50
 const totalPages = computed(() => Math.max(1, Math.ceil(total.value / size)))
 
 async function load() {
-  if (!selected.value) return
+  if (!allMode.value && !selected.value) return
   loading.value = true
   error.value = ''
   try {
-    const r = await $fetch<any>('/api/knowledge', {
-      query: { chapter: selected.value.id, q: q.value, page: page.value, size },
-    })
+    const r = allMode.value
+      ? await $fetch<any>('/api/knowledge/search', {
+          query: { q: q.value, page: page.value, size },
+        })
+      : await $fetch<any>('/api/knowledge', {
+          query: { chapter: selected.value!.id, q: q.value, page: page.value, size },
+        })
     rows.value = r.rows ?? []
     total.value = r.total ?? 0
   } catch (e: any) {
@@ -89,7 +96,9 @@ async function load() {
 }
 
 async function select(node: KNode) {
+  allMode.value = false
   selected.value = node
+  sidebarOpen.value = false
   page.value = 1
   await load()
 }
@@ -99,12 +108,43 @@ async function search() {
   await load()
 }
 
+async function searchAll() {
+  allMode.value = true
+  selected.value = null
+  page.value = 1
+  await load()
+}
+
+function findNode(nodes: KNode[], id: number): KNode | null {
+  for (const n of nodes) {
+    if (n.id === id) return n
+    const hit = findNode(n.children ?? [], id)
+    if (hit) return hit
+  }
+  return null
+}
+
 function go(p: number) {
   page.value = p
   load()
 }
 
-onMounted(() => {
+onMounted(async () => {
+  const kpId = Number(route.query.kp)
+  if (kpId) {
+    try {
+      const kp = await $fetch<any>(`/api/knowledge/${kpId}`)
+      const node = findNode(tree.value ?? [], kp?.nodeId)
+      if (node) {
+        selected.value = node
+        allMode.value = false
+        q.value = kp.title ?? ''
+        page.value = 1
+        await load()
+        return
+      }
+    } catch { /* 回退到默认章 */ }
+  }
   const first = groups.value.find(g => g.chapters.length)?.chapters[0]
   if (first) select(first)
 })
@@ -117,9 +157,16 @@ onMounted(() => {
       <p class="mt-1 text-slate-600">按大纲树浏览课程、章、节的知识点；数字为知识点条数。题目关联由历史匹配生成，供辅助练习。</p>
     </div>
 
+    <button class="flex w-full items-center justify-between rounded-lg border border-slate-200 px-4 py-2 text-sm lg:hidden"
+            @click="sidebarOpen = !sidebarOpen">
+      <span>选择章节：{{ selected ? selected.name : '未选择' }}</span>
+      <span class="text-xs text-slate-400">{{ sidebarOpen ? '收起' : '展开' }}</span>
+    </button>
+
     <div class="grid gap-4 lg:grid-cols-[300px_1fr]">
       <!-- 左侧大纲树 -->
-      <aside class="max-h-[75vh] overflow-auto rounded-xl border border-slate-200">
+      <aside class="max-h-[75vh] overflow-auto rounded-xl border border-slate-200"
+             :class="sidebarOpen ? 'block' : 'hidden lg:block'">
         <div v-for="g in groups" :key="g.code" class="border-b border-slate-100 last:border-b-0">
           <div class="flex items-center justify-between bg-slate-50 px-4 py-2.5">
             <div class="flex items-center gap-2">
@@ -156,14 +203,16 @@ onMounted(() => {
         <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 px-4 py-3">
           <div class="min-w-0">
             <p class="truncate text-sm font-semibold text-slate-800">
-              {{ selected ? (selected.code + ' ' + selected.name) : '选择左侧章节' }}
+              {{ allMode ? '全库搜索' : (selected ? (selected.code + ' ' + selected.name) : '选择左侧章节') }}
             </p>
             <p class="text-xs text-slate-400">共 {{ total }} 条知识点</p>
           </div>
-          <form class="flex gap-2" @submit.prevent="search">
+          <form class="flex w-full flex-wrap gap-2 sm:w-auto" @submit.prevent="search">
             <input v-model="q" placeholder="搜索标题或内容"
-                   class="w-44 rounded-lg border border-slate-300 px-3 py-1.5 text-xs" />
+                   class="min-w-0 flex-1 rounded-lg border border-slate-300 px-3 py-1.5 text-xs sm:w-44 sm:flex-none" />
             <button class="rounded-lg bg-blue-600 px-3 py-1.5 text-xs text-white">搜索</button>
+            <button type="button" class="rounded-lg border border-slate-300 px-3 py-1.5 text-xs text-slate-600"
+                    @click="searchAll">全库</button>
           </form>
         </div>
 
@@ -188,6 +237,8 @@ onMounted(() => {
                           @click.stop>
                   练相关题
                 </NuxtLink>
+                <NuxtLink :to="`/search?kp=${kp.id}`"
+                          class="shrink-0 text-[11px] text-slate-400 hover:text-blue-600" @click.stop>搜题</NuxtLink>
               </summary>
               <div class="kp-content mt-2 border-l-2 border-blue-100 pl-3 text-sm leading-6 text-slate-600"
                    v-html="render(kp.content)" />

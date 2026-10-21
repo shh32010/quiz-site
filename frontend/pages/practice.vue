@@ -340,10 +340,11 @@ onUnmounted(() => { if (timer) clearInterval(timer) })
 
         <div v-if="relatedKps.length" class="mt-2 flex flex-wrap items-center gap-1.5">
           <span class="text-xs text-slate-400">相关知识点：</span>
-          <span v-for="k in relatedKps" :key="k.id"
-                class="rounded bg-slate-100 px-1.5 py-0.5 text-[11px] text-slate-600" :title="k.nodeName">
+          <NuxtLink v-for="k in relatedKps" :key="k.id" :to="`/knowledge?kp=${k.id}`"
+                    class="rounded bg-slate-100 px-1.5 py-0.5 text-[11px] text-slate-600 hover:bg-blue-50 hover:text-blue-700"
+                    :title="k.nodeName">
             {{ k.title }}
-          </span>
+          </NuxtLink>
         </div>
 
         <div v-if="question.questionType === 1 || question.questionType === 3" class="mt-4 space-y-2">

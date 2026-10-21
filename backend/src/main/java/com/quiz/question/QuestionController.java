@@ -25,10 +25,11 @@ public class QuestionController {
      * GET /api/questions?course=A&page=1&size=50
      */
     @GetMapping("/search")
-    public Map<String, Object> search(@RequestParam String q,
+    public Map<String, Object> search(@RequestParam(defaultValue = "") String q,
+                                      @RequestParam(required = false) Integer kp,
                                       @RequestParam(defaultValue = "1") int page,
                                       @RequestParam(defaultValue = "20") int size) {
-        return questionService.search(q, Math.max(page, 1), Math.min(Math.max(size, 1), 100));
+        return questionService.search(q, kp, Math.max(page, 1), Math.min(Math.max(size, 1), 100));
     }
 
     @GetMapping

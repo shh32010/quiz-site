@@ -31,9 +31,16 @@ public class WrongController {
                        w.next_review_at   as "nextReviewAt",
                        w.resolved,
                        q.question_type    as "questionType",
-                       q.stem
+                       q.stem,
+                       kp.kps as "kps"
                   from wrong_question w
                   join t_question q on q.id = w.question_id
+                  left join lateral (
+                    select string_agg(k.title, '、' order by k.id) as kps
+                      from t_question_kp x
+                      join t_knowledge_point k on k.id = x.kp_id and not k.deleted
+                     where x.question_id = q.id
+                  ) kp on true
                  where w.user_id = ? and not q.deleted
                  order by w.resolved asc, w.next_review_at nulls last
                  limit 300

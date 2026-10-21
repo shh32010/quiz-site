@@ -91,6 +91,25 @@ async function loadWeekly() {
         </ul>
       </div>
 
+      <div v-if="data.kps?.length">
+        <h2 class="mb-2 text-sm font-semibold text-slate-700">知识点掌握度</h2>
+        <ul class="space-y-2 rounded-xl border border-slate-200 p-4">
+          <li v-for="k in data.kps" :key="k.id" class="text-sm">
+            <div class="flex items-center justify-between gap-2 text-xs">
+              <NuxtLink :to="`/knowledge?kp=${k.id}`" class="truncate text-slate-700 hover:text-blue-600">
+                {{ k.title }}
+              </NuxtLink>
+              <span class="shrink-0 text-slate-500">{{ k.correct }}/{{ k.total }}（{{ k.rate }}%）</span>
+            </div>
+            <div class="mt-1 h-2 w-full rounded bg-slate-100">
+              <div class="h-2 rounded"
+                   :class="k.rate >= 80 ? 'bg-green-500' : k.rate >= 60 ? 'bg-amber-500' : 'bg-red-500'"
+                   :style="{ width: (k.rate || 0) + '%' }" />
+            </div>
+          </li>
+        </ul>
+      </div>
+
       <div>
         <h2 class="mb-2 text-sm font-semibold text-slate-700">最近练习</h2>
         <ul class="divide-y divide-slate-100 rounded-xl border border-slate-200">
