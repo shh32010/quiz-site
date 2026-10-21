@@ -154,7 +154,7 @@ onMounted(async () => {
   <section class="space-y-4">
     <div>
       <h1 class="text-2xl font-bold text-slate-900">知识点学习</h1>
-      <p class="mt-1 text-slate-600">按大纲树浏览课程、章、节的知识点；数字为知识点条数。题目关联由历史匹配生成，供辅助练习。</p>
+      <p class="mt-1 text-slate-600">按大纲树浏览课程、章、节的知识点；数字为知识点条数。没有关联题的知识点也可以正常阅读学习；题目关联由历史匹配生成，供辅助练习。</p>
     </div>
 
     <button class="flex w-full items-center justify-between rounded-lg border border-slate-200 px-4 py-2 text-sm lg:hidden"
@@ -232,6 +232,7 @@ onMounted(async () => {
                   {{ kp.nodeName }}
                 </span>
                 <span v-if="kp.questionCount" class="shrink-0 text-[11px] text-slate-400">{{ kp.questionCount }} 题</span>
+                <span v-else class="shrink-0 rounded bg-slate-50 px-1.5 py-0.5 text-[11px] text-slate-400">暂无关联题</span>
                 <NuxtLink v-if="kp.questionCount" :to="`/practice?mode=kp&target=${kp.id}`"
                           class="shrink-0 rounded border border-blue-200 px-1.5 py-0.5 text-[11px] text-blue-600 hover:bg-blue-50"
                           @click.stop>

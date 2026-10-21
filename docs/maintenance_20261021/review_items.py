@@ -30,6 +30,10 @@ SYSTEMS = {
 只输出 JSON：{"keep":true|false,"confidence":"high|medium|low","reason":"不超过20字"}""",
     'quarantine': """你是江苏专转本计算机题库的审题专家。这是一道当前被隔离的题，请重新审读题干、选项、答案和解析，
 判断它是否应恢复为正常练习题。只输出 JSON：{"release":true|false,"confidence":"high|medium|low","reason":"不超过30字"}""",
+    'answer': """你是江苏专转本计算机题库的审题专家。请整体审读题干、选项、库内答案和解析：
+1) 判断库内答案是否正确；
+2) 判断题目质量（题干/选项是否完整、是否有明显错误）。
+只输出 JSON：{"answer":"match|mismatch|uncertain","fix":"答案错误且能确定时给出正确选项字母或填空文本，否则空字符串","quality":"good|warn|error","confidence":"high|medium|low","reason":"不超过30字"}""",
 }
 
 
@@ -68,9 +72,13 @@ def prompt_quarantine(it):
         it.get('qc_grade'), it.get('answer_check'))
 
 
+def prompt_answer(it):
+    return prompt_quarantine(it)
+
+
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument('--task', choices=['kp', 'quarantine'], required=True)
+    ap.add_argument('--task', choices=['kp', 'quarantine', 'answer'], required=True)
     ap.add_argument('--concurrency', type=int, default=8)
     args = ap.parse_args()
 
@@ -78,10 +86,14 @@ def main():
         items = json.loads((BASE / 'kp_items.json').read_text(encoding='utf-8'))
         prompt = prompt_kp
         out_file = BASE / 'kp_results.jsonl'
-    else:
+    elif args.task == 'quarantine':
         items = json.loads((BASE / 'quarantine_items.json').read_text(encoding='utf-8'))
         prompt = prompt_quarantine
         out_file = BASE / 'quarantine_results.jsonl'
+    else:
+        items = json.loads((BASE / 'answer_items.json').read_text(encoding='utf-8'))
+        prompt = prompt_answer
+        out_file = BASE / 'answer_results.jsonl'
 
     done = set()
     if out_file.exists():
