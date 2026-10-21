@@ -31,7 +31,7 @@ public class PracticeService {
     @Transactional
     public Map<String, Object> start(UUID uid, String mode, String target, int limit) {
         Integer targetId = switch (mode) {
-            case "chapter", "paper" -> {
+            case "chapter", "paper", "kp" -> {
                 try {
                     yield Integer.valueOf(target);
                 } catch (NumberFormatException e) {
@@ -61,6 +61,13 @@ public class PracticeService {
                       join t_question q on q.id = e.question_id
                      where e.paper_id = ? and e.is_active and not q.deleted
                      order by e.item_order limit ?
+                    """, Integer.class, targetId, limit);
+            case "kp" -> jdbc.queryForList("""
+                    select x.question_id from t_question_kp x
+                      join t_question q on q.id = x.question_id
+                     where x.kp_id = ? and not q.deleted and q.review_status = 'ok'
+                     order by case x.confidence when '高' then 0 when '中' then 1 else 2 end, x.question_id
+                     limit ?
                     """, Integer.class, targetId, limit);
             default -> throw new IllegalArgumentException("mode 非法: " + mode);
         };

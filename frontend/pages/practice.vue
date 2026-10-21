@@ -25,6 +25,7 @@ const fb = ref({ type: 'other', content: '', msg: '' })
 const remain = ref(-1)
 let timer: ReturnType<typeof setInterval> | null = null
 const favorited = ref(false)
+const relatedKps = ref<any[]>([])
 const variant = ref<{ loading: boolean; content: string; err: string }>({ loading: false, content: '', err: '' })
 
 const TYPE_LABEL: Record<number, string> = { 1: '单选', 2: '多选', 3: '判断', 4: '填空', 5: '综合' }
@@ -55,7 +56,8 @@ async function start() {
       // 游客：直接拉题，不建会话
       guest.value = true
       const qs = mode === 'paper' ? `paper=${target}`
-        : mode === 'course' ? `course=${target}` : `chapter=${target}`
+        : mode === 'course' ? `course=${target}`
+        : mode === 'kp' ? `kp=${target}` : `chapter=${target}`
       const r = await api.get<any>(`/api/questions?${qs}&size=20`)
       guestRows.value = r.rows ?? []
       if (!guestRows.value.length) throw new Error('该范围下没有题目')
@@ -182,8 +184,19 @@ async function sendFeedback() {
   } catch (e: any) { fb.value.msg = e.message }
 }
 
+async function loadRelated(id: number) {
+  try {
+    relatedKps.value = await api.get<any[]>(`/api/questions/${id}/knowledge`)
+  } catch {
+    relatedKps.value = []
+  }
+}
+
 watch(() => question.value?.id, async (id) => {
-  if (!id || guest.value) { favorited.value = false; return }
+  relatedKps.value = []
+  if (!id) { favorited.value = false; return }
+  loadRelated(id)
+  if (guest.value) { favorited.value = false; return }
   try {
     const r = await api.get<any>(`/api/favorites/${id}`)
     favorited.value = Boolean(r.favorited)
@@ -238,6 +251,14 @@ onUnmounted(() => { if (timer) clearInterval(timer) })
 
       <div class="rounded-xl border border-slate-200 p-5">
         <p class="whitespace-pre-wrap text-base leading-7 text-slate-800">{{ formatText(question.stem) }}</p>
+
+        <div v-if="relatedKps.length" class="mt-2 flex flex-wrap items-center gap-1.5">
+          <span class="text-xs text-slate-400">相关知识点：</span>
+          <span v-for="k in relatedKps" :key="k.id"
+                class="rounded bg-slate-100 px-1.5 py-0.5 text-[11px] text-slate-600" :title="k.nodeName">
+            {{ k.title }}
+          </span>
+        </div>
 
         <div v-if="question.questionType === 1 || question.questionType === 3" class="mt-4 space-y-2">
           <template v-if="options.length">

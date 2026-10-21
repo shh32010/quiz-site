@@ -113,7 +113,11 @@ public class KnowledgeService {
         List<Map<String, Object>> rows = jdbc.queryForList(
                 sub + """
                         select k.id, k.title, k.section, k.content, k.importance,
-                               c.code as "nodeCode", c.name as "nodeName"
+                               c.code as "nodeCode", c.name as "nodeName",
+                               (select count(*)
+                                  from t_question_kp x
+                                  join t_question q on q.id = x.question_id
+                                 where x.kp_id = k.id and not q.deleted and q.review_status = 'ok') as "questionCount"
                           from t_knowledge_point k
                           left join t_chapter c on c.id = k.node_id
                         """ + where + """

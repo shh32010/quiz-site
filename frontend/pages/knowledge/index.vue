@@ -30,6 +30,7 @@ interface KP {
   importance: string | null
   nodeCode: string | null
   nodeName: string | null
+  questionCount: number
 }
 
 const { data: tree } = await useFetch<KNode[]>('/api/knowledge/tree')
@@ -113,7 +114,7 @@ onMounted(() => {
   <section class="space-y-4">
     <div>
       <h1 class="text-2xl font-bold text-slate-900">知识点学习</h1>
-      <p class="mt-1 text-slate-600">按大纲树浏览课程、章、节的知识点；数字为知识点条数。</p>
+      <p class="mt-1 text-slate-600">按大纲树浏览课程、章、节的知识点；数字为知识点条数。题目关联由历史匹配生成，供辅助练习。</p>
     </div>
 
     <div class="grid gap-4 lg:grid-cols-[300px_1fr]">
@@ -177,10 +178,16 @@ onMounted(() => {
                 <span class="mt-1 shrink-0 text-slate-400 group-open:rotate-90">›</span>
                 <span class="min-w-0 flex-1 text-sm font-medium text-slate-800">{{ kp.title }}</span>
                 <span v-if="kp.nodeName && kp.nodeCode !== selected?.code"
-                      class="max-w-[45%] shrink-0 truncate rounded bg-slate-100 px-1.5 py-0.5 text-[11px] text-slate-400"
+                      class="max-w-[35%] shrink-0 truncate rounded bg-slate-100 px-1.5 py-0.5 text-[11px] text-slate-400"
                       :title="kp.nodeName">
                   {{ kp.nodeName }}
                 </span>
+                <span v-if="kp.questionCount" class="shrink-0 text-[11px] text-slate-400">{{ kp.questionCount }} 题</span>
+                <NuxtLink v-if="kp.questionCount" :to="`/practice?mode=kp&target=${kp.id}`"
+                          class="shrink-0 rounded border border-blue-200 px-1.5 py-0.5 text-[11px] text-blue-600 hover:bg-blue-50"
+                          @click.stop>
+                  练相关题
+                </NuxtLink>
               </summary>
               <div class="kp-content mt-2 border-l-2 border-blue-100 pl-3 text-sm leading-6 text-slate-600"
                    v-html="render(kp.content)" />

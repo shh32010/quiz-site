@@ -43,8 +43,9 @@ public class QuestionService {
         return Map.of("total", total == null ? 0 : total, "page", page, "size", size, "rows", rows);
     }
 
-    /** 某章节（含全部子孙）/ 课程 / 试卷下的题 */
-    public Map<String, Object> page(Integer chapterId, String course, Integer paperId, int page, int size) {
+    /** 某章节（含全部子孙）/ 课程 / 试卷 / 知识点下的题 */
+    public Map<String, Object> page(Integer chapterId, String course, Integer paperId,
+                                    Integer kpId, int page, int size) {
         int offset = Math.max(0, (page - 1) * size);
         List<Object> args = new ArrayList<>();
         String where = "where review_status = 'ok'";
@@ -69,6 +70,10 @@ public class QuestionService {
                     """;
             args.add(paperId);
         }
+        if (kpId != null) {
+            where += " and id in (select question_id from t_question_kp where kp_id = ?)";
+            args.add(kpId);
+        }
 
         Integer total = jdbc.queryForObject(
                 "select count(*) from v_question_public " + where, Integer.class, args.toArray());
@@ -80,5 +85,19 @@ public class QuestionService {
                         + " order by id limit ? offset ?", args.toArray());
 
         return Map.of("total", total == null ? 0 : total, "page", page, "size", size, "rows", rows);
+    }
+
+    /** 一道题关联的知识点（最多 10 条，高置信度优先） */
+    public List<Map<String, Object>> kps(int questionId) {
+        return jdbc.queryForList("""
+                select k.id, k.title, k.section,
+                       c.code as "nodeCode", c.name as "nodeName"
+                  from t_question_kp x
+                  join t_knowledge_point k on k.id = x.kp_id and not k.deleted
+                  left join t_chapter c on c.id = k.node_id
+                 where x.question_id = ?
+                 order by case x.confidence when '高' then 0 when '中' then 1 else 2 end, k.id
+                 limit 10
+                """, questionId);
     }
 }

@@ -35,9 +35,16 @@ public class QuestionController {
     public Map<String, Object> page(@RequestParam(required = false) Integer chapter,
                                     @RequestParam(required = false) String course,
                                     @RequestParam(required = false) Integer paper,
+                                    @RequestParam(required = false) Integer kp,
                                     @RequestParam(defaultValue = "1") int page,
                                     @RequestParam(defaultValue = "50") int size) {
         int safeSize = Math.min(Math.max(size, 1), 200);
-        return questionService.page(chapter, course, paper, Math.max(page, 1), safeSize);
+        return questionService.page(chapter, course, paper, kp, Math.max(page, 1), safeSize);
+    }
+
+    /** 一道题关联的知识点：GET /api/questions/123/knowledge */
+    @GetMapping("/{id}/knowledge")
+    public java.util.List<Map<String, Object>> knowledge(@org.springframework.web.bind.annotation.PathVariable int id) {
+        return questionService.kps(id);
     }
 }
