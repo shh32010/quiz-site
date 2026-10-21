@@ -119,6 +119,27 @@ public class PracticeService {
         return Map.of("kind", "question", "question", rows.get(0));
     }
 
+    /** 按顺序取某一道题（含是否已答），用于上一题/下一题 */
+    public Map<String, Object> item(long sessionId, int order, UUID uid) {
+        requireOwn(sessionId, uid);
+        List<Map<String, Object>> rows = jdbc.queryForList("""
+                select q.id, q.question_type as "questionType", q.stem, q.option_json as "optionJson",
+                       q.score, q.blank_count as "blankCount", sq.item_order as "itemOrder",
+                       (select count(*) from session_question x where x.session_id = sq.session_id) as "total",
+                       (a.id is not null) as "answered", a.user_answer as "userAnswer",
+                       a.is_correct as "isCorrect", a.score_got as "scoreGot"
+                  from session_question sq
+                  join t_question q on q.id = sq.question_id
+                  left join practice_answer a
+                         on a.session_id = sq.session_id and a.question_id = sq.question_id
+                 where sq.session_id = ? and sq.item_order = ?
+                """, sessionId, order);
+        if (rows.isEmpty()) {
+            return Map.of("kind", "done");
+        }
+        return Map.of("kind", "question", "question", rows.get(0));
+    }
+
     @SuppressWarnings("unchecked")
     private Map<String, Object> readJson(String json) {
         try {

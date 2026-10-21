@@ -26,6 +26,14 @@ const remain = ref(-1)
 let timer: ReturnType<typeof setInterval> | null = null
 const favorited = ref(false)
 const relatedKps = ref<any[]>([])
+const wrongModal = ref(false)
+const correctHint = ref(false)
+const guestState = ref<Record<number, { feedback: any; review: any; answer: string; multi: string[]; fill: string }>>({})
+let advanceTimer: ReturnType<typeof setTimeout> | null = null
+
+function clearAdvance() {
+  if (advanceTimer) { clearTimeout(advanceTimer); advanceTimer = null }
+}
 const variant = ref<{ loading: boolean; content: string; err: string }>({ loading: false, content: '', err: '' })
 
 const TYPE_LABEL: Record<number, string> = { 1: '单选', 2: '多选', 3: '判断', 4: '填空', 5: '综合' }
@@ -44,6 +52,8 @@ const remainText = computed(() => {
 function resetAnswer() {
   answer.value = ''; multi.value = []; fill.value = ''
   feedback.value = null; review.value = null
+  wrongModal.value = false; correctHint.value = false
+  clearAdvance()
   ai.value = { loading: false, content: '', err: '' }
   fb.value = { type: 'other', content: '', msg: '' }
 }
@@ -82,6 +92,7 @@ async function start() {
 }
 
 function showGuest(i: number) {
+  if (i < 0) return
   if (i >= guestRows.value.length) {
     question.value = null
     finished.value = { guest: true, score: 0, total_score: 0, correct_count: 0, question_count: guestRows.value.length }
@@ -90,6 +101,14 @@ function showGuest(i: number) {
   guestIdx.value = i
   const q = guestRows.value[i]
   resetAnswer()
+  const saved = guestState.value[i]
+  if (saved) {
+    feedback.value = saved.feedback
+    review.value = saved.review
+    answer.value = saved.answer
+    multi.value = saved.multi
+    fill.value = saved.fill
+  }
   question.value = { id: q.id, questionType: q.questionType, stem: q.stem, optionJson: q.optionJson,
     score: q.score, blankCount: q.blankCount, itemOrder: i + 1, total: guestRows.value.length, answered: i }
 }
@@ -112,6 +131,7 @@ async function loadStatus() {
 }
 
 async function next() {
+  clearAdvance()
   if (guest.value) { showGuest(guestIdx.value + 1); return }
   resetAnswer()
   const r = await api.get<any>(`/api/practice/${sessionId.value}/next`)
@@ -122,6 +142,53 @@ async function next() {
   }
   question.value = r.question
   total.value = r.question.total
+}
+
+async function loadItem(order: number) {
+  if (guest.value) { showGuest(order - 1); return }
+  resetAnswer()
+  try {
+    const r = await api.get<any>(`/api/practice/${sessionId.value}/item/${order}`)
+    if (r.kind === 'done') {
+      finished.value = await api.post(`/api/practice/${sessionId.value}/finish`, {})
+      question.value = null
+      return
+    }
+    const q = r.question
+    question.value = q
+    total.value = q.total
+    if (q.answered) {
+      feedback.value = { is_correct: q.isCorrect, score_got: q.scoreGot, max_score: q.score }
+      const raw = q.userAnswer ?? ''
+      if (q.questionType === 2) multi.value = raw ? String(raw).split(',') : []
+      else if (q.questionType === 4 || q.questionType === 5) fill.value = String(raw)
+      else answer.value = String(raw)
+      try {
+        review.value = await api.get(`/api/practice/${sessionId.value}/review/${q.id}`)
+      } catch { review.value = null }
+    }
+  } catch (e: any) {
+    error.value = e.message
+  }
+}
+
+async function goPrev() {
+  clearAdvance()
+  wrongModal.value = false
+  if (!question.value) return
+  const order = question.value.itemOrder ?? 1
+  if (order <= 1) return
+  if (guest.value) { showGuest(order - 2); return }
+  await loadItem(order - 1)
+}
+
+async function goNext() {
+  clearAdvance()
+  wrongModal.value = false
+  if (!question.value) return
+  const order = question.value.itemOrder ?? 1
+  if (guest.value) { showGuest(order); return }
+  await loadItem(order + 1)
 }
 
 async function submit() {
@@ -135,9 +202,20 @@ async function submit() {
     const r = await api.post<any>('/api/guest/answer', { questionId: q.id, answer: payload })
     feedback.value = r
     review.value = { correct: r.correct, analysis: r.analysis }
+    guestState.value[guestIdx.value] = {
+      feedback: r, review: { correct: r.correct, analysis: r.analysis },
+      answer: answer.value, multi: [...multi.value], fill: fill.value,
+    }
   } else {
     feedback.value = await api.post(`/api/practice/${sessionId.value}/answer`, { questionId: q.id, answer: payload })
     review.value = await api.get(`/api/practice/${sessionId.value}/review/${q.id}`)
+  }
+
+  if (feedback.value?.is_correct) {
+    correctHint.value = true
+    advanceTimer = setTimeout(() => { correctHint.value = false; goNext() }, 650)
+  } else {
+    wrongModal.value = true
   }
 }
 
@@ -239,7 +317,9 @@ onUnmounted(() => { if (timer) clearInterval(timer) })
     </template>
 
     <template v-else-if="question">
-      <div class="flex items-center justify-between text-sm text-slate-500">
+      <div class="flex flex-wrap items-center justify-between gap-2 text-sm text-slate-500">
+        <button :disabled="(question.itemOrder ?? 1) <= 1" @click="goPrev"
+                class="rounded border border-slate-300 px-2.5 py-1 text-xs disabled:opacity-40">上一题</button>
         <span>第 {{ question.itemOrder }} / {{ total }} 题</span>
         <span class="flex items-center gap-3">
           <span v-if="remain >= 0" class="font-mono" :class="remain < 300 ? 'text-red-600' : ''">
@@ -247,7 +327,13 @@ onUnmounted(() => { if (timer) clearInterval(timer) })
           </span>
           <span>{{ TYPE_LABEL[question.questionType] }} · {{ question.score }} 分</span>
         </span>
+        <button :disabled="(question.itemOrder ?? 1) >= total" @click="goNext"
+                class="rounded border border-slate-300 px-2.5 py-1 text-xs disabled:opacity-40">下一题</button>
       </div>
+
+      <p v-if="correctHint" class="rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700">
+        ✓ 答对了，自动下一题…
+      </p>
 
       <div class="rounded-xl border border-slate-200 p-5">
         <p class="whitespace-pre-wrap text-base leading-7 text-slate-800">{{ formatText(question.stem) }}</p>
@@ -312,7 +398,7 @@ onUnmounted(() => { if (timer) clearInterval(timer) })
           <b>解析：</b>{{ formatText(review.analysis) }}
         </p>
         <div class="mt-3 flex flex-wrap items-center gap-2">
-          <button class="rounded-lg bg-slate-800 px-5 py-2 text-sm text-white" @click="next">下一题</button>
+          <button class="rounded-lg bg-slate-800 px-5 py-2 text-sm text-white" @click="goNext">下一题</button>
           <button class="rounded-lg border border-slate-300 px-3 py-2 text-xs" @click="askAi(false)">AI 讲解</button>
           <button class="rounded-lg border border-slate-300 px-3 py-2 text-xs" @click="askAi(true)">引导思考</button>
           <button class="rounded-lg border border-slate-300 px-3 py-2 text-xs" @click="askVariant">举一反三</button>
@@ -353,5 +439,23 @@ onUnmounted(() => { if (timer) clearInterval(timer) })
     </template>
 
     <p v-else-if="loading" class="text-sm text-slate-500">加载中…</p>
+
+    <!-- 答错弹窗：正确答案 + 解析 -->
+    <div v-if="wrongModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+         @click.self="wrongModal = false">
+      <div class="max-h-[80vh] w-full max-w-lg overflow-auto rounded-xl bg-white p-5 shadow-xl">
+        <p class="text-base font-semibold text-red-600">✗ 回答错误</p>
+        <p v-if="review" class="mt-2 whitespace-pre-wrap text-sm text-slate-700">
+          <b>正确答案：</b>{{ formatText(review.correct) }}
+        </p>
+        <p v-if="review?.analysis" class="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-600">
+          <b>解析：</b>{{ formatText(review.analysis) }}
+        </p>
+        <div class="mt-4 flex justify-end gap-2">
+          <button class="rounded-lg border border-slate-300 px-4 py-2 text-sm" @click="wrongModal = false">关闭</button>
+          <button class="rounded-lg bg-blue-600 px-4 py-2 text-sm text-white" @click="goNext">下一题</button>
+        </div>
+      </div>
+    </div>
   </section>
 </template>

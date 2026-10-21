@@ -1,0 +1,122 @@
+[
+  {
+    "id": 334819,
+    "section": "S2-3",
+    "confidence": "high",
+    "reason": "SQL删除语句属数据操纵语言"
+  },
+  {
+    "id": 340582,
+    "section": "A2-2.3",
+    "confidence": "high",
+    "reason": "考查程序设计语言特点与适用场景"
+  },
+  {
+    "id": 342802,
+    "section": "A3-3.4",
+    "confidence": "high",
+    "reason": "Web1.0/2.0特征属互联网应用"
+  },
+  {
+    "id": 342819,
+    "section": "A3-3.1",
+    "confidence": "high",
+    "reason": "网络按覆盖范围分类属网络基础"
+  },
+  {
+    "id": 344399,
+    "section": "S5-4",
+    "confidence": "high",
+    "reason": "Windows网络连接启用与IP设置"
+  },
+  {
+    "id": 346205,
+    "section": "A4-4.2",
+    "confidence": "high",
+    "reason": "JPEG静态图像压缩属图像应用"
+  },
+  {
+    "id": 346996,
+    "section": "A4-4.2",
+    "confidence": "high",
+    "reason": "考查图像取样、像素与彩色分量"
+  },
+  {
+    "id": 347034,
+    "section": "A4-4.3",
+    "confidence": "high",
+    "reason": "音频数字化取样量化计算"
+  },
+  {
+    "id": 347115,
+    "section": "A4-4.2",
+    "confidence": "medium",
+    "reason": "图像/声音压缩属多媒体图像处理范畴"
+  },
+  {
+    "id": 347146,
+    "section": "A3-3.3",
+    "confidence": "high",
+    "reason": "微波接力通信属广域网通信技术"
+  },
+  {
+    "id": 348500,
+    "section": "B3-3.2",
+    "confidence": "medium",
+    "reason": "LTE与CDMA属移动通信接入技术"
+  },
+  {
+    "id": 353154,
+    "section": "B3-3.3",
+    "confidence": "high",
+    "reason": "互联网金融属移动互联网应用领域"
+  },
+  {
+    "id": 356108,
+    "section": "B7-7.1",
+    "confidence": "high",
+    "reason": "区块链数据以区块存储，属概述基本概念"
+  },
+  {
+    "id": 356112,
+    "section": "B7-7.2",
+    "confidence": "high",
+    "reason": "Hyperledger属典型区块链技术平台"
+  },
+  {
+    "id": 356181,
+    "section": "B7-7.1",
+    "confidence": "medium",
+    "reason": "去中心化属区块链概述核心概念"
+  },
+  {
+    "id": 366468,
+    "section": "S2-3",
+    "confidence": "high",
+    "reason": "SQL查询语句SELECT属数据操纵"
+  },
+  {
+    "id": 368408,
+    "section": "A3-3.2",
+    "confidence": "high",
+    "reason": "考查局域网按访问控制方式分类"
+  },
+  {
+    "id": 370176,
+    "section": "A1-1.7",
+    "confidence": "high",
+    "reason": "汉字机内码与区位码转换属信息表示"
+  },
+  {
+    "id": 373523,
+    "section": "A2-2.1",
+    "confidence": "medium",
+    "reason": "PowerPoint属于应用软件，归入软件基本概念"
+  },
+  {
+    "id": 376248,
+    "section": "A1-1.4",
+    "confidence": "high",
+    "reason": "键盘属输入设备，考大写输入"
+  }
+]

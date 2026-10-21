@@ -36,6 +36,13 @@ public class PracticeController {
         return practice.next(sessionId, uid);
     }
 
+    /** 按顺序取题（上一题/下一题） */
+    @GetMapping("/{sessionId}/item/{order}")
+    public Map<String, Object> item(@AuthenticationPrincipal UUID uid, @PathVariable long sessionId,
+                                    @PathVariable int order) {
+        return practice.item(sessionId, order, uid);
+    }
+
     @PostMapping("/{sessionId}/answer")
     public Map<String, Object> answer(@AuthenticationPrincipal UUID uid, @PathVariable long sessionId,
                                       @RequestBody AnswerReq req) {

@@ -1,0 +1,23 @@
+BEGIN;
+\copy (select id, chapter_id, subject_id, cat_l1 from t_question where id in (334819,340582,342802,342819,344399,346205,346996,347034,347115,347146,348500,353154,356108,356112,356181,366468,368408,370176,373523,376248) order by id) to '/tmp/stray20_backup.csv' with (format csv, header)
+UPDATE t_question SET chapter_id=277, subject_id=5, cat_l1='S2' WHERE id=334819;
+UPDATE t_question SET chapter_id=73, subject_id=4, cat_l1='A' WHERE id=340582;
+UPDATE t_question SET chapter_id=102, subject_id=4, cat_l1='A' WHERE id=342802;
+UPDATE t_question SET chapter_id=92, subject_id=4, cat_l1='A' WHERE id=342819;
+UPDATE t_question SET chapter_id=320, subject_id=5, cat_l1='S5' WHERE id=344399;
+UPDATE t_question SET chapter_id=120, subject_id=4, cat_l1='A' WHERE id=346205;
+UPDATE t_question SET chapter_id=120, subject_id=4, cat_l1='A' WHERE id=346996;
+UPDATE t_question SET chapter_id=127, subject_id=4, cat_l1='A' WHERE id=347034;
+UPDATE t_question SET chapter_id=120, subject_id=4, cat_l1='A' WHERE id=347115;
+UPDATE t_question SET chapter_id=99, subject_id=4, cat_l1='A' WHERE id=347146;
+UPDATE t_question SET chapter_id=183, subject_id=4, cat_l1='B' WHERE id=348500;
+UPDATE t_question SET chapter_id=189, subject_id=4, cat_l1='B' WHERE id=353154;
+UPDATE t_question SET chapter_id=228, subject_id=4, cat_l1='B' WHERE id=356108;
+UPDATE t_question SET chapter_id=232, subject_id=4, cat_l1='B' WHERE id=356112;
+UPDATE t_question SET chapter_id=228, subject_id=4, cat_l1='B' WHERE id=356181;
+UPDATE t_question SET chapter_id=277, subject_id=5, cat_l1='S2' WHERE id=366468;
+UPDATE t_question SET chapter_id=95, subject_id=4, cat_l1='A' WHERE id=368408;
+UPDATE t_question SET chapter_id=61, subject_id=4, cat_l1='A' WHERE id=370176;
+UPDATE t_question SET chapter_id=65, subject_id=4, cat_l1='A' WHERE id=373523;
+UPDATE t_question SET chapter_id=52, subject_id=4, cat_l1='A' WHERE id=376248;
+COMMIT;
