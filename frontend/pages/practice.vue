@@ -28,6 +28,8 @@ const favorited = ref(false)
 const relatedKps = ref<any[]>([])
 const wrongModal = ref(false)
 const correctHint = ref(false)
+const submitting = ref(false)
+const answerBox = ref<HTMLTextAreaElement | null>(null)
 const guestState = ref<Record<number, { feedback: any; review: any; answer: string; multi: string[]; fill: string }>>({})
 let advanceTimer: ReturnType<typeof setTimeout> | null = null
 
@@ -62,12 +64,16 @@ async function start() {
   const mode = String(route.query.mode || 'chapter')
   const target = String(route.query.target || '')
   try {
+    if (mode === 'wrong' && !api.hasToken()) {
+      throw new Error('错题复习需要登录')
+    }
     if (!api.hasToken()) {
       // 游客：直接拉题，不建会话
       guest.value = true
       const qs = mode === 'paper' ? `paper=${target}`
         : mode === 'course' ? `course=${target}`
-        : mode === 'kp' ? `kp=${target}` : `chapter=${target}`
+        : mode === 'kp' ? `kp=${target}`
+        : mode === 'single' ? `id=${target}` : `chapter=${target}`
       const r = await api.get<any>(`/api/questions?${qs}&size=20`)
       guestRows.value = r.rows ?? []
       if (!guestRows.value.length) throw new Error('该范围下没有题目')
@@ -110,7 +116,10 @@ function showGuest(i: number) {
     fill.value = saved.fill
   }
   question.value = { id: q.id, questionType: q.questionType, stem: q.stem, optionJson: q.optionJson,
-    score: q.score, blankCount: q.blankCount, itemOrder: i + 1, total: guestRows.value.length, answered: i }
+    score: q.score, blankCount: q.blankCount, imageUrl: q.imageUrl,
+    chapterId: q.chapterId, chapterCode: q.chapterCode, chapterName: q.chapterName,
+    chapterPath: q.chapterPath,
+    itemOrder: i + 1, total: guestRows.value.length, answered: i }
 }
 
 async function loadStatus() {
@@ -193,30 +202,52 @@ async function goNext() {
 
 async function submit() {
   const q = question.value
-  let payload = ''
-  if (q.questionType === 2) payload = multi.value.slice().sort().join(',')
-  else if (q.questionType === 4 || q.questionType === 5) payload = fill.value
-  else payload = answer.value
+  if (!q || feedback.value || submitting.value) return
+  submitting.value = true
+  try {
+    let payload = ''
+    if (q.questionType === 2) payload = multi.value.slice().sort().join(',')
+    else if (q.questionType === 4 || q.questionType === 5) payload = fill.value
+    else payload = answer.value
 
-  if (guest.value) {
-    const r = await api.post<any>('/api/guest/answer', { questionId: q.id, answer: payload })
-    feedback.value = r
-    review.value = { correct: r.correct, analysis: r.analysis }
-    guestState.value[guestIdx.value] = {
-      feedback: r, review: { correct: r.correct, analysis: r.analysis },
-      answer: answer.value, multi: [...multi.value], fill: fill.value,
+    if (guest.value) {
+      const r = await api.post<any>('/api/guest/answer', { questionId: q.id, answer: payload })
+      feedback.value = r
+      review.value = { correct: r.correct, analysis: r.analysis }
+      guestState.value[guestIdx.value] = {
+        feedback: r, review: { correct: r.correct, analysis: r.analysis },
+        answer: answer.value, multi: [...multi.value], fill: fill.value,
+      }
+    } else {
+      feedback.value = await api.post(`/api/practice/${sessionId.value}/answer`, { questionId: q.id, answer: payload })
+      review.value = await api.get(`/api/practice/${sessionId.value}/review/${q.id}`)
     }
-  } else {
-    feedback.value = await api.post(`/api/practice/${sessionId.value}/answer`, { questionId: q.id, answer: payload })
-    review.value = await api.get(`/api/practice/${sessionId.value}/review/${q.id}`)
-  }
 
-  if (feedback.value?.is_correct) {
-    correctHint.value = true
-    advanceTimer = setTimeout(() => { correctHint.value = false; goNext() }, 650)
-  } else {
-    wrongModal.value = true
+    // 单题练习不自动跳转，保留答题反馈
+    if (feedback.value?.is_correct && total.value > 1) {
+      correctHint.value = true
+      advanceTimer = setTimeout(() => { correctHint.value = false; goNext() }, 650)
+    } else if (!feedback.value?.is_correct) {
+      wrongModal.value = true
+    }
+  } finally {
+    submitting.value = false
   }
+}
+
+/** 键盘提交：选择题 Enter；填空/综合 Ctrl+Enter（普通 Enter 保留换行） */
+function onKeydown(e: KeyboardEvent) {
+  if (e.key !== 'Enter' || e.defaultPrevented) return
+  if (!question.value || feedback.value || submitting.value) return
+  const el = e.target as HTMLElement | null
+  const tag = el?.tagName
+  if (tag === 'BUTTON' || tag === 'A') return
+  if (tag === 'TEXTAREA') {
+    // 只处理答案输入框；反馈框等其他文本域不响应
+    if (el !== answerBox.value || !(e.ctrlKey || e.metaKey)) return
+  }
+  e.preventDefault()
+  submit()
 }
 
 async function askAi(guide = false) {
@@ -281,8 +312,15 @@ watch(() => question.value?.id, async (id) => {
   } catch { favorited.value = false }
 })
 
-onMounted(start)
-onUnmounted(() => { if (timer) clearInterval(timer) })
+onMounted(() => {
+  window.addEventListener('keydown', onKeydown)
+  start()
+})
+onUnmounted(() => {
+  window.removeEventListener('keydown', onKeydown)
+  if (timer) clearInterval(timer)
+  clearAdvance()
+})
 </script>
 
 <template>
@@ -336,7 +374,13 @@ onUnmounted(() => { if (timer) clearInterval(timer) })
       </p>
 
       <div class="rounded-xl border border-slate-200 p-5">
+        <p v-if="question.chapterPath || question.chapterName" class="mb-2 text-xs leading-5 text-slate-400">
+          所属章节：{{ question.chapterPath
+            || ((question.chapterCode ? question.chapterCode + ' ' : '') + question.chapterName) }}
+        </p>
         <p class="whitespace-pre-wrap text-base leading-7 text-slate-800">{{ formatText(question.stem) }}</p>
+        <img v-if="question.imageUrl" :src="question.imageUrl" alt="题目配图"
+             class="mt-3 max-h-80 w-auto rounded-lg border border-slate-200 object-contain" />
 
         <div v-if="relatedKps.length" class="mt-2 flex flex-wrap items-center gap-1.5">
           <span class="text-xs text-slate-400">相关知识点：</span>
@@ -378,14 +422,20 @@ onUnmounted(() => { if (timer) clearInterval(timer) })
         </div>
 
         <div v-else class="mt-4">
-          <textarea v-model="fill" :disabled="!!feedback" :rows="question.questionType === 5 ? 5 : 3"
+          <textarea ref="answerBox" v-model="fill" :disabled="!!feedback"
+                    :rows="question.questionType === 5 ? 5 : 3"
                     placeholder="多空用中文分号「；」分隔；程序题可直接按行输入"
                     class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
         </div>
 
-        <button v-if="!feedback" :disabled="!answer && !multi.length && !fill"
+        <button v-if="!feedback" :disabled="submitting"
                 class="mt-4 rounded-lg bg-blue-600 px-5 py-2 text-sm font-medium text-white disabled:opacity-40"
-                @click="submit">提交</button>
+                @click="submit">
+          {{ submitting ? '提交中…' : (!answer && !multi.length && !fill ? '不会，看答案' : '提交') }}
+        </button>
+        <p v-if="!feedback" class="mt-2 text-xs text-slate-400">
+          选择题按 Enter 提交；填空/综合按 Ctrl+Enter 提交；不填也能直接看答案
+        </p>
       </div>
 
       <div v-if="feedback" class="rounded-xl border p-5 text-sm"

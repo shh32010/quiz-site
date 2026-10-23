@@ -31,7 +31,7 @@ public class PracticeService {
     @Transactional
     public Map<String, Object> start(UUID uid, String mode, String target, int limit) {
         Integer targetId = switch (mode) {
-            case "chapter", "paper", "kp" -> {
+            case "chapter", "paper", "kp", "single" -> {
                 try {
                     yield Integer.valueOf(target);
                 } catch (NumberFormatException e) {
@@ -69,6 +69,20 @@ public class PracticeService {
                      order by case x.confidence when '高' then 0 when '中' then 1 else 2 end, x.question_id
                      limit ?
                     """, Integer.class, targetId, limit);
+            // 单题练习：从章节题目列表点进来
+            case "single" -> jdbc.queryForList("""
+                    select id from t_question
+                     where id = ? and not deleted and review_status = 'ok'
+                    """, Integer.class, targetId);
+            // 错题复习：按未掌握优先、复习时间排序
+            case "wrong" -> jdbc.queryForList("""
+                    select w.question_id
+                      from wrong_question w
+                      join t_question q on q.id = w.question_id
+                     where w.user_id = ? and not q.deleted and q.review_status = 'ok'
+                     order by w.resolved asc, w.next_review_at nulls last, w.question_id
+                     limit ?
+                    """, Integer.class, uid, limit);
             default -> throw new IllegalArgumentException("mode 非法: " + mode);
         };
         if (ids.isEmpty()) {
@@ -102,11 +116,26 @@ public class PracticeService {
         requireOwn(sessionId, uid);
         List<Map<String, Object>> rows = jdbc.queryForList("""
                 select q.id, q.question_type as "questionType", q.stem, q.option_json as "optionJson",
-                       q.score, q.blank_count as "blankCount", sq.item_order as "itemOrder",
+                       q.score, q.blank_count as "blankCount",
+                       (select substring(tc.content from '/qimg/[A-Za-z0-9._-]+')
+                          from t_text_content tc where tc.id = q.info_text_content_id) as "imageUrl",
+                       q.chapter_id as "chapterId",
+                       c.code as "chapterCode", c.name as "chapterName",
+                       (with recursive anc as (
+                          select c2.id, c2.parent_id, c2.code, c2.name, 0 as depth
+                            from t_chapter c2 where c2.id = q.chapter_id
+                          union all
+                          select p.id, p.parent_id, p.code, p.name, a.depth + 1
+                            from t_chapter p join anc a on p.id = a.parent_id
+                        )
+                        select string_agg(trim(coalesce(code, '') || ' ' || name), ' › ' order by depth desc)
+                          from anc) as "chapterPath",
+                       sq.item_order as "itemOrder",
                        (select count(*) from session_question x where x.session_id = sq.session_id) as "total",
                        (select count(*) from practice_answer a where a.session_id = sq.session_id) as "answered"
                   from session_question sq
                   join t_question q on q.id = sq.question_id
+                  left join t_chapter c on c.id = q.chapter_id
                   left join practice_answer a
                          on a.session_id = sq.session_id and a.question_id = sq.question_id
                  where sq.session_id = ? and a.id is null
@@ -124,12 +153,27 @@ public class PracticeService {
         requireOwn(sessionId, uid);
         List<Map<String, Object>> rows = jdbc.queryForList("""
                 select q.id, q.question_type as "questionType", q.stem, q.option_json as "optionJson",
-                       q.score, q.blank_count as "blankCount", sq.item_order as "itemOrder",
+                       q.score, q.blank_count as "blankCount",
+                       (select substring(tc.content from '/qimg/[A-Za-z0-9._-]+')
+                          from t_text_content tc where tc.id = q.info_text_content_id) as "imageUrl",
+                       q.chapter_id as "chapterId",
+                       c.code as "chapterCode", c.name as "chapterName",
+                       (with recursive anc as (
+                          select c2.id, c2.parent_id, c2.code, c2.name, 0 as depth
+                            from t_chapter c2 where c2.id = q.chapter_id
+                          union all
+                          select p.id, p.parent_id, p.code, p.name, a.depth + 1
+                            from t_chapter p join anc a on p.id = a.parent_id
+                        )
+                        select string_agg(trim(coalesce(code, '') || ' ' || name), ' › ' order by depth desc)
+                          from anc) as "chapterPath",
+                       sq.item_order as "itemOrder",
                        (select count(*) from session_question x where x.session_id = sq.session_id) as "total",
                        (a.id is not null) as "answered", a.user_answer as "userAnswer",
                        a.is_correct as "isCorrect", a.score_got as "scoreGot"
                   from session_question sq
                   join t_question q on q.id = sq.question_id
+                  left join t_chapter c on c.id = q.chapter_id
                   left join practice_answer a
                          on a.session_id = sq.session_id and a.question_id = sq.question_id
                  where sq.session_id = ? and sq.item_order = ?

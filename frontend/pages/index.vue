@@ -207,5 +207,6 @@ const entries = [
         </li>
       </ul>
     </div>
+
   </section>
 </template>

@@ -16,22 +16,26 @@ const TYPE_LABEL: Record<number, string> = { 1: '单选', 2: '多选', 3: '判�
   <section class="space-y-4">
     <NuxtLink to="/chapters" class="text-sm text-blue-600 hover:underline">← 返回章节</NuxtLink>
     <h1 class="text-xl font-bold text-slate-900">章节题目</h1>
-    <div class="flex items-center gap-3">
+    <div class="flex flex-wrap items-center gap-3">
       <p class="text-sm text-slate-500">共 {{ data?.total ?? 0 }} 题</p>
       <NuxtLink :to="`/practice?mode=chapter&target=${chapterId}`"
                 class="rounded-lg bg-blue-600 px-4 py-1.5 text-sm font-medium text-white">
         开始练习
       </NuxtLink>
+      <span class="text-xs text-slate-400">点击任意题目可直接做这一题</span>
     </div>
 
     <ul class="divide-y divide-slate-100 rounded-xl border border-slate-200">
-      <li v-for="q in data?.rows ?? []" :key="q.id" class="flex items-start gap-3 px-5 py-3">
-        <span class="mt-0.5 shrink-0 rounded bg-slate-100 px-1.5 py-0.5 text-xs text-slate-600">
-          {{ TYPE_LABEL[q.questionType] ?? q.questionType }}
-        </span>
-        <span class="min-w-0 flex-1 text-sm leading-6 text-slate-800">{{ formatText(q.stem) }}</span>
-        <span v-if="q.hasImage" class="shrink-0 text-xs text-slate-400">含图</span>
-        <span class="shrink-0 text-xs text-slate-400">#{{ q.id }}</span>
+      <li v-for="q in data?.rows ?? []" :key="q.id">
+        <NuxtLink :to="`/practice?mode=single&target=${q.id}`" title="点击做这道题"
+                  class="flex items-start gap-3 px-5 py-3 hover:bg-blue-50/60">
+          <span class="mt-0.5 shrink-0 rounded bg-slate-100 px-1.5 py-0.5 text-xs text-slate-600">
+            {{ TYPE_LABEL[q.questionType] ?? q.questionType }}
+          </span>
+          <span class="min-w-0 flex-1 text-sm leading-6 text-slate-800">{{ formatText(q.stem) }}</span>
+          <span v-if="q.hasImage" class="shrink-0 text-xs text-slate-400">含图</span>
+          <span class="shrink-0 text-xs font-medium text-blue-600">做这题 →</span>
+        </NuxtLink>
       </li>
       <li v-if="!(data?.rows ?? []).length" class="px-5 py-6 text-sm text-slate-500">本章暂无题目。</li>
     </ul>

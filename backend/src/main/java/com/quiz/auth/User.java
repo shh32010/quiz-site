@@ -24,6 +24,9 @@ public class User {
 
     private String username;
 
+    /** 登录/找回密码用，唯一（不区分大小写），可为空 */
+    private String email;
+
     private String nickname;
 
     @Column(name = "avatar_url")
@@ -33,6 +36,10 @@ public class User {
 
     @Column(name = "password_hash")
     private String passwordHash;
+
+    /** 令牌版本：改密/重置时 +1，旧 token 立即失效 */
+    @Column(name = "token_version")
+    private Integer tokenVersion = 0;
 
     @Column(name = "created_at")
     private OffsetDateTime createdAt;

@@ -22,3 +22,7 @@ Thumbs.db
 *.log
 *.tmp
 /backups/
+
+# Python 缓存
+__pycache__/
+*.pyc

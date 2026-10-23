@@ -30,33 +30,29 @@ public class JwtService {
         this.expireSeconds = expireSeconds;
     }
 
+    /** 令牌解析结果；version 用于改密后强制旧 token 失效 */
+    public record TokenInfo(UUID uid, String role, int version) {}
+
     public String issue(User user) {
         Instant now = Instant.now();
         return Jwts.builder()
                 .subject(user.getId().toString())
                 .claim("username", user.getUsername())
                 .claim("role", user.getRole())
+                .claim("ver", user.getTokenVersion() == null ? 0 : user.getTokenVersion())
                 .issuedAt(Date.from(now))
                 .expiration(Date.from(now.plusSeconds(expireSeconds)))
                 .signWith(key)
                 .compact();
     }
 
-    /** 校验并返回用户 id；无效则返回 null */
-    public UUID parseSubject(String token) {
+    /** 校验并解析令牌；无效返回 null。旧 token 没有 ver 字段，按 0 处理 */
+    public TokenInfo parse(String token) {
         try {
             Claims c = Jwts.parser().verifyWith(key).build().parseSignedClaims(token).getPayload();
-            return UUID.fromString(c.getSubject());
-        } catch (Exception e) {
-            return null;
-        }
-    }
-
-    /** 取角色（user / admin），无效返回 null */
-    public String parseRole(String token) {
-        try {
-            Claims c = Jwts.parser().verifyWith(key).build().parseSignedClaims(token).getPayload();
-            return c.get("role", String.class);
+            Integer ver = c.get("ver", Integer.class);
+            return new TokenInfo(UUID.fromString(c.getSubject()), c.get("role", String.class),
+                    ver == null ? 0 : ver);
         } catch (Exception e) {
             return null;
         }

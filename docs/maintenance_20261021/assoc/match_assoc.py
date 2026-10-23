@@ -18,13 +18,17 @@ from pathlib import Path
 
 sys.stdout.reconfigure(encoding='utf-8', errors='replace')
 BASE = Path(__file__).resolve().parent
-KPS = {k['id']: k for k in json.loads((BASE / 'kps_no_q.json').read_text(encoding='utf-8'))}
+KPS_NO_Q = {k['id']: k for k in json.loads((BASE / 'kps_no_q.json').read_text(encoding='utf-8'))}
+KPS_ALL = {k['id']: k for k in json.loads((BASE / 'all_kps.json').read_text(encoding='utf-8'))}
 QS = {q['id']: q for q in json.loads((BASE / 'questions_no_kp.json').read_text(encoding='utf-8'))}
 KP_CAND = {int(k): v for k, v in json.loads((BASE / 'kp_candidates.json').read_text(encoding='utf-8')).items()}
 Q_CAND = {int(k): v for k, v in json.loads((BASE / 'q_candidates.json').read_text(encoding='utf-8')).items()}
 NODE = shutil.which('node')
 CB_BIN = r'D:\Program Files\nodejs\node_global\node_modules\@tencent-ai\codebuddy-code\bin\codebuddy'
 MODEL = 'deepseek-v4.1-flash'
+OC_EXE = r'D:\Program Files\nodejs\node_global\node_modules\opencode-ai\bin\opencode.exe'
+OC_MODEL = 'opencode/deepseek-v4.1-flash-free'
+CHANNEL = 'buddy'
 
 SYS_KP = """你是江苏专转本计算机题库的审题专家。给定一个知识点和若干候选题，选出真正考查该知识点的题目。
 只能从候选 id 中选，最多 3 个；都不相关就返回空数组。只输出 JSON：{"ids":[1,2],"confidence":"high|medium|low"}"""
@@ -34,14 +38,19 @@ SYS_Q = """你是江苏专转本计算机题库的审题专家。给定一道题
 
 def call(system, prompt, timeout=300):
     full = system + '\n\n' + prompt
-    env = {k: v for k, v in os.environ.items()
-           if k.lower() not in ('https_proxy', 'http_proxy', 'all_proxy')}
-    r = subprocess.run([NODE, CB_BIN, '-p', '--model', MODEL, '--tools', '',
-                        '--no-session-persistence'],
-                       input=full.encode('utf-8'), capture_output=True, timeout=timeout, env=env)
+    if CHANNEL == 'opencode':
+        r = subprocess.run([OC_EXE, 'run', '-m', OC_MODEL],
+                           input=full.encode('utf-8'), capture_output=True, timeout=timeout)
+        out = re.sub(r'\x1b\[[0-9;]*m', '', (r.stdout or b'').decode('utf-8', 'replace')).strip()
+    else:
+        env = {k: v for k, v in os.environ.items()
+               if k.lower() not in ('https_proxy', 'http_proxy', 'all_proxy')}
+        r = subprocess.run([NODE, CB_BIN, '-p', '--model', MODEL, '--tools', '',
+                            '--no-session-persistence'],
+                           input=full.encode('utf-8'), capture_output=True, timeout=timeout, env=env)
+        out = (r.stdout or b'').decode('utf-8', 'replace').strip()
     if r.returncode != 0:
-        raise RuntimeError('buddy exit %s' % r.returncode)
-    out = (r.stdout or b'').decode('utf-8', 'replace').strip()
+        raise RuntimeError('%s exit %s' % (CHANNEL, r.returncode))
     if out.startswith('```'):
         out = re.sub(r'^```[a-zA-Z]*\s*|\s*```$', '', out)
     m = re.search(r'\{.*\}', out, re.S)
@@ -63,7 +72,7 @@ def prompt_q(q):
     lines = ['【题目】', '题干：%s' % (q.get('stem') or '')[:600],
              '答案：%s' % (q.get('correct') or ''), '', '【候选知识点】']
     for kid in Q_CAND.get(q['id'], []):
-        k = KPS[kid]
+        k = KPS_ALL[kid]
         lines.append('[%s] %s' % (kid, k.get('title') or ''))
     lines.append('')
     lines.append('选出这道题真正考查的知识点 id（最多 3 个，没有就空数组），只输出 JSON。')
@@ -73,11 +82,14 @@ def prompt_q(q):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--task', choices=['kp', 'q'], required=True)
+    ap.add_argument('--channel', choices=['buddy', 'opencode'], default='buddy')
     ap.add_argument('--concurrency', type=int, default=6)
     args = ap.parse_args()
+    global CHANNEL
+    CHANNEL = args.channel
 
     if args.task == 'kp':
-        items = list(KPS.values())
+        items = list(KPS_NO_Q.values())
         cand = KP_CAND
         system, prompt, out_file = SYS_KP, prompt_kp, BASE / 'kp_match_results.jsonl'
     else:
@@ -89,11 +101,14 @@ def main():
     if out_file.exists():
         for line in out_file.read_text(encoding='utf-8').splitlines():
             try:
-                done.add(json.loads(line)['id'])
+                r = json.loads(line)
+                # fallback / error 的结果不算完成，下次重跑
+                if not r.get('error') and r.get('confidence') != 'fallback':
+                    done.add(r['id'])
             except Exception:  # noqa: BLE001
                 pass
     todo = [x for x in items if x['id'] not in done and cand.get(x['id'])]
-    print('待跑 %d | 已完成 %d | task %s' % (len(todo), len(done), args.task))
+    print('待跑 %d | 已完成 %d | task %s | channel %s' % (len(todo), len(done), args.task, args.channel))
 
     lock = __import__('threading').Lock()
     t0 = time.time()

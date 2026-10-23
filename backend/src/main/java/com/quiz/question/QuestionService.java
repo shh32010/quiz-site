@@ -23,7 +23,21 @@ public class QuestionService {
     private static final String COLS = """
             id, question_type as "questionType", stem, option_json as "optionJson", score,
             blank_count as "blankCount", has_image as "hasImage",
-            chapter_id as "chapterId", cat_l1 as "catL1"
+            chapter_id as "chapterId", cat_l1 as "catL1",
+            (select c.code from t_chapter c where c.id = v_question_public.chapter_id) as "chapterCode",
+            (select c.name from t_chapter c where c.id = v_question_public.chapter_id) as "chapterName",
+            (with recursive anc as (
+               select c.id, c.parent_id, c.code, c.name, 0 as depth
+                 from t_chapter c where c.id = v_question_public.chapter_id
+               union all
+               select p.id, p.parent_id, p.code, p.name, a.depth + 1
+                 from t_chapter p join anc a on p.id = a.parent_id
+             )
+             select string_agg(trim(coalesce(code, '') || ' ' || name), ' › ' order by depth desc)
+               from anc) as "chapterPath",
+            (select substring(tc.content from '/qimg/[A-Za-z0-9._-]+')
+               from t_question tq join t_text_content tc on tc.id = tq.info_text_content_id
+              where tq.id = v_question_public.id) as "imageUrl"
             """;
 
     /** 题干关键词搜索（pg_trgm 索引加速）；可按知识点过滤 */
@@ -50,9 +64,9 @@ public class QuestionService {
         return Map.of("total", total == null ? 0 : total, "page", page, "size", size, "rows", rows);
     }
 
-    /** 某章节（含全部子孙）/ 课程 / 试卷 / 知识点下的题 */
+    /** 某章节（含全部子孙）/ 课程 / 试卷 / 知识点下的题；id 用于单题练习（游客） */
     public Map<String, Object> page(Integer chapterId, String course, Integer paperId,
-                                    Integer kpId, int page, int size) {
+                                    Integer kpId, Integer questionId, int page, int size) {
         int offset = Math.max(0, (page - 1) * size);
         List<Object> args = new ArrayList<>();
         String where = "where review_status = 'ok'";
@@ -80,6 +94,10 @@ public class QuestionService {
         if (kpId != null) {
             where += " and id in (select question_id from t_question_kp where kp_id = ?)";
             args.add(kpId);
+        }
+        if (questionId != null) {
+            where += " and id = ?";
+            args.add(questionId);
         }
 
         Integer total = jdbc.queryForObject(

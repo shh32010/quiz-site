@@ -37,10 +37,11 @@ public class QuestionController {
                                     @RequestParam(required = false) String course,
                                     @RequestParam(required = false) Integer paper,
                                     @RequestParam(required = false) Integer kp,
+                                    @RequestParam(required = false) Integer id,
                                     @RequestParam(defaultValue = "1") int page,
                                     @RequestParam(defaultValue = "50") int size) {
         int safeSize = Math.min(Math.max(size, 1), 200);
-        return questionService.page(chapter, course, paper, kp, Math.max(page, 1), safeSize);
+        return questionService.page(chapter, course, paper, kp, id, Math.max(page, 1), safeSize);
     }
 
     /** 一道题关联的知识点：GET /api/questions/123/knowledge */
