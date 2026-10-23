@@ -80,20 +80,23 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--task', choices=['kp', 'quarantine', 'answer'], required=True)
     ap.add_argument('--concurrency', type=int, default=8)
+    ap.add_argument('--items', help='输入 JSON（默认按 task 取内置文件名）')
+    ap.add_argument('--out', help='输出 JSONL（默认按 task 取内置文件名）')
     args = ap.parse_args()
 
     if args.task == 'kp':
-        items = json.loads((BASE / 'kp_items.json').read_text(encoding='utf-8'))
-        prompt = prompt_kp
-        out_file = BASE / 'kp_results.jsonl'
+        items_file, prompt, default_out = BASE / 'kp_items.json', prompt_kp, 'kp_results.jsonl'
     elif args.task == 'quarantine':
-        items = json.loads((BASE / 'quarantine_items.json').read_text(encoding='utf-8'))
-        prompt = prompt_quarantine
-        out_file = BASE / 'quarantine_results.jsonl'
+        items_file, prompt, default_out = BASE / 'quarantine_items.json', prompt_quarantine, 'quarantine_results.jsonl'
     else:
-        items = json.loads((BASE / 'answer_items.json').read_text(encoding='utf-8'))
-        prompt = prompt_answer
-        out_file = BASE / 'answer_results.jsonl'
+        items_file, prompt, default_out = BASE / 'answer_items.json', prompt_answer, 'answer_results.jsonl'
+
+    if args.items:
+        items_file = Path(args.items) if Path(args.items).is_absolute() else BASE / args.items
+    items = json.loads(items_file.read_text(encoding='utf-8'))
+    out_file = Path(args.out) if args.out else BASE / default_out
+    if not out_file.is_absolute():
+        out_file = BASE / out_file
 
     done = set()
     if out_file.exists():

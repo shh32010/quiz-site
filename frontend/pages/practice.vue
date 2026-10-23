@@ -328,7 +328,7 @@ onUnmounted(() => {
     <p v-if="error" class="text-sm text-red-600">{{ error }}</p>
 
     <div v-if="guest" class="rounded-lg border border-amber-300 bg-amber-50 px-4 py-2 text-xs text-amber-800">
-      游客模式：可以试做，但**进度不会保存**。
+      游客模式：可以试做，但<b>进度不会保存</b>。
       <NuxtLink to="/login" class="ml-1 underline">登录/注册</NuxtLink> 后可记录错题与学习报告。
     </div>
 
