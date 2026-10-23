@@ -36,8 +36,9 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         if (header != null && header.startsWith("Bearer ")) {
             String token = header.substring(7);
             JwtService.TokenInfo info = jwtService.parse(token);
-            if (info != null && versionMatches(info)) {
-                String authority = "admin".equals(info.role()) ? "ROLE_ADMIN" : "ROLE_USER";
+            String role = info == null ? null : currentRole(info);
+            if (role != null) {
+                String authority = "admin".equals(role) ? "ROLE_ADMIN" : "ROLE_USER";
                 var auth = new UsernamePasswordAuthenticationToken(
                         info.uid(), null, List.of(new SimpleGrantedAuthority(authority)));
                 SecurityContextHolder.getContext().setAuthentication(auth);
@@ -46,10 +47,21 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         chain.doFilter(req, res);
     }
 
-    /** 比对数据库中的 token_version；用户不存在或版本不一致都视为未登录 */
-    private boolean versionMatches(JwtService.TokenInfo info) {
-        List<Integer> rows = jdbc.queryForList(
-                "select coalesce(token_version, 0) from profiles where id = ?", Integer.class, info.uid());
-        return !rows.isEmpty() && rows.get(0) == info.version();
+    /**
+     * 用数据库中的 role + token_version 校验；
+     * 角色变更立即生效，用户不存在或版本不一致都视为未登录。
+     */
+    private String currentRole(JwtService.TokenInfo info) {
+        List<java.util.Map<String, Object>> rows = jdbc.queryForList(
+                "select role, coalesce(token_version, 0) as ver from profiles where id = ?", info.uid());
+        if (rows.isEmpty()) {
+            return null;
+        }
+        Object ver = rows.get(0).get("ver");
+        if (!(ver instanceof Number) || ((Number) ver).intValue() != info.version()) {
+            return null;
+        }
+        Object role = rows.get(0).get("role");
+        return role == null ? "user" : role.toString();
     }
 }

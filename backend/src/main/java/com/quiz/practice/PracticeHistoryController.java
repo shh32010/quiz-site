@@ -95,7 +95,10 @@ public class PracticeHistoryController {
                        q.question_type as "questionType", q.stem, q.score,
                        q.blank_count as "blankCount", q.correct, q.analysis,
                        (select substring(tc.content from '/qimg/[A-Za-z0-9._-]+')
-                          from t_text_content tc where tc.id = q.info_text_content_id) as "imageUrl"
+                          from t_text_content tc where tc.id = q.info_text_content_id) as "imageUrl",
+                       (select string_agg(m[1], ',')
+                          from t_text_content tc, regexp_matches(tc.content, '(/qimg/[A-Za-z0-9._-]+)', 'g') m
+                         where tc.id = q.info_text_content_id) as "imageUrls"
                   from practice_answer a
                   join t_question q on q.id = a.question_id
                  where a.session_id = ? and a.user_id = ?

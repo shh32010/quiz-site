@@ -62,7 +62,7 @@ quiz:
   mail:
     from: ${QUIZ_MAIL_FROM:}         # 发信地址，如 noreply@mail.teacher-wishes.asia
   cors:
-    allowed-origins: ${QUIZ_CORS:http://localhost:3000}
+    allowed-origins: ${QUIZ_CORS:https://101-37-14-222.sslip.io,https://*.teacher-wishes.asia,http://101.37.14.222,http://localhost:3000}
   ai:
     base-url: ${QUIZ_AI_URL:https://api.deepseek.com}
     key: ${QUIZ_AI_KEY:${DEEPSEEK_API_KEY:}}
@@ -76,6 +76,10 @@ management:
   endpoint:
     health:
       show-details: always
+  health:
+    # 未配置 SMTP 时不要让 /actuator/health 因 mail 一直 DOWN
+    mail:
+      enabled: ${QUIZ_MAIL_HEALTH:false}
 
 logging:
   level:

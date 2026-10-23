@@ -37,7 +37,11 @@ public class QuestionService {
                from anc) as "chapterPath",
             (select substring(tc.content from '/qimg/[A-Za-z0-9._-]+')
                from t_question tq join t_text_content tc on tc.id = tq.info_text_content_id
-              where tq.id = v_question_public.id) as "imageUrl"
+              where tq.id = v_question_public.id) as "imageUrl",
+            (select string_agg(m[1], ',')
+               from t_question tq join t_text_content tc on tc.id = tq.info_text_content_id,
+                    regexp_matches(tc.content, '(/qimg/[A-Za-z0-9._-]+)', 'g') m
+              where tq.id = v_question_public.id) as "imageUrls"
             """;
 
     /** 题干关键词搜索（pg_trgm 索引加速）；可按知识点过滤 */
@@ -103,11 +107,16 @@ public class QuestionService {
         Integer total = jdbc.queryForObject(
                 "select count(*) from v_question_public " + where, Integer.class, args.toArray());
 
+        // 真题按卷面顺序；其他按 id
+        String orderBy = paperId == null ? " order by id "
+                : (" order by (select e.item_order from exam_paper_question e"
+                        + " where e.paper_id = %d and e.question_id = v_question_public.id and e.is_active)"
+                        + " nulls last, id ").formatted(paperId);
         args.add(size);
         args.add(offset);
         List<Map<String, Object>> rows = jdbc.queryForList(
                 "select " + COLS + " from v_question_public " + where
-                        + " order by id limit ? offset ?", args.toArray());
+                        + orderBy + " limit ? offset ?", args.toArray());
 
         return Map.of("total", total == null ? 0 : total, "page", page, "size", size, "rows", rows);
     }

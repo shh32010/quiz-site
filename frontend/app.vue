@@ -3,7 +3,17 @@
 const api = useApi()
 const loggedIn = useState('logged_in', () => false)
 
-onMounted(() => { loggedIn.value = api.hasToken() })
+function onAuthExpired() {
+  loggedIn.value = false
+}
+
+onMounted(() => {
+  loggedIn.value = api.hasToken()
+  window.addEventListener('quiz-auth-expired', onAuthExpired)
+})
+onUnmounted(() => {
+  window.removeEventListener('quiz-auth-expired', onAuthExpired)
+})
 
 function logout() {
   api.clearToken()

@@ -34,6 +34,11 @@ function fmtDur(sec: number) {
   return m > 0 ? `${m} 分 ${s} 秒` : `${s} 秒`
 }
 
+function imgs(a: any): string[] {
+  const raw = a?.imageUrls || a?.imageUrl || ''
+  return String(raw).split(',').map(s => s.trim()).filter(Boolean)
+}
+
 async function load(p = page.value) {
   loading.value = true
   error.value = ''
@@ -73,7 +78,13 @@ onMounted(() => load(1))
         <p v-if="session.finishedAt" class="mt-2 text-sm text-slate-700">
           得分 <b class="text-blue-600">{{ session.score }}</b> / {{ session.totalScore }}
         </p>
-        <p v-else class="mt-2 text-sm text-amber-600">本次练习尚未结束</p>
+        <div v-else class="mt-2 flex items-center gap-3">
+          <p class="text-sm text-amber-600">本次练习尚未结束</p>
+          <NuxtLink :to="`/practice?session=${session.id}`"
+                    class="rounded-lg bg-blue-600 px-3 py-1 text-xs font-medium text-white">
+            继续练习
+          </NuxtLink>
+        </div>
       </div>
 
       <ul v-if="rows.length" class="space-y-3">
@@ -91,7 +102,7 @@ onMounted(() => load(1))
           </div>
 
           <p class="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-800">{{ formatText(a.stem) }}</p>
-          <img v-if="a.imageUrl" :src="a.imageUrl" alt="题目配图"
+          <img v-for="(src, i) in imgs(a)" :key="i" :src="src" alt="题目配图"
                class="mt-2 max-h-60 w-auto rounded-lg border border-slate-200 object-contain" />
 
           <div class="mt-3 grid gap-2 text-sm sm:grid-cols-2">

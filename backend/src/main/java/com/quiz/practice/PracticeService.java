@@ -60,8 +60,9 @@ public class PracticeService {
                     select e.question_id from exam_paper_question e
                       join t_question q on q.id = e.question_id
                      where e.paper_id = ? and e.is_active and not q.deleted
-                     order by e.item_order limit ?
-                    """, Integer.class, targetId, limit);
+                       and q.review_status = 'ok'
+                     order by e.item_order limit 500
+                    """, Integer.class, targetId);
             case "kp" -> jdbc.queryForList("""
                     select x.question_id from t_question_kp x
                       join t_question q on q.id = x.question_id
@@ -81,8 +82,8 @@ public class PracticeService {
                       join t_question q on q.id = w.question_id
                      where w.user_id = ? and not q.deleted and q.review_status = 'ok'
                      order by w.resolved asc, w.next_review_at nulls last, w.question_id
-                     limit ?
-                    """, Integer.class, uid, limit);
+                     limit 500
+                    """, Integer.class, uid);
             default -> throw new IllegalArgumentException("mode 非法: " + mode);
         };
         if (ids.isEmpty()) {
@@ -119,6 +120,9 @@ public class PracticeService {
                        q.score, q.blank_count as "blankCount",
                        (select substring(tc.content from '/qimg/[A-Za-z0-9._-]+')
                           from t_text_content tc where tc.id = q.info_text_content_id) as "imageUrl",
+                       (select string_agg(m[1], ',')
+                          from t_text_content tc, regexp_matches(tc.content, '(/qimg/[A-Za-z0-9._-]+)', 'g') m
+                         where tc.id = q.info_text_content_id) as "imageUrls",
                        q.chapter_id as "chapterId",
                        c.code as "chapterCode", c.name as "chapterName",
                        (with recursive anc as (
@@ -156,6 +160,9 @@ public class PracticeService {
                        q.score, q.blank_count as "blankCount",
                        (select substring(tc.content from '/qimg/[A-Za-z0-9._-]+')
                           from t_text_content tc where tc.id = q.info_text_content_id) as "imageUrl",
+                       (select string_agg(m[1], ',')
+                          from t_text_content tc, regexp_matches(tc.content, '(/qimg/[A-Za-z0-9._-]+)', 'g') m
+                         where tc.id = q.info_text_content_id) as "imageUrls",
                        q.chapter_id as "chapterId",
                        c.code as "chapterCode", c.name as "chapterName",
                        (with recursive anc as (
@@ -196,18 +203,41 @@ public class PracticeService {
     /** 提交作答并判分；返回 is_correct / score_got / max_score */
     @Transactional
     public Map<String, Object> submit(long sessionId, int questionId, String answer, UUID uid) {
+        // 只允许提交当前会话内的可练习题，防止借任意 questionId 套取答案解析
+        Integer inSession = jdbc.queryForObject("""
+                select count(*)
+                  from session_question sq
+                  join t_question q on q.id = sq.question_id
+                 where sq.session_id = ? and sq.question_id = ?
+                   and not q.deleted and q.review_status = 'ok'
+                """, Integer.class, sessionId, questionId);
+        if (inSession == null || inSession == 0) {
+            throw new IllegalArgumentException("题目不属于当前会话");
+        }
         bindUser(uid);
         String json = jdbc.queryForObject("select submit_answer(?, ?, ?)::text",
                 String.class, sessionId, questionId, answer);
         return readJson(json);
     }
 
-    /** 交卷 */
+    /** 交卷：总分按整卷/整个会话的题目分值计算，未作答的题也计入分母 */
     @Transactional
     public Map<String, Object> finish(long sessionId, UUID uid) {
         bindUser(uid);
-        String json = jdbc.queryForObject("select finish_session(?)::text", String.class, sessionId);
-        return readJson(json);
+        Integer totalScore = jdbc.queryForObject("""
+                select coalesce(sum(q.score), 0)
+                  from session_question sq
+                  join t_question q on q.id = sq.question_id
+                 where sq.session_id = ?
+                """, Integer.class, sessionId);
+        String json = jdbc.queryForObject("select finish_session(?, ?)::text",
+                String.class, sessionId, totalScore);
+        Map<String, Object> result = readJson(json);
+        // finish_session 返回的是已答题数；这里改成会话总题数，避免“共 1 题”的误导
+        Integer totalQuestions = jdbc.queryForObject(
+                "select count(*) from session_question where session_id = ?", Integer.class, sessionId);
+        result.put("question_count", totalQuestions == null ? 0 : totalQuestions);
+        return result;
     }
 
     /** 会话状态：计时以服务端 started_at 为准 */

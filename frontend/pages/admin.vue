@@ -36,8 +36,11 @@ async function load() {
 async function resetByName() {
   resetError.value = ''
   resetResult.value = null
+  const name = resetUser.value.trim()
+  if (!name) { resetError.value = '请输入用户名'; return }
+  if (!confirm(`确定为「${name}」生成临时密码？该用户所有设备会被踢下线。`)) return
   try {
-    resetResult.value = await api.post('/api/admin/password-resets/reset', { username: resetUser.value.trim() })
+    resetResult.value = await api.post('/api/admin/password-resets/reset', { username: name })
     await load()
   } catch (e: any) {
     resetError.value = e.message

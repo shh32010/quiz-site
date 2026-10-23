@@ -15,9 +15,16 @@ export function useApi() {
     if (t) headers.Authorization = `Bearer ${t}`
     const res = await fetch(path, { ...opts, headers })
     const text = await res.text()
-    const data = text ? JSON.parse(text) : null
+    let data: any = null
+    try { data = text ? JSON.parse(text) : null } catch { data = null }
+    if (res.status === 401) {
+      try { localStorage.removeItem('quiz_token') } catch { /* 忽略 */ }
+      if (typeof window !== 'undefined') window.dispatchEvent(new Event('quiz-auth-expired'))
+    }
     if (!res.ok) {
-      throw new Error(data?.message ?? `请求失败 (${res.status})`)
+      const msg = data?.message
+        ?? (res.status === 401 ? '登录已过期，请重新登录' : `请求失败 (${res.status})`)
+      throw new Error(msg)
     }
     return data as T
   }

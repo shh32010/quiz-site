@@ -5,11 +5,13 @@ set -u
 DIR=/opt/quiz-backups
 mkdir -p $DIR
 chown postgres:postgres $DIR 2>/dev/null
+chmod 700 $DIR 2>/dev/null
 LOG=/var/log/quiz-backup.log
 TS=$(date +%Y%m%d-%H%M)
 echo "[$(date '+%F %T')] 开始 pg_dump" >> $LOG
 sudo -u postgres pg_dump -d quiz -Fc -f $DIR/quiz-$TS.dump >> $LOG 2>&1
 if [ $? -eq 0 ]; then
+  chmod 600 $DIR/quiz-$TS.dump 2>/dev/null
   echo "[$(date '+%F %T')] 完成: quiz-$TS.dump ($(du -h $DIR/quiz-$TS.dump | cut -f1))" >> $LOG
 else
   echo "[$(date '+%F %T')] 失败" >> $LOG
@@ -20,6 +22,7 @@ find $DIR -name 'quiz-2*.dump' -mtime +14 -delete 2>/dev/null
 if [ "$(date +%u)" = "7" ]; then
   tar -czf $DIR/assets-$TS.tar.gz -C /opt quiz-assets >> $LOG 2>&1
   if [ $? -eq 0 ]; then
+    chmod 600 $DIR/assets-$TS.tar.gz 2>/dev/null
     echo "[$(date '+%F %T')] 图片备份完成: assets-$TS.tar.gz ($(du -h $DIR/assets-$TS.tar.gz | cut -f1))" >> $LOG
   else
     echo "[$(date '+%F %T')] 图片备份失败" >> $LOG

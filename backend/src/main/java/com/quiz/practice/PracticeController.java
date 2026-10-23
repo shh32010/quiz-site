@@ -1,7 +1,9 @@
 package com.quiz.practice;
 
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -15,9 +17,11 @@ import java.util.UUID;
 @RequestMapping("/api/practice")
 public class PracticeController {
 
-    public record StartReq(String mode, String target, Integer limit) {}
+    public record StartReq(@NotBlank(message = "mode 不能为空") String mode,
+                           String target, Integer limit) {}
 
-    public record AnswerReq(Integer questionId, String answer) {}
+    public record AnswerReq(@NotNull(message = "questionId 不能为空") Integer questionId,
+                            @Size(max = 10000, message = "答案过长") String answer) {}
 
     private final PracticeService practice;
 
@@ -26,7 +30,7 @@ public class PracticeController {
     }
 
     @PostMapping("/start")
-    public Map<String, Object> start(@AuthenticationPrincipal UUID uid, @RequestBody StartReq req) {
+    public Map<String, Object> start(@AuthenticationPrincipal UUID uid, @Valid @RequestBody StartReq req) {
         int limit = req.limit() == null ? 200 : Math.min(Math.max(req.limit(), 1), 500);
         return practice.start(uid, req.mode(), req.target(), limit);
     }
@@ -45,7 +49,7 @@ public class PracticeController {
 
     @PostMapping("/{sessionId}/answer")
     public Map<String, Object> answer(@AuthenticationPrincipal UUID uid, @PathVariable long sessionId,
-                                      @RequestBody AnswerReq req) {
+                                      @Valid @RequestBody AnswerReq req) {
         return practice.submit(sessionId, req.questionId(), req.answer() == null ? "" : req.answer(), uid);
     }
 
@@ -65,8 +69,4 @@ public class PracticeController {
         return practice.review(sessionId, questionId, uid);
     }
 
-    @ExceptionHandler({IllegalArgumentException.class, IllegalStateException.class})
-    public ResponseEntity<Map<String, String>> handle(RuntimeException e) {
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", e.getMessage()));
-    }
 }

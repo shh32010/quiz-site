@@ -1,6 +1,7 @@
 package com.quiz.config;
 
 import com.quiz.auth.JwtAuthFilter;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -14,6 +15,7 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -29,11 +31,24 @@ public class SecurityConfig {
     }
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http, JwtAuthFilter jwtFilter) throws Exception {
+    public SecurityFilterChain filterChain(HttpSecurity http, JwtAuthFilter jwtFilter,
+                                           @Value("${quiz.cors.allowed-origins:}") String allowedOrigins)
+            throws Exception {
         http
             .csrf(AbstractHttpConfigurer::disable)
-            .cors(c -> c.configurationSource(corsSource()))
+            .cors(c -> c.configurationSource(corsSource(allowedOrigins)))
             .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .exceptionHandling(e -> e
+                .authenticationEntryPoint((req, res, ex) -> {
+                    res.setStatus(401);
+                    res.setContentType("application/json;charset=UTF-8");
+                    res.getWriter().write("{\"message\":\"未登录或登录已过期\"}");
+                })
+                .accessDeniedHandler((req, res, ex) -> {
+                    res.setStatus(403);
+                    res.setContentType("application/json;charset=UTF-8");
+                    res.getWriter().write("{\"message\":\"无权访问\"}");
+                }))
             .authorizeHttpRequests(auth -> auth
                 // 公开
                 .requestMatchers("/api/health", "/api/auth/**", "/actuator/**").permitAll()
@@ -50,9 +65,17 @@ public class SecurityConfig {
         return http.build();
     }
 
-    private CorsConfigurationSource corsSource() {
+    private CorsConfigurationSource corsSource(String allowedOrigins) {
+        List<String> patterns = allowedOrigins == null ? List.of()
+                : Arrays.stream(allowedOrigins.split(",")).map(String::trim)
+                        .filter(s -> !s.isEmpty()).toList();
+        if (patterns.isEmpty()) {
+            // 默认只允许本站已知入口，避免任意 Origin 携带凭证访问
+            patterns = List.of("https://101-37-14-222.sslip.io", "https://*.teacher-wishes.asia",
+                    "http://101.37.14.222", "http://localhost:3000");
+        }
         CorsConfiguration cfg = new CorsConfiguration();
-        cfg.setAllowedOriginPatterns(List.of("*"));
+        cfg.setAllowedOriginPatterns(patterns);
         cfg.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         cfg.setAllowedHeaders(List.of("*"));
         cfg.setAllowCredentials(true);

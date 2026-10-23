@@ -24,6 +24,7 @@ const ai = ref<{ loading: boolean; content: string; err: string }>({ loading: fa
 const fb = ref({ type: 'other', content: '', msg: '' })
 const remain = ref(-1)
 let timer: ReturnType<typeof setInterval> | null = null
+let disposed = false
 const favorited = ref(false)
 const relatedKps = ref<any[]>([])
 const wrongModal = ref(false)
@@ -45,6 +46,10 @@ const options = computed<[string, string][]>(() => {
       .map(([k, v]) => [k, formatText(v)])
   } catch { return [] }
 })
+const images = computed<string[]>(() => {
+  const raw = question.value?.imageUrls || question.value?.imageUrl || ''
+  return String(raw).split(',').map(s => s.trim()).filter(Boolean)
+})
 const remainText = computed(() => {
   if (remain.value < 0) return ''
   const m = Math.floor(remain.value / 60), s = remain.value % 60
@@ -57,6 +62,7 @@ function resetAnswer() {
   wrongModal.value = false; correctHint.value = false
   clearAdvance()
   ai.value = { loading: false, content: '', err: '' }
+  variant.value = { loading: false, content: '', err: '' }
   fb.value = { type: 'other', content: '', msg: '' }
 }
 
@@ -64,6 +70,9 @@ async function start() {
   const mode = String(route.query.mode || 'chapter')
   const target = String(route.query.target || '')
   try {
+    if (route.query.session && !api.hasToken()) {
+      throw new Error('请先登录后继续练习')
+    }
     if (mode === 'wrong' && !api.hasToken()) {
       throw new Error('错题复习需要登录')
     }
@@ -74,7 +83,8 @@ async function start() {
         : mode === 'course' ? `course=${target}`
         : mode === 'kp' ? `kp=${target}`
         : mode === 'single' ? `id=${target}` : `chapter=${target}`
-      const r = await api.get<any>(`/api/questions?${qs}&size=20`)
+      const guestSize = mode === 'paper' ? 200 : 20
+      const r = await api.get<any>(`/api/questions?${qs}&size=${guestSize}`)
       guestRows.value = r.rows ?? []
       if (!guestRows.value.length) throw new Error('该范围下没有题目')
       total.value = guestRows.value.length
@@ -84,7 +94,9 @@ async function start() {
       await loadStatus()
       await next()
     } else {
-      const r = await api.post<any>('/api/practice/start', { mode, target, limit: 50 })
+      // 真题/错题复习要整卷/全部错题；章节等练习默认 50 题
+      const limit = mode === 'paper' || mode === 'wrong' ? 500 : 50
+      const r = await api.post<any>('/api/practice/start', { mode, target, limit })
       sessionId.value = r.sessionId
       total.value = r.count
       await loadStatus()
@@ -116,7 +128,7 @@ function showGuest(i: number) {
     fill.value = saved.fill
   }
   question.value = { id: q.id, questionType: q.questionType, stem: q.stem, optionJson: q.optionJson,
-    score: q.score, blankCount: q.blankCount, imageUrl: q.imageUrl,
+    score: q.score, blankCount: q.blankCount, imageUrl: q.imageUrl, imageUrls: q.imageUrls,
     chapterId: q.chapterId, chapterCode: q.chapterCode, chapterName: q.chapterName,
     chapterPath: q.chapterPath,
     itemOrder: i + 1, total: guestRows.value.length, answered: i }
@@ -126,43 +138,58 @@ async function loadStatus() {
   try {
     const st = await api.get<any>(`/api/practice/${sessionId.value}/status`)
     remain.value = st.remainingSec
-    if (st.limitSec > 0 && !st.finished) {
+    if (!disposed && st.limitSec > 0 && !st.finished) {
       timer = setInterval(async () => {
         remain.value = Math.max(0, remain.value - 1)
         if (remain.value === 0) {
-          clearInterval(timer!); timer = null
-          try { finished.value = await api.post(`/api/practice/${sessionId.value}/finish`, {}) } catch { /* 已结束 */ }
-          question.value = null
+          await finishSession()
         }
       }, 1000)
     }
   } catch { /* 忽略 */ }
 }
 
+async function finishSession() {
+  if (!sessionId.value) return
+  if (timer) { clearInterval(timer); timer = null }
+  clearAdvance()
+  try {
+    finished.value = await api.post(`/api/practice/${sessionId.value}/finish`, {})
+    question.value = null
+    wrongModal.value = false
+    error.value = ''
+  } catch (e: any) {
+    error.value = e.message ?? '交卷失败，请重试'
+  }
+}
+
+async function finishNow() {
+  if (!sessionId.value || finished.value) return
+  if (!confirm('确定交卷？未作答的题按 0 分计。')) return
+  await finishSession()
+}
+
 async function next() {
   clearAdvance()
   if (guest.value) { showGuest(guestIdx.value + 1); return }
-  resetAnswer()
-  const r = await api.get<any>(`/api/practice/${sessionId.value}/next`)
-  if (r.kind === 'done') {
-    finished.value = await api.post(`/api/practice/${sessionId.value}/finish`, {})
-    question.value = null
-    return
+  try {
+    const r = await api.get<any>(`/api/practice/${sessionId.value}/next`)
+    if (r.kind === 'done') { await finishSession(); return }
+    resetAnswer()
+    question.value = r.question
+    total.value = r.question.total
+    error.value = ''
+  } catch (e: any) {
+    error.value = e.message ?? '加载下一题失败'
   }
-  question.value = r.question
-  total.value = r.question.total
 }
 
 async function loadItem(order: number) {
   if (guest.value) { showGuest(order - 1); return }
-  resetAnswer()
   try {
     const r = await api.get<any>(`/api/practice/${sessionId.value}/item/${order}`)
-    if (r.kind === 'done') {
-      finished.value = await api.post(`/api/practice/${sessionId.value}/finish`, {})
-      question.value = null
-      return
-    }
+    if (r.kind === 'done') { await finishSession(); return }
+    resetAnswer()
     const q = r.question
     question.value = q
     total.value = q.total
@@ -184,7 +211,7 @@ async function loadItem(order: number) {
 async function goPrev() {
   clearAdvance()
   wrongModal.value = false
-  if (!question.value) return
+  if (!question.value || submitting.value) return
   const order = question.value.itemOrder ?? 1
   if (order <= 1) return
   if (guest.value) { showGuest(order - 2); return }
@@ -194,7 +221,7 @@ async function goPrev() {
 async function goNext() {
   clearAdvance()
   wrongModal.value = false
-  if (!question.value) return
+  if (!question.value || submitting.value) return
   const order = question.value.itemOrder ?? 1
   if (guest.value) { showGuest(order); return }
   await loadItem(order + 1)
@@ -203,6 +230,8 @@ async function goNext() {
 async function submit() {
   const q = question.value
   if (!q || feedback.value || submitting.value) return
+  const qid = q.id
+  const gidx = guestIdx.value
   submitting.value = true
   try {
     let payload = ''
@@ -211,16 +240,27 @@ async function submit() {
     else payload = answer.value
 
     if (guest.value) {
-      const r = await api.post<any>('/api/guest/answer', { questionId: q.id, answer: payload })
-      feedback.value = r
-      review.value = { correct: r.correct, analysis: r.analysis }
-      guestState.value[guestIdx.value] = {
-        feedback: r, review: { correct: r.correct, analysis: r.analysis },
+      const r = await api.post<any>('/api/guest/answer', { questionId: qid, answer: payload })
+      const rv = { correct: r.correct, analysis: r.analysis }
+      guestState.value[gidx] = {
+        feedback: r, review: rv,
         answer: answer.value, multi: [...multi.value], fill: fill.value,
       }
+      // 用户已切题：结果只写入原题缓存，不覆盖当前题
+      if (question.value?.id !== qid) return
+      feedback.value = r
+      review.value = rv
     } else {
-      feedback.value = await api.post(`/api/practice/${sessionId.value}/answer`, { questionId: q.id, answer: payload })
-      review.value = await api.get(`/api/practice/${sessionId.value}/review/${q.id}`)
+      const fb = await api.post(`/api/practice/${sessionId.value}/answer`, { questionId: qid, answer: payload })
+      let rv = null
+      try {
+        rv = await api.get(`/api/practice/${sessionId.value}/review/${qid}`)
+      } catch {
+        error.value = '答案已记录，但解析加载失败，请刷新重试'
+      }
+      if (question.value?.id !== qid) return
+      feedback.value = fb
+      review.value = rv
     }
 
     // 单题练习不自动跳转，保留答题反馈
@@ -230,6 +270,8 @@ async function submit() {
     } else if (!feedback.value?.is_correct) {
       wrongModal.value = true
     }
+  } catch (e: any) {
+    error.value = e.message ?? '提交失败，请重试'
   } finally {
     submitting.value = false
   }
@@ -252,34 +294,44 @@ function onKeydown(e: KeyboardEvent) {
 
 async function askAi(guide = false) {
   if (guest.value) { ai.value = { loading: false, content: '', err: '登录后可使用 AI 答疑' }; return }
+  const qid = question.value?.id
+  if (!qid) return
   ai.value = { loading: true, content: '', err: '' }
   try {
     const r = await api.post<{ content: string }>('/api/ai/explain', {
-      questionId: question.value.id, mode: guide ? 'guide' : 'explain' })
+      questionId: qid, mode: guide ? 'guide' : 'explain' })
+    if (question.value?.id !== qid) return
     ai.value = { loading: false, content: r.content, err: '' }
   } catch (e: any) {
+    if (question.value?.id !== qid) return
     ai.value = { loading: false, content: '', err: e.message }
   }
 }
 
 async function toggleFav() {
   if (guest.value) return
+  const id = question.value?.id
+  if (!id) return
   try {
-    const id = question.value.id
     const r: any = favorited.value
       ? await api.del(`/api/favorites/${id}`)
       : await api.post(`/api/favorites/${id}`, {})
+    if (question.value?.id !== id) return
     favorited.value = Boolean(r.favorited)
   } catch { /* 忽略 */ }
 }
 
 async function askVariant() {
   if (guest.value) { variant.value = { loading: false, content: '', err: '登录后可使用' }; return }
+  const qid = question.value?.id
+  if (!qid) return
   variant.value = { loading: true, content: '', err: '' }
   try {
-    const r = await api.post<{ content: string }>('/api/ai/variant', { questionId: question.value.id })
+    const r = await api.post<{ content: string }>('/api/ai/variant', { questionId: qid })
+    if (question.value?.id !== qid) return
     variant.value = { loading: false, content: r.content, err: '' }
   } catch (e: any) {
+    if (question.value?.id !== qid) return
     variant.value = { loading: false, content: '', err: e.message }
   }
 }
@@ -295,9 +347,10 @@ async function sendFeedback() {
 
 async function loadRelated(id: number) {
   try {
-    relatedKps.value = await api.get<any[]>(`/api/questions/${id}/knowledge`)
+    const kps = await api.get<any[]>(`/api/questions/${id}/knowledge`)
+    if (question.value?.id === id) relatedKps.value = kps
   } catch {
-    relatedKps.value = []
+    if (question.value?.id === id) relatedKps.value = []
   }
 }
 
@@ -308,8 +361,11 @@ watch(() => question.value?.id, async (id) => {
   if (guest.value) { favorited.value = false; return }
   try {
     const r = await api.get<any>(`/api/favorites/${id}`)
+    if (question.value?.id !== id) return
     favorited.value = Boolean(r.favorited)
-  } catch { favorited.value = false }
+  } catch {
+    if (question.value?.id === id) favorited.value = false
+  }
 })
 
 onMounted(() => {
@@ -317,6 +373,7 @@ onMounted(() => {
   start()
 })
 onUnmounted(() => {
+  disposed = true
   window.removeEventListener('keydown', onKeydown)
   if (timer) clearInterval(timer)
   clearAdvance()
@@ -356,7 +413,7 @@ onUnmounted(() => {
 
     <template v-else-if="question">
       <div class="flex flex-wrap items-center justify-between gap-2 text-sm text-slate-500">
-        <button :disabled="(question.itemOrder ?? 1) <= 1" @click="goPrev"
+        <button :disabled="(question.itemOrder ?? 1) <= 1 || submitting" @click="goPrev"
                 class="rounded border border-slate-300 px-2.5 py-1 text-xs disabled:opacity-40">上一题</button>
         <span>第 {{ question.itemOrder }} / {{ total }} 题</span>
         <span class="flex items-center gap-3">
@@ -365,8 +422,12 @@ onUnmounted(() => {
           </span>
           <span>{{ TYPE_LABEL[question.questionType] }} · {{ question.score }} 分</span>
         </span>
-        <button :disabled="(question.itemOrder ?? 1) >= total" @click="goNext"
-                class="rounded border border-slate-300 px-2.5 py-1 text-xs disabled:opacity-40">下一题</button>
+        <span class="flex items-center gap-2">
+          <button :disabled="(question.itemOrder ?? 1) >= total || submitting" @click="goNext"
+                  class="rounded border border-slate-300 px-2.5 py-1 text-xs disabled:opacity-40">下一题</button>
+          <button v-if="!guest" :disabled="submitting" @click="finishNow"
+                  class="rounded border border-red-200 px-2.5 py-1 text-xs text-red-600 disabled:opacity-40">交卷</button>
+        </span>
       </div>
 
       <p v-if="correctHint" class="rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700">
@@ -379,7 +440,7 @@ onUnmounted(() => {
             || ((question.chapterCode ? question.chapterCode + ' ' : '') + question.chapterName) }}
         </p>
         <p class="whitespace-pre-wrap text-base leading-7 text-slate-800">{{ formatText(question.stem) }}</p>
-        <img v-if="question.imageUrl" :src="question.imageUrl" alt="题目配图"
+        <img v-for="(src, i) in images" :key="i" :src="src" alt="题目配图"
              class="mt-3 max-h-80 w-auto rounded-lg border border-slate-200 object-contain" />
 
         <div v-if="relatedKps.length" class="mt-2 flex flex-wrap items-center gap-1.5">

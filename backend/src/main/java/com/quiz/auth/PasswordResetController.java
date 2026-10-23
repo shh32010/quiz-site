@@ -9,6 +9,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.nio.charset.StandardCharsets;
@@ -91,12 +92,15 @@ public class PasswordResetController {
         return Map.of("ok", true);
     }
 
+    @Transactional
     @PostMapping("/reset")
     public ResponseEntity<?> reset(@Valid @RequestBody ResetReq req) {
+        // 原子消费令牌：并发请求只有一个能成功
         List<Map<String, Object>> rows = jdbc.queryForList("""
-                select id, profile_id
-                  from password_reset_token
+                update password_reset_token
+                   set used_at = now()
                  where token_hash = ? and used_at is null and expires_at > now()
+                returning profile_id
                 """, sha256(req.token().trim()));
         if (rows.isEmpty()) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
@@ -106,7 +110,6 @@ public class PasswordResetController {
         // 同时递增令牌版本：所有已登录设备强制下线
         jdbc.update("update profiles set password_hash = ?, token_version = coalesce(token_version, 0) + 1 where id = ?",
                 encoder.encode(req.password()), profileId);
-        jdbc.update("update password_reset_token set used_at = now() where id = ?", rows.get(0).get("id"));
         // 其余未使用令牌一并作废
         jdbc.update("update password_reset_token set used_at = now() where profile_id = ? and used_at is null", profileId);
         return ResponseEntity.ok(Map.of("ok", true));

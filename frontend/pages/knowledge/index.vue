@@ -10,7 +10,9 @@ function render(text: string) {
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
-  return marked.parse(safe, { async: false, gfm: true, breaks: true }) as string
+  const html = marked.parse(safe, { async: false, gfm: true, breaks: true }) as string
+  // 兜底拦截 Markdown 生成的 javascript:/data:/vbscript: 链接
+  return html.replace(/\s(href|src)=["'](?:javascript|data|vbscript):[^"']*["']/gi, ' $1="#"')
 }
 
 interface KNode {
