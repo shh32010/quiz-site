@@ -82,8 +82,8 @@ const groups = computed(() => {
   })
 })
 
-/** 展开状态；默认展开第一门课 */
-const open = ref<Record<string, boolean>>({ A: true })
+/** 展开状态；默认全部收起 */
+const open = ref<Record<string, boolean>>({})
 function toggle(code: string) { open.value[code] = !open.value[code] }
 const allOpen = computed(() => groups.value.every(g => open.value[g.code]))
 function toggleAll() {
