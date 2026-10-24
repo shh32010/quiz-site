@@ -14,6 +14,27 @@ onMounted(async () => {
 })
 
 const TYPE_LABEL: Record<number, string> = { 1: '单选', 2: '多选', 3: '判断', 4: '填空', 5: '综合' }
+const TYPE_TABS = [
+  { value: 0, label: '全部' },
+  { value: 1, label: '单选' },
+  { value: 2, label: '多选' },
+  { value: 3, label: '判断' },
+  { value: 4, label: '填空' },
+  { value: 5, label: '综合' },
+]
+const selectedType = ref(0)
+const typeCounts = computed<Record<number, number>>(() => {
+  const m: Record<number, number> = {}
+  for (const q of data.value?.rows ?? []) {
+    const t = Number(q.questionType)
+    m[t] = (m[t] ?? 0) + 1
+  }
+  return m
+})
+const filteredRows = computed(() => {
+  const rows = data.value?.rows ?? []
+  return selectedType.value ? rows.filter((q: any) => Number(q.questionType) === selectedType.value) : rows
+})
 
 /** 浏览器的原生打印（配 Tailwind 的 print: 变体） */
 function printPage() {
@@ -42,8 +63,23 @@ function printPage() {
         <button class="print:hidden rounded-lg border border-slate-300 px-3 py-1 text-xs"
                 @click="printPage">打印错题</button>
       </div>
+
+      <div class="print:hidden flex flex-wrap gap-2">
+        <button v-for="t in TYPE_TABS" :key="t.value"
+                class="rounded-full border px-3 py-1 text-xs"
+                :class="selectedType === t.value
+                  ? 'border-blue-600 bg-blue-600 text-white'
+                  : 'border-slate-300 text-slate-600 hover:border-blue-400'"
+                @click="selectedType = t.value">
+          {{ t.label }}
+          <span :class="selectedType === t.value ? 'text-blue-100' : 'text-slate-400'">
+            {{ t.value === 0 ? data.total : (typeCounts[t.value] ?? 0) }}
+          </span>
+        </button>
+      </div>
+
       <ul class="divide-y divide-slate-100 rounded-xl border border-slate-200">
-        <li v-for="q in data.rows" :key="q.questionId">
+        <li v-for="q in filteredRows" :key="q.questionId">
           <NuxtLink :to="`/practice?mode=single&target=${q.questionId}`" title="点击复习这道错题"
                     class="flex items-start gap-3 px-5 py-3 hover:bg-blue-50/60">
             <span class="mt-0.5 shrink-0 rounded bg-slate-100 px-1.5 py-0.5 text-xs text-slate-600">
@@ -62,7 +98,9 @@ function printPage() {
             <span class="shrink-0 text-xs font-medium text-blue-600">复习这题 →</span>
           </NuxtLink>
         </li>
-        <li v-if="!data.rows.length" class="px-5 py-6 text-sm text-slate-500">还没有错题。</li>
+        <li v-if="!filteredRows.length" class="px-5 py-6 text-sm text-slate-500">
+          {{ selectedType ? '该题型暂无错题。' : '还没有错题。' }}
+        </li>
       </ul>
     </template>
 

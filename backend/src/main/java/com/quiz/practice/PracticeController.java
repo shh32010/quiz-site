@@ -18,7 +18,7 @@ import java.util.UUID;
 public class PracticeController {
 
     public record StartReq(@NotBlank(message = "mode 不能为空") String mode,
-                           String target, Integer limit) {}
+                           String target, Integer limit, Integer type) {}
 
     public record AnswerReq(@NotNull(message = "questionId 不能为空") Integer questionId,
                             @Size(max = 10000, message = "答案过长") String answer) {}
@@ -32,7 +32,7 @@ public class PracticeController {
     @PostMapping("/start")
     public Map<String, Object> start(@AuthenticationPrincipal UUID uid, @Valid @RequestBody StartReq req) {
         int limit = req.limit() == null ? 200 : Math.min(Math.max(req.limit(), 1), 500);
-        return practice.start(uid, req.mode(), req.target(), limit);
+        return practice.start(uid, req.mode(), req.target(), limit, req.type());
     }
 
     @GetMapping("/{sessionId}/next")

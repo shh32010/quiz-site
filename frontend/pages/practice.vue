@@ -69,6 +69,7 @@ function resetAnswer() {
 async function start() {
   const mode = String(route.query.mode || 'chapter')
   const target = String(route.query.target || '')
+  const type = Number(route.query.type) || 0
   try {
     if (route.query.session && !api.hasToken()) {
       throw new Error('请先登录后继续练习')
@@ -84,7 +85,8 @@ async function start() {
         : mode === 'kp' ? `kp=${target}`
         : mode === 'single' ? `id=${target}` : `chapter=${target}`
       const guestSize = mode === 'paper' ? 200 : 20
-      const r = await api.get<any>(`/api/questions?${qs}&size=${guestSize}`)
+      const typeQuery = type ? `&type=${type}` : ''
+      const r = await api.get<any>(`/api/questions?${qs}&size=${guestSize}${typeQuery}`)
       guestRows.value = r.rows ?? []
       if (!guestRows.value.length) throw new Error('该范围下没有题目')
       total.value = guestRows.value.length
@@ -96,7 +98,9 @@ async function start() {
     } else {
       // 真题/错题复习要整卷/全部错题；章节等练习默认 50 题
       const limit = mode === 'paper' || mode === 'wrong' ? 500 : 50
-      const r = await api.post<any>('/api/practice/start', { mode, target, limit })
+      const r = await api.post<any>('/api/practice/start', {
+        mode, target, limit, ...(type ? { type } : {}),
+      })
       sessionId.value = r.sessionId
       total.value = r.count
       await loadStatus()

@@ -39,12 +39,25 @@ public class PracticeHistoryController {
 
     @GetMapping
     public Map<String, Object> list(@AuthenticationPrincipal UUID uid,
+                                    @RequestParam(required = false) Integer type,
                                     @RequestParam(defaultValue = "1") int page,
                                     @RequestParam(defaultValue = "20") int size) {
         int p = Math.max(page, 1);
         int s = Math.min(Math.max(size, 1), 100);
+        boolean byType = type != null && type >= 1 && type <= 5;
+        String typeFilter = byType
+                ? " and exists (select 1 from session_question sqx join t_question qx on qx.id = sqx.question_id"
+                        + " where sqx.session_id = s.id and qx.question_type = ?)"
+                : "";
+        List<Object> countArgs = new java.util.ArrayList<>();
+        countArgs.add(uid);
+        if (byType) countArgs.add(type);
         Integer total = jdbc.queryForObject(
-                "select count(*) from practice_session where user_id = ?", Integer.class, uid);
+                "select count(*) from practice_session s where s.user_id = ?" + typeFilter,
+                Integer.class, countArgs.toArray());
+        List<Object> rowArgs = new java.util.ArrayList<>(countArgs);
+        rowArgs.add(s);
+        rowArgs.add((p - 1) * s);
         List<Map<String, Object>> rows = jdbc.queryForList("""
                 select s.id, s.mode, s.target_id as "targetId",
                        s.started_at as "startedAt", s.finished_at as "finishedAt",
@@ -56,11 +69,23 @@ public class PracticeHistoryController {
                        (select count(*) from practice_answer a where a.session_id = s.id and a.is_correct) as "correctCount",
                        %s as "targetName"
                   from practice_session s
-                 where s.user_id = ?
+                 where s.user_id = ?%s
                  order by s.started_at desc
                  limit ? offset ?
-                """.formatted(TARGET_NAME), uid, s, (p - 1) * s);
-        return Map.of("total", total == null ? 0 : total, "page", p, "size", s, "rows", rows);
+                """.formatted(TARGET_NAME, typeFilter), rowArgs.toArray());
+        List<Map<String, Object>> typeCounts = jdbc.queryForList("""
+                select q.question_type as "type", count(distinct s.id) as "count"
+                  from practice_session s
+                  join session_question sq on sq.session_id = s.id
+                  join t_question q on q.id = sq.question_id
+                 where s.user_id = ?
+                 group by q.question_type
+                 order by q.question_type
+                """, uid);
+        Integer totalAll = jdbc.queryForObject(
+                "select count(*) from practice_session where user_id = ?", Integer.class, uid);
+        return Map.of("total", total == null ? 0 : total, "totalAll", totalAll == null ? 0 : totalAll,
+                "page", p, "size", s, "rows", rows, "typeCounts", typeCounts);
     }
 
     @GetMapping("/{sessionId}")

@@ -70,7 +70,8 @@ public class QuestionService {
 
     /** 某章节（含全部子孙）/ 课程 / 试卷 / 知识点下的题；id 用于单题练习（游客） */
     public Map<String, Object> page(Integer chapterId, String course, Integer paperId,
-                                    Integer kpId, Integer questionId, int page, int size) {
+                                    Integer kpId, Integer questionId, Integer questionType,
+                                    int page, int size) {
         int offset = Math.max(0, (page - 1) * size);
         List<Object> args = new ArrayList<>();
         String where = "where review_status = 'ok'";
@@ -104,8 +105,20 @@ public class QuestionService {
             args.add(questionId);
         }
 
+        // 按题型筛选前先保留基础条件，用于返回各题型数量
+        String baseWhere = where;
+        List<Object> baseArgs = new ArrayList<>(args);
+        if (questionType != null && questionType >= 1 && questionType <= 5) {
+            where += " and question_type = ?";
+            args.add(questionType);
+        }
+
         Integer total = jdbc.queryForObject(
                 "select count(*) from v_question_public " + where, Integer.class, args.toArray());
+        List<Map<String, Object>> typeCounts = jdbc.queryForList(
+                "select question_type as \"type\", count(*) as \"count\" from v_question_public "
+                        + baseWhere + " group by question_type order by question_type",
+                baseArgs.toArray());
 
         // 真题按卷面顺序；其他按 id
         String orderBy = paperId == null ? " order by id "
@@ -118,7 +131,8 @@ public class QuestionService {
                 "select " + COLS + " from v_question_public " + where
                         + orderBy + " limit ? offset ?", args.toArray());
 
-        return Map.of("total", total == null ? 0 : total, "page", page, "size", size, "rows", rows);
+        return Map.of("total", total == null ? 0 : total, "page", page, "size", size,
+                "rows", rows, "typeCounts", typeCounts);
     }
 
     /** 一道题关联的知识点（最多 10 条，高置信度优先） */

@@ -29,7 +29,7 @@ public class PracticeService {
 
     /** 开始会话，返回 sessionId 与题量 */
     @Transactional
-    public Map<String, Object> start(UUID uid, String mode, String target, int limit) {
+    public Map<String, Object> start(UUID uid, String mode, String target, int limit, Integer type) {
         Integer targetId = switch (mode) {
             case "chapter", "paper", "kp", "single" -> {
                 try {
@@ -41,16 +41,25 @@ public class PracticeService {
             default -> null;
         };
         List<Integer> ids = switch (mode) {
-            case "chapter" -> jdbc.queryForList("""
-                    with recursive sub as (
-                      select id from t_chapter where id = ?
-                      union all
-                      select c.id from t_chapter c join sub s on c.parent_id = s.id
-                    )
-                    select q.id from t_question q join sub on sub.id = q.chapter_id
-                     where not q.deleted and q.review_status = 'ok'
-                     order by q.id limit ?
-                    """, Integer.class, targetId, limit);
+            case "chapter" -> {
+                List<Object> params = new java.util.ArrayList<>();
+                params.add(targetId);
+                String typeFilter = "";
+                if (type != null && type >= 1 && type <= 5) {
+                    typeFilter = " and q.question_type = ?";
+                    params.add(type);
+                }
+                params.add(limit);
+                yield jdbc.queryForList("""
+                        with recursive sub as (
+                          select id from t_chapter where id = ?
+                          union all
+                          select c.id from t_chapter c join sub s on c.parent_id = s.id
+                        )
+                        select q.id from t_question q join sub on sub.id = q.chapter_id
+                         where not q.deleted and q.review_status = 'ok'
+                        """ + typeFilter + " order by q.id limit ?", Integer.class, params.toArray());
+            }
             case "course" -> jdbc.queryForList("""
                     select id from t_question
                      where not deleted and review_status = 'ok' and cat_l1 = ?
