@@ -27,6 +27,7 @@
 | `quiz-security-headers.conf` | HSTS / nosniff / X-Frame-Options / Referrer-Policy / Permissions-Policy |
 | `nginx-quiz-rate.conf`、`nginx-quiz-rate-locations.conf` | 限流区与 location |
 | `backup-cron.sh` | 每日 DB + 每周图片备份（700/600 权限） |
+| `ops_20261024.md` | 2026-10-24 索引/权限/pg_stat_statements/旧数据/依赖加固记录 |
 
 ## 数据工程 / 复核记录
 
