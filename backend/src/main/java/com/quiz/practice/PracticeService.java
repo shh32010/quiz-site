@@ -85,14 +85,24 @@ public class PracticeService {
                      where id = ? and not deleted and review_status = 'ok'
                     """, Integer.class, targetId);
             // 错题复习：按未掌握优先、复习时间排序
-            case "wrong" -> jdbc.queryForList("""
-                    select w.question_id
-                      from wrong_question w
-                      join t_question q on q.id = w.question_id
-                     where w.user_id = ? and not q.deleted and q.review_status = 'ok'
-                     order by w.resolved asc, w.next_review_at nulls last, w.question_id
-                     limit 500
-                    """, Integer.class, uid);
+            case "wrong" -> {
+                List<Object> params = new java.util.ArrayList<>();
+                params.add(uid);
+                String typeFilter = "";
+                if (type != null && type >= 1 && type <= 5) {
+                    typeFilter = " and q.question_type = ?";
+                    params.add(type);
+                }
+                yield jdbc.queryForList("""
+                        select w.question_id
+                          from wrong_question w
+                          join t_question q on q.id = w.question_id
+                         where w.user_id = ? and not q.deleted and q.review_status = 'ok'
+                        """ + typeFilter + """
+                         order by w.resolved asc, w.next_review_at nulls last, w.question_id
+                         limit 500
+                        """, Integer.class, params.toArray());
+            }
             default -> throw new IllegalArgumentException("mode 非法: " + mode);
         };
         if (ids.isEmpty()) {

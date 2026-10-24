@@ -56,9 +56,10 @@ function printPage() {
         <p class="text-sm text-slate-500">
           共 {{ data.total }} 题，待复习 {{ data.pending }} 题
         </p>
-        <NuxtLink v-if="data.rows.length" to="/practice?mode=wrong"
+        <NuxtLink v-if="data.rows.length"
+                  :to="`/practice?mode=wrong${selectedType ? `&type=${selectedType}` : ''}`"
                   class="print:hidden rounded-lg bg-blue-600 px-3 py-1 text-xs font-medium text-white">
-          复习全部错题
+          {{ selectedType ? '复习该题型错题' : '复习全部错题' }}
         </NuxtLink>
         <button class="print:hidden rounded-lg border border-slate-300 px-3 py-1 text-xs"
                 @click="printPage">打印错题</button>
