@@ -1,7 +1,7 @@
 <script setup lang="ts">
 /** 基础按钮：统一触控高度、语义色和 loading 状态 */
 withDefaults(defineProps<{
-  variant?: 'primary' | 'secondary' | 'ghost' | 'danger'
+  variant?: 'primary' | 'secondary' | 'ghost' | 'danger' | 'danger-outline'
   size?: 'sm' | 'md' | 'lg'
   type?: 'button' | 'submit'
   disabled?: boolean
@@ -19,6 +19,7 @@ const variants: Record<string, string> = {
   secondary: 'border border-line-strong bg-surface-card text-fg-primary hover:border-brand hover:text-brand',
   ghost: 'text-fg-secondary hover:bg-surface-muted hover:text-fg-primary',
   danger: 'bg-danger-fg text-white hover:opacity-90 disabled:opacity-50',
+  'danger-outline': 'border border-danger-border bg-surface-card text-danger-fg hover:bg-danger-bg',
 }
 const sizes: Record<string, string> = {
   sm: 'min-h-10 px-3 text-xs sm:min-h-9',

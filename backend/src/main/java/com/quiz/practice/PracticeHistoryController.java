@@ -4,6 +4,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -35,6 +36,16 @@ public class PracticeHistoryController {
 
     public PracticeHistoryController(JdbcTemplate jdbc) {
         this.jdbc = jdbc;
+    }
+
+    /** 清空当前用户的全部做题历史与错题进度；收藏不在本次清理范围。 */
+    @DeleteMapping
+    @Transactional
+    public Map<String, Object> clear(@AuthenticationPrincipal UUID uid) {
+        int wrong = jdbc.update("delete from wrong_question where user_id = ?", uid);
+        int answers = jdbc.update("delete from practice_answer where user_id = ?", uid);
+        int sessions = jdbc.update("delete from practice_session where user_id = ?", uid);
+        return Map.of("ok", true, "sessions", sessions, "answers", answers, "wrong", wrong);
     }
 
     @GetMapping

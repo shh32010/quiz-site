@@ -3,6 +3,9 @@
 definePageMeta({ middleware: 'auth' })
 useHead({ title: '做题历史' })
 const api = useApi()
+const ask = useConfirm()
+const toast = useToast()
+const clearing = ref(false)
 const rows = ref<any[]>([])
 const resume = ref<any>(null)
 const total = ref(0)
@@ -80,6 +83,33 @@ function switchType(t: number) {
   load(1)
 }
 
+async function clearHistory() {
+  if (clearing.value) return
+  if (!(await ask({
+    title: '清空做题历史与进度',
+    message: '将永久删除全部做题会话、答题记录和错题本进度，总进度、章节进度会归零。收藏不受影响。此操作不可恢复。',
+    confirmText: '确认清空',
+    cancelText: '保留',
+    danger: true,
+  }))) return
+  clearing.value = true
+  try {
+    await api.del('/api/practice/history')
+    rows.value = []
+    total.value = 0
+    totalAll.value = 0
+    page.value = 1
+    typeCounts.value = {}
+    selectedType.value = 0
+    resume.value = null
+    toast.show('做题历史和进度已清空', 'success')
+  } catch (e: any) {
+    error.value = e.message ?? '清空失败，请重试'
+  } finally {
+    clearing.value = false
+  }
+}
+
 onMounted(async () => {
   load(1)
   if (!api.hasToken()) return
@@ -95,6 +125,8 @@ onMounted(async () => {
     <UiPageHeader title="做题历史" subtitle="每次练习、进度和得分">
       <template #actions>
         <NuxtLink to="/report" class="text-sm text-brand hover:underline">学习报告 →</NuxtLink>
+        <UiButton v-if="!loading && (totalAll > 0 || resume)" variant="danger-outline" size="sm"
+                  :loading="clearing" @click="clearHistory">清空历史与进度</UiButton>
       </template>
     </UiPageHeader>
 
