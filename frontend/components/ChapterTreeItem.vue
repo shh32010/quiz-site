@@ -17,6 +17,8 @@ const props = defineProps<{
   label?: string
   /** 覆盖显示名 */
   displayName?: string
+  /** 当前章的已做进度（只在根章节显示） */
+  progress?: { answered: number; total: number; pct: number }
 }>()
 
 const emit = defineEmits<{ (e: 'toggle', id: number): void }>()
@@ -49,6 +51,17 @@ function num(code: string | null): string {
       <NuxtLink :to="`/chapters/${node.id}`" class="shrink-0 text-xs text-blue-600 hover:underline">
         {{ node.questionCount.toLocaleString() }} 题 ›
       </NuxtLink>
+    </div>
+
+    <div v-if="depth === 0 && progress" class="flex items-center gap-2 pb-2 pl-11 pr-5">
+      <div class="h-1.5 flex-1 overflow-hidden rounded-full bg-surface-muted" role="progressbar"
+           :aria-valuenow="progress.pct" aria-valuemin="0" aria-valuemax="100">
+        <div class="h-full rounded-full bg-brand transition-all"
+             :style="{ width: progress.answered > 0 ? `max(3px, ${progress.pct}%)` : '0%' }" />
+      </div>
+      <span class="shrink-0 text-xs tabular-nums text-fg-muted">
+        {{ progress.answered }}/{{ progress.total }} 已做
+      </span>
     </div>
 
     <ul v-if="!isLeaf && open[node.id]" class="bg-slate-50/60">

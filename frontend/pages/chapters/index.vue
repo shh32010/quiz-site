@@ -17,6 +17,32 @@ const { data: practical } = await useFetch<Node[]>('/api/chapters/tree', {
   query: { subject: 5 },
 })
 
+const api = useApi()
+const progress = ref<Record<string, { answered: number; total: number; pct: number }>>({})
+
+onMounted(async () => {
+  if (!api.hasToken()) return
+  try {
+    const rows = await api.get<any[]>('/api/report/chapters')
+    const map: Record<string, { answered: number; total: number; pct: number }> = {}
+    for (const r of rows ?? []) {
+      if (!r.code) continue
+      const total = Number(r.total ?? 0)
+      const answered = Number(r.answered ?? 0)
+      map[String(r.code)] = {
+        answered,
+        total,
+        pct: total > 0 ? Math.min(100, Math.round(answered / total * 100)) : 0,
+      }
+    }
+    progress.value = map
+  } catch { /* 未登录/网络失败时不显示进度 */ }
+})
+
+function progressOf(code: string | null) {
+  return code ? progress.value[code] : undefined
+}
+
 const open = ref<Record<number, boolean>>({})
 function toggle(id: number) {
   open.value[id] = !open.value[id]
@@ -84,7 +110,8 @@ const otherTotal = computed(() => otherNodes.value.reduce((s, n) => s + n.questi
         </div>
         <ul class="divide-y divide-slate-100">
           <ChapterTreeItem v-for="node in course.nodes" :key="node.id"
-                           :node="node" :open="open" :depth="0" @toggle="toggle" />
+                           :node="node" :open="open" :depth="0" :progress="progressOf(node.code)"
+                           @toggle="toggle" />
         </ul>
       </div>
     </div>
@@ -94,7 +121,8 @@ const otherTotal = computed(() => otherNodes.value.reduce((s, n) => s + n.questi
       <ul class="divide-y divide-slate-100">
         <template v-for="s in skills" :key="s.code">
           <ChapterTreeItem v-if="s.node" :node="s.node" :open="open" :depth="0"
-                           :label="s.label" :display-name="s.name" @toggle="toggle" />
+                           :label="s.label" :display-name="s.name"
+                           :progress="progressOf(s.node.code)" @toggle="toggle" />
         </template>
       </ul>
     </div>
@@ -109,7 +137,8 @@ const otherTotal = computed(() => otherNodes.value.reduce((s, n) => s + n.questi
       </p>
       <ul class="divide-y divide-slate-100 border-t border-slate-100">
         <ChapterTreeItem v-for="n in otherNodes" :key="`${n.bank}-${n.id}`"
-                         :node="n" :open="open" :depth="0" :label="n.bank" @toggle="toggle" />
+                         :node="n" :open="open" :depth="0" :label="n.bank"
+                         :progress="progressOf(n.code)" @toggle="toggle" />
       </ul>
     </details>
   </section>

@@ -23,6 +23,36 @@ public class ReportController {
         this.jdbc = jdbc;
     }
 
+    /**
+     * 章节进度：按 L1 章/技能统计“已做过的不同题数 / 可练总题数”。
+     * 与 /api/report 的 mastery（作答次数正确率）区分，专门供 /chapters 进度条使用。
+     */
+    @GetMapping("/chapters")
+    public List<Map<String, Object>> chapterProgress(@AuthenticationPrincipal UUID uid) {
+        return jdbc.queryForList("""
+                with recursive anc as (
+                  select id, parent_id, id as root
+                    from t_chapter where level = 1 and not deleted
+                  union all
+                  select c.id, c.parent_id, a.root
+                    from t_chapter c join anc a on c.parent_id = a.id
+                   where not c.deleted
+                )
+                select l.id, l.code, l.name,
+                       count(distinct q.id) as "total",
+                       count(distinct q.id) filter (where pa.id is not null) as "answered",
+                       count(distinct q.id) filter (where pa.is_correct) as "correct"
+                  from t_question q
+                  join anc on anc.id = q.chapter_id
+                  join t_chapter l on l.id = anc.root
+                  left join practice_answer pa
+                         on pa.question_id = q.id and pa.user_id = ?
+                 where not q.deleted and q.review_status = 'ok'
+                 group by l.id, l.code, l.name
+                 order by l.code
+                """, uid);
+    }
+
     @GetMapping
     public Map<String, Object> report(@AuthenticationPrincipal UUID uid) {
         Map<String, Object> summary = jdbc.queryForMap("""
