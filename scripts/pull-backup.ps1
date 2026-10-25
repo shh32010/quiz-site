@@ -1,4 +1,5 @@
-# 每周从阿里云 ECS 拉取题库备份到本机 D:\Backups\quiz-aliyun
+# 每天从阿里云 ECS 拉取题库备份到本机 D:\Backups\quiz-aliyun
+# 数据库 dump 每天拉最新一份；图片包只在本地没有同名文件时拉取
 # 由 Windows 计划任务 QuizBackupPull 调用
 $ErrorActionPreference = 'Stop'
 $dest = 'D:\Backups\quiz-aliyun'
@@ -21,11 +22,21 @@ try {
     & $scp @sshArgs -q "${target}:$latestDump" $dest
     if ($LASTEXITCODE -ne 0) { throw "scp dump 失败，exit $LASTEXITCODE" }
 
-    # 图片包每周日才生成；没有时跳过，不视为整体失败
+    # 图片包每周日才生成；本地已有同名文件就跳过，避免每天重复拉 40MB
+    # 图片拉取失败不阻断数据库备份，只记录退出码
     $assetCode = 'none'
+    $assetAction = 'none'
     if ($latestAssets -ne '') {
-        & $scp @sshArgs -q "${target}:$latestAssets" $dest
-        $assetCode = $LASTEXITCODE
+        $assetName = Split-Path $latestAssets -Leaf
+        $localAsset = Join-Path $dest $assetName
+        if (Test-Path $localAsset) {
+            $assetCode = 'skip'
+            $assetAction = 'exists'
+        } else {
+            & $scp @sshArgs -q "${target}:$latestAssets" $dest
+            $assetCode = $LASTEXITCODE
+            if ($LASTEXITCODE -eq 0) { $assetAction = 'pulled' } else { $assetAction = 'failed' }
+        }
     }
 
     # 本地保留：数据库 30 天，图片包 56 天
@@ -38,7 +49,8 @@ try {
 
     $dumps = (Get-ChildItem $dest -Filter 'quiz-*.dump' | Measure-Object).Count
     $assets = (Get-ChildItem $dest -Filter 'assets-*.tar.gz' | Measure-Object).Count
-    "$ts OK dumps=$dumps assets=$assets asset_scp_exit=$assetCode" |
+    $dumpName = Split-Path $latestDump -Leaf
+    "$ts OK dump=$dumpName dumps=$dumps assets=$assets asset_action=$assetAction asset_scp_exit=$assetCode" |
         Out-File -Append -Encoding utf8 $log
 } catch {
     "$ts FAIL: $($_.Exception.Message)" | Out-File -Append -Encoding utf8 $log
