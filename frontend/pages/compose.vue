@@ -22,7 +22,7 @@ async function create(subject: number) {
 
 <template>
   <section class="space-y-5">
-    <UiPageHeader title="随机组卷" subtitle="按大纲题型配比与难度分布（易 30% / 中 50% / 难 20%）生成一套卷。" />
+    <UiPageHeader title="随机组卷" subtitle="按大纲题型配比与难度分布（易 30% / 中 50% / 难 20%）生成一套卷，优先抽取你未做过的题。" />
     <p v-if="error" class="text-sm text-danger-fg">{{ error }}</p>
 
     <div class="grid gap-4 sm:grid-cols-2">

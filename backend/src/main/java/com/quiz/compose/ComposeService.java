@@ -98,13 +98,13 @@ public class ComposeService {
         for (Section sec : plan) {
             for (Bucket b : sec.buckets()) {
                 for (int[] dn : splitByDifficulty(b.n())) {
-                    pick(subject, sec.type(), b.codes(), dn[1], dn[0], picked);
+                    pick(uid, subject, sec.type(), b.codes(), dn[1], dn[0], picked);
                 }
                 // 该桶按配比没抽满 → 不限难度回填
                 int got = countOfType(subject, sec.type(), b.codes(), picked);
                 int need = b.n() - got;
                 if (need > 0) {
-                    pick(subject, sec.type(), b.codes(), need, null, picked);
+                    pick(uid, subject, sec.type(), b.codes(), need, null, picked);
                 }
             }
         }
@@ -140,14 +140,16 @@ public class ComposeService {
         return n == null ? 0 : n;
     }
 
-    private void pick(int subject, int type, String[] codes, int count, Integer difficult, List<Integer> into) {
+    private void pick(UUID uid, int subject, int type, String[] codes, int count,
+                      Integer difficult, List<Integer> into) {
         if (count <= 0) {
             return;
         }
+        // 同题型/难度桶内优先未做过的题，未做过的不足时自然回落到做过的题
         List<Integer> got = jdbc.queryForList(
-                "select pick_questions(?, ?, ?, ?, ?, ?)",
+                "select pick_questions_for_user(?, ?, ?, ?, ?, ?, ?)",
                 Integer.class,
-                subject, type, codes, count, difficult,
+                uid, subject, type, codes, count, difficult,
                 into.isEmpty() ? null : into.toArray(new Integer[0]));
         for (Integer id : got) {
             if (!into.contains(id)) {
