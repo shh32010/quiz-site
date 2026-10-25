@@ -3,6 +3,7 @@
 definePageMeta({ middleware: 'auth' })
 useHead({ title: '账号设置' })
 const api = useApi()
+const auth = useAuth()
 const ask = useConfirm()
 const route = useRoute()
 const me = ref<any>(null)
@@ -75,7 +76,7 @@ async function changePassword() {
     const r = await api.post<{ token?: string }>('/api/auth/password',
       { oldPassword: oldPwd.value, newPassword: newPwd.value })
     // 当前会话换发新 token，其他设备的旧 token 已失效
-    if (r.token) api.setToken(r.token)
+    if (r.token) auth.saveToken(r.token)
     pwdMsg.value = '密码已修改，其他设备已退出登录。'
     oldPwd.value = ''
     newPwd.value = ''

@@ -164,17 +164,23 @@ function showGuest(i: number) {
   total.value = guestRows.value.length
 }
 
-async function loadStatus() {
-  if (!sessionId.value) return
+async function loadStatus(): Promise<boolean> {
+  if (!sessionId.value) return false
   try {
     const st = await api.get<any>(`/api/practice/${sessionId.value}/status`)
     mode.value = st.mode || mode.value
     remain.value = st.remainingSec
-    if (st.expired) {
-      notice.value = '本场已超时，请交卷'
-      return
+    if (st.finished) {
+      // 已交卷会话不要重新拉题，直接去历史明细复盘
+      await router.replace(`/history/${sessionId.value}`)
+      return true
     }
-    if (!disposed && st.limitSec > 0 && !st.finished) {
+    if (st.expired) {
+      notice.value = '时间到，已自动交卷'
+      await finishSession()
+      return true
+    }
+    if (!disposed && st.limitSec > 0) {
       if (timer) clearInterval(timer)
       timer = setInterval(async () => {
         remain.value = Math.max(0, remain.value - 1)
@@ -186,6 +192,7 @@ async function loadStatus() {
       }, 1000)
     }
   } catch { /* 状态失败不阻塞答题 */ }
+  return false
 }
 
 async function loadSheet() {
@@ -230,7 +237,7 @@ async function start() {
 
     if (route.query.session) {
       sessionId.value = Number(route.query.session)
-      await loadStatus()
+      if (await loadStatus()) return
       await loadSheet()
       await loadNextInitial()
       return
@@ -242,7 +249,7 @@ async function start() {
     })
     sessionId.value = r.sessionId
     total.value = r.count
-    await loadStatus()
+    if (await loadStatus()) return
     await loadSheet()
     await loadNextInitial()
   } catch (e: any) {
@@ -325,7 +332,7 @@ function finishGuest() {
 }
 
 async function finishSession() {
-  if (!sessionId.value || submitting.value) return
+  if (!sessionId.value || submitting.value || finished.value) return
   submitting.value = true
   try {
     finished.value = await api.post(`/api/practice/${sessionId.value}/finish`, {})
@@ -407,7 +414,7 @@ async function submit() {
 
     if (guest.value) {
       const r = await api.post<any>('/api/guest/answer', { questionId: qid, answer: payload })
-      const rv = { correct: r.correct, analysis: r.analysis }
+      const rv = { correct: r.correct, analysis: r.analysis, qcGrade: r.qcGrade }
       guestState.value[guestIdx.value] = {
         feedback: r, review: rv, answer: answer.value,
         multi: [...multi.value], fill: fill.value,
@@ -618,6 +625,11 @@ onUnmounted(() => {
           <template v-else>
             <p class="mt-2 text-3xl font-bold text-blue-600 tabular-nums">{{ finished.score }} / {{ finished.total_score }}</p>
             <p class="mt-1 text-sm text-slate-500">共 {{ finished.question_count }} 题，答对 {{ finished.correct_count }} 题</p>
+            <p v-if="finished.paperScore != null"
+               class="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+              可练满分 {{ finished.total_score }} 分；原卷 {{ finished.paperScore }} 分，
+              {{ Math.max(0, (finished.paperQuestionCount ?? finished.question_count) - finished.question_count) }} 题暂不可练、不计入总分。
+            </p>
             <div class="mt-5 flex flex-wrap justify-center gap-2">
               <NuxtLink to="/history" class="rounded-lg border border-slate-300 px-4 py-2 text-sm">查看记录</NuxtLink>
               <NuxtLink to="/wrong" class="rounded-lg border border-slate-300 px-4 py-2 text-sm">复习错题</NuxtLink>

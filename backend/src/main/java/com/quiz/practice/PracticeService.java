@@ -158,6 +158,7 @@ public class PracticeService {
                        (select count(*) from session_question x where x.session_id = sq.session_id) as "total",
                        (select count(*) from practice_answer a where a.session_id = sq.session_id) as "answered"
                   from session_question sq
+                  join practice_session ps on ps.id = sq.session_id and ps.finished_at is null
                   join t_question q on q.id = sq.question_id
                   left join t_chapter c on c.id = q.chapter_id
                   left join practice_answer a
@@ -279,6 +280,7 @@ public class PracticeService {
                        (a.id is not null) as "answered", a.user_answer as "userAnswer",
                        a.is_correct as "isCorrect", a.score_got as "scoreGot"
                   from session_question sq
+                  join practice_session ps on ps.id = sq.session_id and ps.finished_at is null
                   join t_question q on q.id = sq.question_id
                   left join t_chapter c on c.id = q.chapter_id
                   left join practice_answer a
@@ -323,6 +325,28 @@ public class PracticeService {
     /** 交卷：总分按整卷/整个会话的题目分值计算，未作答的题也计入分母 */
     @Transactional
     public Map<String, Object> finish(long sessionId, UUID uid) {
+        // 幂等：多标签页或浏览器后退重复交卷时，返回已有结算，不覆盖成绩
+        List<Map<String, Object>> sessions = jdbc.queryForList("""
+                select s.finished_at as "finishedAt", s.score, s.total_score as "totalScore",
+                       s.correct_count as "correctCount",
+                       (select count(*) from session_question x where x.session_id = s.id) as "questionCount"
+                  from practice_session s
+                 where s.id = ? and s.user_id = ?
+                """, sessionId, uid);
+        if (sessions.isEmpty()) {
+            throw new IllegalStateException("会话无效");
+        }
+        Map<String, Object> existing = sessions.get(0);
+        if (existing.get("finishedAt") != null) {
+            Map<String, Object> out = new LinkedHashMap<>();
+            out.put("score", existing.get("score"));
+            out.put("total_score", existing.get("totalScore"));
+            out.put("correct_count", existing.get("correctCount"));
+            out.put("question_count", existing.get("questionCount"));
+            addPaperInfo(sessionId, out);
+            return out;
+        }
+
         bindUser(uid);
         Integer totalScore = jdbc.queryForObject("""
                 select coalesce(sum(q.score), 0)
@@ -337,7 +361,21 @@ public class PracticeService {
         Integer totalQuestions = jdbc.queryForObject(
                 "select count(*) from session_question where session_id = ?", Integer.class, sessionId);
         result.put("question_count", totalQuestions == null ? 0 : totalQuestions);
+        addPaperInfo(sessionId, result);
         return result;
+    }
+
+    /** 真题结算补充原卷题数/满分，前端据此说明缺口 */
+    private void addPaperInfo(long sessionId, Map<String, Object> result) {
+        List<Map<String, Object>> papers = jdbc.queryForList("""
+                select p.question_count as "paperQuestionCount", p.score as "paperScore"
+                  from practice_session s
+                  join t_exam_paper p on p.id = s.target_id
+                 where s.id = ? and s.mode = 'paper'
+                """, sessionId);
+        if (!papers.isEmpty()) {
+            result.putAll(papers.get(0));
+        }
     }
 
     /** 会话状态：计时以服务端 started_at 为准 */

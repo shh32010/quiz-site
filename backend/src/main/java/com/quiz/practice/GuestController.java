@@ -31,7 +31,11 @@ public class GuestController {
         String json = jdbc.queryForObject("select judge_answer(?, ?)::text",
                 String.class, req.questionId(), req.answer() == null ? "" : req.answer());
         try {
-            return om.readValue(json, Map.class);
+            Map<String, Object> result = om.readValue(json, Map.class);
+            String quality = jdbc.queryForObject(
+                    "select qc_grade from t_question where id = ?", String.class, req.questionId());
+            result.put("qcGrade", quality == null ? "" : quality);
+            return result;
         } catch (Exception e) {
             throw new IllegalStateException("判分失败");
         }

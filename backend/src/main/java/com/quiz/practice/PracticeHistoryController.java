@@ -100,8 +100,10 @@ public class PracticeHistoryController {
                        (select count(*) from session_question x where x.session_id = s.id) as "questionCount",
                        coalesce(s.elapsed_sec,
                                 extract(epoch from (coalesce(s.finished_at, now()) - s.started_at))::int) as "elapsedSec",
-                       %s as "targetName"
+                       %s as "targetName",
+                       p.question_count as "paperQuestionCount", p.score as "paperScore"
                   from practice_session s
+                  left join t_exam_paper p on p.id = s.target_id and s.mode = 'paper'
                  where s.id = ? and s.user_id = ?
                 """.formatted(TARGET_NAME), sessionId, uid);
         if (sessions.isEmpty()) {
@@ -119,6 +121,7 @@ public class PracticeHistoryController {
                        a.answered_at as "answeredAt",
                        q.question_type as "questionType", q.stem, q.score,
                        q.blank_count as "blankCount", q.correct, q.analysis,
+                       q.qc_grade as "qcGrade",
                        (select substring(tc.content from '/qimg/[A-Za-z0-9._-]+')
                           from t_text_content tc where tc.id = q.info_text_content_id) as "imageUrl",
                        (select string_agg(m[1], ',')

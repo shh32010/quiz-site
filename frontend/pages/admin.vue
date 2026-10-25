@@ -56,6 +56,12 @@ async function resetByName() {
 async function resetRequest(id: number) {
   resetError.value = ''
   resetResult.value = null
+  if (!(await ask({
+    title: '重置密码',
+    message: '确定为该找回密码申请生成临时密码？该用户所有设备会被踢下线。',
+    confirmText: '生成临时密码',
+    danger: true,
+  }))) return
   try {
     resetResult.value = await api.post(`/api/admin/password-resets/${id}/reset`, {})
     await load()

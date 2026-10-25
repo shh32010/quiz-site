@@ -79,7 +79,11 @@ onMounted(() => load(1))
         <p v-if="session.finishedAt" class="mt-2 text-sm text-slate-700">
           得分 <b class="text-blue-600">{{ session.score }}</b> / {{ session.totalScore }}
         </p>
-        <div v-else class="mt-2 flex items-center gap-3">
+        <p v-if="session.paperScore != null" class="mt-1 text-xs text-amber-700">
+          可练满分 {{ session.totalScore }} 分；原卷 {{ session.paperScore }} 分，
+          {{ Math.max(0, (session.paperQuestionCount ?? session.questionCount) - session.questionCount) }} 题暂不可练、不计入总分。
+        </p>
+        <div v-if="!session.finishedAt" class="mt-2 flex items-center gap-3">
           <p class="text-sm text-amber-600">本次练习尚未结束</p>
           <NuxtLink :to="`/practice?session=${session.id}`"
                     class="rounded-lg bg-blue-600 px-3 py-1 text-xs font-medium text-white">
@@ -119,6 +123,10 @@ onMounted(() => load(1))
             </p>
           </div>
 
+          <p v-if="a.qcGrade === 'error'"
+             class="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+            本题解析可能不准确，建议结合 AI 讲解或提交报错。
+          </p>
           <details v-if="a.analysis" class="mt-2 text-sm">
             <summary class="cursor-pointer text-xs text-slate-500">查看解析</summary>
             <p class="mt-2 whitespace-pre-wrap leading-6 text-slate-600">{{ formatText(a.analysis) }}</p>
