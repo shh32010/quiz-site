@@ -118,92 +118,96 @@ const entries = [
   <section class="space-y-8">
     <ResumeCard v-if="resume" :session="resume" />
 
-    <div class="rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-10 text-white">
-      <h1 class="text-3xl font-bold">专转本计算机刷题</h1>
-      <p class="mt-2 text-blue-50">章节练习 · 真题模考 · 错题复习 · AI 答疑</p>
-      <div class="mt-6 flex flex-wrap gap-6 text-sm">
+    <div class="rounded-2xl border border-line-subtle border-l-4 border-l-brand bg-surface-card p-5 sm:p-6">
+      <div class="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <span class="text-2xl font-bold">{{ totalQuestions.toLocaleString() }}</span>
-          <span class="ml-1 text-blue-100">道可练习题</span>
+          <h1 class="text-2xl font-bold tracking-tight text-fg-primary">专转本计算机刷题</h1>
+          <p class="mt-1.5 text-sm text-fg-secondary">章节练习 · 真题模考 · 错题复习 · AI 答疑</p>
         </div>
-        <div>
-          <span class="text-2xl font-bold">{{ paperCount }}</span>
-          <span class="ml-1 text-blue-100">套历年真题</span>
-        </div>
-        <div>
-          <span class="text-2xl font-bold">8</span>
-          <span class="ml-1 text-blue-100">个课程 / 技能</span>
+        <div class="flex flex-wrap gap-2">
+          <NuxtLink to="/chapters"
+                    class="inline-flex min-h-11 items-center rounded-lg bg-brand px-4 text-sm font-medium text-white hover:bg-brand-hover">
+            开始刷题
+          </NuxtLink>
+          <NuxtLink v-if="!loggedIn" to="/login"
+                    class="inline-flex min-h-11 items-center rounded-lg border border-line-strong px-4 text-sm text-fg-primary hover:border-brand">
+            登录 / 注册
+          </NuxtLink>
+          <NuxtLink v-else to="/report"
+                    class="inline-flex min-h-11 items-center rounded-lg border border-line-strong px-4 text-sm text-fg-primary hover:border-brand">
+            我的学习报告
+          </NuxtLink>
         </div>
       </div>
-      <div class="mt-6 flex gap-3">
-        <NuxtLink to="/chapters"
-                  class="rounded-lg bg-white px-5 py-2 text-sm font-medium text-blue-700">
-          开始刷题
-        </NuxtLink>
-        <NuxtLink v-if="!loggedIn" to="/login"
-                  class="rounded-lg border border-white/60 px-5 py-2 text-sm text-white">
-          登录 / 注册
-        </NuxtLink>
-        <NuxtLink v-else to="/report"
-                  class="rounded-lg border border-white/60 px-5 py-2 text-sm text-white">
-          我的学习报告
-        </NuxtLink>
+      <div class="mt-5 grid grid-cols-3 gap-2 border-t border-line-subtle pt-4">
+        <div>
+          <p class="text-xl font-bold tabular-nums text-brand">{{ totalQuestions.toLocaleString() }}</p>
+          <p class="mt-0.5 text-xs text-fg-muted">道可练习题</p>
+        </div>
+        <div>
+          <p class="text-xl font-bold tabular-nums text-brand">{{ paperCount }}</p>
+          <p class="mt-0.5 text-xs text-fg-muted">套历年真题</p>
+        </div>
+        <div>
+          <p class="text-xl font-bold tabular-nums text-brand">8</p>
+          <p class="mt-0.5 text-xs text-fg-muted">个课程 / 技能</p>
+        </div>
       </div>
     </div>
 
-    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
       <NuxtLink v-for="e in entries" :key="e.to" :to="e.to"
-                class="group rounded-xl border border-slate-200 p-5 transition hover:border-blue-400 hover:shadow-sm">
-        <p class="text-base font-semibold text-slate-800 group-hover:text-blue-600">{{ e.title }}</p>
-        <p class="mt-1 text-sm text-slate-500">{{ e.desc }}</p>
+                class="group rounded-xl border border-line-subtle bg-surface-card p-4 transition hover:border-brand hover:shadow-sm">
+        <p class="text-base font-semibold text-fg-primary group-hover:text-brand">{{ e.title }}</p>
+        <p class="mt-1 text-sm text-fg-secondary">{{ e.desc }}</p>
       </NuxtLink>
     </div>
 
-    <div class="rounded-xl border border-slate-200">
+    <div class="rounded-xl border border-line-subtle bg-surface-card">
       <div class="flex items-center justify-between px-5 py-3">
         <div>
-          <h2 class="text-sm font-semibold text-slate-700">课程 / 技能</h2>
-          <p class="mt-0.5 text-xs text-slate-400">展开到每一节；点节名直接开始练习</p>
+          <h2 class="text-sm font-semibold text-fg-primary">课程 / 技能</h2>
+          <p class="mt-0.5 text-xs text-fg-muted">展开到每一节；点节名直接开始练习</p>
         </div>
-        <button class="text-xs text-blue-600 hover:underline" @click="toggleAll">
+        <button class="min-h-11 text-xs text-brand hover:underline" @click="toggleAll">
           {{ allOpen ? '收起全部' : '展开全部' }}
         </button>
       </div>
-      <ul class="divide-y divide-slate-100 border-t border-slate-100">
+      <ul class="divide-y divide-line-subtle border-t border-line-subtle">
         <li v-for="g in groups" :key="g.code">
-          <button class="flex w-full items-center justify-between px-5 py-3 text-left hover:bg-slate-50"
+          <button class="flex min-h-[52px] w-full items-center justify-between px-5 py-3 text-left hover:bg-surface-muted"
                   @click="toggle(g.code)">
             <span class="flex items-center gap-2">
-              <span class="w-4 text-slate-400">{{ g.chapters.length ? (open[g.code] ? '−' : '+') : '' }}</span>
-              <span class="rounded bg-slate-100 px-1.5 py-0.5 text-xs text-slate-500">{{ g.code }}</span>
-              <span class="text-sm font-medium text-slate-800">{{ g.name }}</span>
+              <span class="w-4 text-fg-muted">{{ g.chapters.length ? (open[g.code] ? '−' : '+') : '' }}</span>
+              <span class="rounded bg-surface-muted px-1.5 py-0.5 text-xs text-fg-secondary">{{ g.code }}</span>
+              <span class="text-sm font-medium text-fg-primary">{{ g.name }}</span>
             </span>
-            <span class="text-xs text-slate-400">{{ g.total.toLocaleString() }} 题</span>
+            <span class="text-xs text-fg-muted">{{ g.total.toLocaleString() }} 题</span>
           </button>
 
-          <div v-if="open[g.code] && g.chapters.length" class="bg-slate-50/60 pb-2">
+          <div v-if="open[g.code] && g.chapters.length" class="bg-surface-muted/60 pb-2">
             <div v-for="ch in g.chapters" :key="ch.id">
               <p v-if="g.chapters.length > 1"
-                 class="flex items-center gap-2 pl-12 pr-5 pt-2 text-xs text-slate-500">
-                <span class="rounded bg-white px-1.5 py-0.5 font-mono text-[11px] text-slate-400">{{ ch.code }}</span>
+                 class="flex items-center gap-2 pl-12 pr-5 pt-2 text-xs text-fg-secondary">
+                <span class="rounded bg-surface-card px-1.5 py-0.5 font-mono text-[11px] text-fg-muted">{{ ch.code }}</span>
                 <span class="font-medium">{{ ch.name }}</span>
-                <span class="text-slate-400">{{ ch.count.toLocaleString() }} 题</span>
+                <span class="text-fg-muted">{{ ch.count.toLocaleString() }} 题</span>
               </p>
               <ul>
                 <li v-for="sec in ch.sections" :key="sec.id">
                   <NuxtLink :to="`/practice?mode=chapter&target=${sec.id}`"
-                            class="flex items-center justify-between py-1.5 pr-5 hover:bg-white"
+                            class="flex min-h-11 items-center justify-between pr-5 hover:bg-surface-card"
                             :class="g.chapters.length > 1 ? 'pl-20' : 'pl-12'">
                     <span class="flex min-w-0 items-center gap-2">
-                      <span class="w-12 shrink-0 font-mono text-xs text-slate-400">{{ num(sec.code) }}</span>
-                      <span class="truncate text-xs text-slate-600">{{ sec.name }}</span>
+                      <span class="w-12 shrink-0 font-mono text-xs text-fg-muted">{{ num(sec.code) }}</span>
+                      <span class="truncate text-xs text-fg-secondary">{{ sec.name }}</span>
                     </span>
-                    <span class="shrink-0 text-xs text-slate-400">{{ sec.count.toLocaleString() }} 题 ›</span>
+                    <span class="shrink-0 text-xs text-fg-muted">{{ sec.count.toLocaleString() }} 题 ›</span>
                   </NuxtLink>
                 </li>
                 <li v-if="ch.rest > 0">
                   <NuxtLink :to="`/chapters/${ch.id}`"
-                            class="flex items-center justify-between py-1.5 text-xs text-slate-400 hover:bg-white"
+                            class="flex min-h-11 items-center justify-between text-xs text-fg-muted hover:bg-surface-card"
                             :class="g.chapters.length > 1 ? 'pl-20' : 'pl-12'">
                     <span>其他（未细分到节）</span>
                     <span class="pr-5">{{ ch.rest.toLocaleString() }} 题 ›</span>

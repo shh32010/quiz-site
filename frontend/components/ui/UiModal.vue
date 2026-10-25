@@ -39,19 +39,20 @@ const widths: Record<string, string> = {
 
 <template>
   <Teleport to="body">
-    <div v-if="modelValue" class="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/40 p-0 sm:items-center sm:p-4"
+    <div v-if="modelValue" class="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-0 backdrop-blur-[2px] sm:items-center sm:p-4"
          @click.self="closeOnBackdrop && close()">
-      <div class="max-h-[90vh] w-full overflow-hidden rounded-t-2xl bg-white shadow-xl sm:rounded-2xl"
+      <div class="max-h-[90vh] w-full overflow-hidden rounded-t-2xl border border-line-subtle bg-surface-elevated shadow-xl sm:rounded-2xl"
            :class="widths[size]" role="dialog" aria-modal="true" :aria-label="title">
-        <div class="flex items-center justify-between border-b border-slate-100 px-4 py-3">
-          <h2 class="text-base font-semibold text-slate-900">{{ title }}</h2>
-          <button type="button" class="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+        <div class="mx-auto mt-2 h-1 w-10 rounded-full bg-line-strong sm:hidden" />
+        <div class="flex items-center justify-between border-b border-line-subtle px-4 py-3">
+          <h2 class="text-base font-semibold text-fg-primary">{{ title }}</h2>
+          <button type="button" class="flex h-11 w-11 items-center justify-center rounded-lg text-fg-muted hover:bg-surface-muted hover:text-fg-primary"
                   aria-label="关闭" @click="close">✕</button>
         </div>
         <div class="max-h-[calc(90vh-8rem)] overflow-y-auto p-4">
           <slot />
         </div>
-        <div v-if="$slots.footer" class="border-t border-slate-100 p-4">
+        <div v-if="$slots.footer" class="border-t border-line-subtle p-4">
           <slot name="footer" />
         </div>
       </div>

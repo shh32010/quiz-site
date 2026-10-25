@@ -16,7 +16,7 @@ const padClass: Record<string, string> = {
 </script>
 
 <template>
-  <div class="rounded-2xl border border-slate-200 bg-white"
+  <div class="rounded-2xl border border-line-subtle bg-surface-card text-fg-primary"
        :class="[padClass[padded], shadow ? 'shadow-sm' : '']">
     <slot />
   </div>

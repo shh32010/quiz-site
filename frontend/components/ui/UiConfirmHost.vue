@@ -5,7 +5,7 @@ const { state, answer } = useConfirmHost()
 <template>
   <UiModal :model-value="Boolean(state)" :title="state?.title || '请确认'" size="sm"
            @update:model-value="answer(false)">
-    <p class="whitespace-pre-wrap text-sm leading-6 text-slate-600">{{ state?.message }}</p>
+    <p class="whitespace-pre-wrap text-sm leading-6 text-fg-secondary">{{ state?.message }}</p>
     <template #footer>
       <div class="flex justify-end gap-2">
         <UiButton variant="secondary" @click="answer(false)">{{ state?.cancelText || '取消' }}</UiButton>

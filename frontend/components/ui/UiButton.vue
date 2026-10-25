@@ -15,13 +15,13 @@ withDefaults(defineProps<{
 })
 
 const variants: Record<string, string> = {
-  primary: 'bg-blue-600 text-white hover:bg-blue-700 disabled:bg-blue-300',
-  secondary: 'border border-slate-300 bg-white text-slate-700 hover:border-blue-400 hover:text-blue-700',
-  ghost: 'text-slate-600 hover:bg-slate-100 hover:text-slate-900',
-  danger: 'bg-red-600 text-white hover:bg-red-700 disabled:bg-red-300',
+  primary: 'bg-brand text-white hover:bg-brand-hover disabled:bg-brand/40',
+  secondary: 'border border-line-strong bg-surface-card text-fg-primary hover:border-brand hover:text-brand',
+  ghost: 'text-fg-secondary hover:bg-surface-muted hover:text-fg-primary',
+  danger: 'bg-danger-fg text-white hover:opacity-90 disabled:opacity-50',
 }
 const sizes: Record<string, string> = {
-  sm: 'min-h-9 px-3 text-xs',
+  sm: 'min-h-10 px-3 text-xs sm:min-h-9',
   md: 'min-h-11 px-4 text-sm',
   lg: 'min-h-12 px-5 text-base',
 }

@@ -3,6 +3,7 @@ export default defineNuxtConfig({
   compatibilityDate: '2026-10-20',
   devtools: { enabled: false },
   modules: ['@nuxtjs/tailwindcss'],
+  css: ['~/assets/css/main.css'],
 
   // 服务端渲染（SEO 需要）
   ssr: true,
@@ -37,7 +38,13 @@ export default defineNuxtConfig({
       meta: [
         { charset: 'utf-8' },
         { name: 'viewport', content: 'width=device-width, initial-scale=1' },
+        { name: 'theme-color', content: '#F6F5F2' },
       ],
+      // 在样式表前同步设置主题，避免夜间模式首屏闪白
+      script: [{
+        tagPosition: 'head',
+        innerHTML: `(function(){try{var p=localStorage.getItem('quiz_theme_pref')||'system';var d=p==='dark'||(p==='system'&&window.matchMedia('(prefers-color-scheme: dark)').matches);var r=document.documentElement;r.classList.toggle('dark',d);r.dataset.theme=d?'dark':'light';r.style.colorScheme=d?'dark':'light';}catch(e){}})();`,
+      }],
     },
   },
 })

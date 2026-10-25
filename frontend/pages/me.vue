@@ -28,15 +28,25 @@ const links = [
   <section class="space-y-5">
     <UiCard padded="lg">
       <template v-if="user">
-        <p class="text-xl font-bold text-slate-900">{{ user.nickname || user.username }}</p>
-        <p class="mt-1 text-sm text-slate-500">
+        <p class="text-xl font-bold text-fg-primary">{{ user.nickname || user.username }}</p>
+        <p class="mt-1 text-sm text-fg-secondary">
           {{ user.username }}
           <span v-if="user.email" class="ml-2">{{ user.email }}</span>
           <UiBadge v-if="user.role === 'admin'" tone="amber" class="ml-2">管理员</UiBadge>
         </p>
       </template>
-      <p v-else-if="error" class="text-sm text-red-600">{{ error }}</p>
-      <p v-else class="text-sm text-slate-500">加载中…</p>
+      <p v-else-if="error" class="text-sm text-danger-fg">{{ error }}</p>
+      <p v-else class="text-sm text-fg-muted">加载中…</p>
+    </UiCard>
+
+    <UiCard padded="md">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <p class="text-sm font-medium text-fg-primary">外观模式</p>
+          <p class="mt-0.5 text-xs text-fg-muted">跟随系统会在手机切换深色时自动变化</p>
+        </div>
+        <UiThemeToggle mode="segmented" class="w-full sm:w-auto" />
+      </div>
     </UiCard>
 
     <div class="grid gap-3 sm:grid-cols-2">

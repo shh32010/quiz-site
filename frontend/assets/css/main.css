@@ -1,0 +1,225 @@
+/* 方向 A：暖砂纸感 · 专注备考。颜色全部走语义变量，light/dark 只换变量。 */
+:root {
+  color-scheme: light;
+  --bg-page: 246 245 242;
+  --bg-immersive: 242 240 236;
+  --surface-card: 252 251 249;
+  --surface-elevated: 255 255 255;
+  --surface-muted: 239 236 230;
+  --surface-glass: rgba(252, 251, 249, 0.88);
+  --line-subtle: 229 226 220;
+  --line-strong: 207 203 194;
+  --fg-primary: 28 30 33;
+  --fg-secondary: 78 83 90;
+  --fg-muted: 122 128 137;
+  --brand: 43 91 238;
+  --brand-hover: 30 70 199;
+  --brand-soft: 235 240 255;
+  --brand-on-soft: 30 66 184;
+  --success-fg: 21 128 61;
+  --success-bg: 234 251 240;
+  --success-border: 134 239 172;
+  --danger-fg: 185 28 28;
+  --danger-bg: 254 241 241;
+  --danger-border: 252 165 165;
+  --warn-fg: 180 83 9;
+  --warn-bg: 255 251 235;
+  --warn-border: 252 211 77;
+  --white: 252 251 249;
+  --slate-50: 246 245 242;
+  --slate-100: 239 236 230;
+  --slate-200: 229 226 220;
+  --slate-300: 207 203 194;
+  --slate-400: 122 128 137;
+  --slate-500: 78 83 90;
+  --slate-600: 78 83 90;
+  --slate-700: 63 67 74;
+  --slate-800: 42 45 51;
+  --slate-900: 28 30 33;
+  --blue-50: 235 240 255;
+  --blue-100: 219 230 255;
+  --blue-200: 191 219 254;
+  --blue-300: 147 197 253;
+  --blue-400: 96 165 250;
+  --blue-500: 59 130 246;
+  --blue-600: 43 91 238;
+  --blue-700: 30 70 199;
+  --green-50: 234 251 240;
+  --green-100: 220 252 231;
+  --green-300: 134 239 172;
+  --green-400: 74 222 128;
+  --green-500: 34 197 94;
+  --green-600: 22 163 74;
+  --green-700: 21 128 61;
+  --green-800: 22 101 52;
+  --green-900: 20 83 45;
+  --red-50: 254 241 241;
+  --red-100: 254 226 226;
+  --red-200: 254 202 202;
+  --red-300: 252 165 165;
+  --red-400: 248 113 113;
+  --red-500: 239 68 68;
+  --red-600: 185 28 28;
+  --red-700: 185 28 28;
+  --red-800: 153 27 27;
+  --red-900: 127 29 29;
+  --amber-50: 255 251 235;
+  --amber-100: 254 243 199;
+  --amber-200: 253 230 138;
+  --amber-300: 252 211 77;
+  --amber-400: 251 191 36;
+  --amber-500: 245 158 11;
+  --amber-600: 180 83 9;
+  --amber-700: 180 83 9;
+  --amber-800: 146 64 14;
+  --amber-900: 120 53 15;
+  --indigo-50: 238 242 255;
+  --indigo-600: 79 70 229;
+  --indigo-700: 67 56 202;
+}
+
+html.dark {
+  color-scheme: dark;
+  --bg-page: 18 20 23;
+  --bg-immersive: 14 16 19;
+  --surface-card: 26 29 34;
+  --surface-elevated: 35 39 47;
+  --surface-muted: 34 38 46;
+  --surface-glass: rgba(26, 29, 34, 0.9);
+  --line-subtle: 42 46 55;
+  --line-strong: 59 64 76;
+  --fg-primary: 230 232 236;
+  --fg-secondary: 166 171 180;
+  --fg-muted: 110 116 128;
+  --brand: 91 133 255;
+  --brand-hover: 120 155 255;
+  --brand-soft: 30 41 66;
+  --brand-on-soft: 147 180 255;
+  --success-fg: 74 222 128;
+  --success-bg: 19 42 28;
+  --success-border: 34 84 61;
+  --danger-fg: 248 113 113;
+  --danger-bg: 45 22 25;
+  --danger-border: 99 38 43;
+  --warn-fg: 251 191 36;
+  --warn-bg: 43 33 17;
+  --warn-border: 92 69 28;
+  --white: 26 29 34;
+  --slate-50: 18 20 23;
+  --slate-100: 34 38 46;
+  --slate-200: 42 46 55;
+  --slate-300: 59 64 76;
+  --slate-400: 110 116 128;
+  --slate-500: 166 171 180;
+  --slate-600: 166 171 180;
+  --slate-700: 201 205 212;
+  --slate-800: 230 232 236;
+  --slate-900: 230 232 236;
+  --blue-50: 30 41 66;
+  --blue-100: 38 52 90;
+  --blue-200: 52 75 130;
+  --blue-300: 71 100 170;
+  --blue-400: 147 180 255;
+  --blue-500: 120 155 255;
+  --blue-600: 91 133 255;
+  --blue-700: 120 155 255;
+  --green-50: 19 42 28;
+  --green-100: 23 58 38;
+  --green-300: 74 222 128;
+  --green-400: 74 222 128;
+  --green-500: 52 211 153;
+  --green-600: 74 222 128;
+  --green-700: 74 222 128;
+  --green-800: 134 239 172;
+  --green-900: 187 247 208;
+  --red-50: 45 22 25;
+  --red-100: 58 29 32;
+  --red-200: 90 45 50;
+  --red-300: 120 56 60;
+  --red-400: 248 113 113;
+  --red-500: 239 68 68;
+  --red-600: 248 113 113;
+  --red-700: 252 165 165;
+  --red-800: 254 202 202;
+  --red-900: 254 226 226;
+  --amber-50: 43 33 17;
+  --amber-100: 58 45 23;
+  --amber-200: 92 69 28;
+  --amber-300: 252 211 77;
+  --amber-400: 251 191 36;
+  --amber-500: 245 158 11;
+  --amber-600: 251 191 36;
+  --amber-700: 251 191 36;
+  --amber-800: 252 211 77;
+  --amber-900: 253 230 138;
+  --indigo-50: 30 27 75;
+  --indigo-600: 129 140 248;
+  --indigo-700: 165 180 252;
+}
+
+html, body {
+  background: rgb(var(--bg-page));
+  color: rgb(var(--fg-primary));
+}
+
+body {
+  font-family: "PingFang SC", "HarmonyOS Sans", "Microsoft YaHei", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: rgb(var(--brand) / 0.22);
+}
+
+/* 旧页面仍有 bg-slate-700/800 深色按钮；夜间保留深底，不能跟随 text-slate token 变亮 */
+html.dark .bg-slate-700 {
+  background-color: rgb(59 64 76) !important;
+}
+html.dark .bg-slate-800 {
+  background-color: rgb(42 45 51) !important;
+}
+html.dark .bg-slate-900\/40 {
+  background-color: rgb(0 0 0 / 0.62) !important;
+}
+html.dark .bg-white\/70,
+html.dark .bg-white\/80 {
+  background-color: rgb(var(--surface-card) / 0.82) !important;
+}
+.text-white {
+  color: #fff !important;
+}
+
+/* 题目配图：夜间不要简单反色 */
+.question-img {
+  background: rgb(var(--surface-muted));
+  border: 1px solid rgb(var(--line-subtle));
+  padding: 0.5rem;
+  border-radius: 0.75rem;
+}
+html.dark .question-img {
+  filter: brightness(0.92) contrast(1.04);
+}
+
+@media print {
+  :root, html.dark {
+    --bg-page: 255 255 255;
+    --bg-immersive: 255 255 255;
+    --surface-card: 255 255 255;
+    --surface-elevated: 255 255 255;
+    --surface-muted: 245 245 245;
+    --line-subtle: 204 204 204;
+    --line-strong: 180 180 180;
+    --fg-primary: 0 0 0;
+    --fg-secondary: 40 40 40;
+    --fg-muted: 80 80 80;
+    color-scheme: light !important;
+  }
+  html.dark {
+    background: #fff !important;
+    color: #000 !important;
+  }
+  .print\:hidden {
+    display: none !important;
+  }
+}

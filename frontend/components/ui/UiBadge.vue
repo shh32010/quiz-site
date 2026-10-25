@@ -8,11 +8,11 @@ withDefaults(defineProps<{
   size: 'sm',
 })
 const tones: Record<string, string> = {
-  slate: 'bg-slate-100 text-slate-600',
-  blue: 'bg-blue-50 text-blue-700',
-  green: 'bg-green-50 text-green-700',
-  red: 'bg-red-50 text-red-700',
-  amber: 'bg-amber-50 text-amber-800',
+  slate: 'bg-surface-muted text-fg-secondary',
+  blue: 'bg-brand-soft text-brand-on-soft',
+  green: 'bg-success-bg text-success-fg',
+  red: 'bg-danger-bg text-danger-fg',
+  amber: 'bg-warn-bg text-warn-fg',
   indigo: 'bg-indigo-50 text-indigo-700',
 }
 const sizes: Record<string, string> = {

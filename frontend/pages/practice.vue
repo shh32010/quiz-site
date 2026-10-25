@@ -582,8 +582,8 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-slate-50 text-slate-800">
-    <header class="sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur">
+  <div class="min-h-screen text-fg-primary">
+    <header class="sticky top-0 z-30 border-b border-line-subtle bg-surface-glass backdrop-blur">
       <div class="mx-auto flex max-w-3xl items-center gap-2 px-3 py-2 sm:px-4">
         <button type="button" class="shrink-0 rounded-lg px-2 py-1.5 text-sm text-slate-500 hover:bg-slate-100 hover:text-slate-800"
                 @click="exit">← 退出</button>
@@ -596,10 +596,11 @@ onUnmounted(() => {
             <div class="h-full rounded-full bg-blue-600 transition-all" :style="{ width: `${progressPercent}%` }" />
           </div>
         </div>
-        <span v-if="remain >= 0" class="shrink-0 rounded-lg bg-slate-50 px-2 py-1 text-xs font-medium tabular-nums"
-              :class="remain < 300 ? 'text-red-600' : 'text-slate-600'">⏱ {{ remainText }}</span>
+        <UiThemeToggle class="shrink-0" />
+        <span v-if="remain >= 0" class="shrink-0 rounded-lg bg-surface-muted px-2 py-1 text-xs font-medium tabular-nums"
+              :class="remain < 300 ? 'text-danger-fg' : 'text-fg-secondary'">⏱ {{ remainText }}</span>
         <button v-if="!guest && question" type="button"
-                class="shrink-0 rounded-lg border border-slate-200 px-2 py-1.5 text-xs text-slate-600 hover:border-blue-300 hover:text-blue-700"
+                class="min-h-11 shrink-0 rounded-lg border border-line-subtle px-2.5 py-1.5 text-xs text-fg-secondary hover:border-brand hover:text-brand"
                 @click="openSheet">答题卡</button>
       </div>
     </header>
@@ -654,7 +655,7 @@ onUnmounted(() => {
 
           <p class="mt-4 whitespace-pre-wrap text-base leading-7 text-slate-900 md:text-[17px]">{{ formatText(question.stem) }}</p>
           <img v-for="(src, i) in images" :key="i" :src="src" alt="题目配图"
-               class="mt-3 max-h-80 w-auto rounded-lg border border-slate-200 object-contain" />
+               class="question-img mt-3 max-h-80 w-auto object-contain" />
 
           <div v-if="relatedKps.length" class="mt-3 flex flex-wrap items-center gap-1.5">
             <span class="text-xs text-slate-400">相关知识点：</span>
@@ -689,15 +690,15 @@ onUnmounted(() => {
             <textarea ref="answerBox" v-model="fill" :disabled="Boolean(feedback)"
                       :rows="question.questionType === 5 ? 5 : 3"
                       placeholder="多空用中文分号「；」分隔；程序题可直接按行输入"
-                      class="w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm outline-none focus:border-blue-500" />
+                      class="w-full rounded-xl border border-line-strong bg-surface-card px-3 py-2.5 text-base outline-none focus:border-brand sm:text-sm" />
           </div>
 
           <p v-if="!feedback" class="mt-3 text-xs text-slate-400">
             选择题按 Enter 提交；填空/综合按 Ctrl+Enter 提交；← → 可切题
           </p>
 
-          <div v-if="feedback" class="mt-5 rounded-xl border p-4 text-sm"
-               :class="feedback.is_correct ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'">
+          <div v-if="feedback" class="mt-5 rounded-xl border border-l-4 border-line-subtle bg-surface-muted p-4 text-sm"
+               :style="{ borderLeftColor: feedback.is_correct ? 'rgb(var(--success-fg))' : 'rgb(var(--danger-fg))' }">
             <div class="flex flex-wrap items-center justify-between gap-2">
               <p class="font-semibold" :class="feedback.is_correct ? 'text-green-700' : 'text-red-700'">
                 {{ feedback.is_correct ? '✓ 回答正确' : '✗ 回答错误' }}
@@ -757,15 +758,15 @@ onUnmounted(() => {
       <p v-else class="py-12 text-center text-sm text-slate-500">这个范围暂时没有可练习题。</p>
     </main>
 
-    <div v-if="!finished && question" class="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-white/95 backdrop-blur">
+    <div v-if="!finished && question" class="fixed inset-x-0 bottom-0 z-30 border-t border-line-subtle bg-surface-glass backdrop-blur">
       <div class="mx-auto flex max-w-3xl items-center gap-2 px-3 py-2.5 pb-[max(0.625rem,env(safe-area-inset-bottom))] sm:px-4">
-        <UiButton variant="secondary" size="sm" :disabled="currentOrder <= 1 || submitting || navigating" @click="goPrev">
+        <UiButton variant="secondary" size="md" :disabled="currentOrder <= 1 || submitting || navigating" @click="goPrev">
           上一题
         </UiButton>
-        <UiButton v-if="!guest" variant="ghost" size="sm" @click="toggleFav">
+        <UiButton v-if="!guest" variant="ghost" size="md" @click="toggleFav">
           {{ favorited ? '★' : '☆' }}
         </UiButton>
-        <UiButton variant="primary" size="md" class="flex-1" :loading="submitting" :disabled="navigating" @click="primaryAction">
+        <UiButton variant="primary" size="lg" class="flex-1" :loading="submitting" :disabled="navigating" @click="primaryAction">
           {{ primaryLabel }}
         </UiButton>
       </div>

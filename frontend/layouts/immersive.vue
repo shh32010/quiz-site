@@ -1,6 +1,6 @@
 <template>
-  <!-- 沉浸布局：W2 刷题页接入，先保留无顶栏结构 -->
-  <div class="min-h-screen bg-white text-slate-800">
+  <!-- 沉浸布局：刷题页专用，页面自己负责顶栏/底栏 -->
+  <div class="min-h-screen bg-immersive text-fg-primary">
     <slot />
   </div>
 </template>

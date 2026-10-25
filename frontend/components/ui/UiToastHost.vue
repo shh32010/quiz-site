@@ -1,10 +1,10 @@
 <script setup lang="ts">
 const { toasts, remove } = useToast()
 const tones: Record<string, string> = {
-  info: 'border-slate-200 bg-white text-slate-700',
-  success: 'border-green-200 bg-green-50 text-green-800',
-  warn: 'border-amber-200 bg-amber-50 text-amber-800',
-  error: 'border-red-200 bg-red-50 text-red-800',
+  info: 'border-line-subtle bg-surface-elevated text-fg-primary',
+  success: 'border-success-border bg-success-bg text-success-fg',
+  warn: 'border-warn-border bg-warn-bg text-warn-fg',
+  error: 'border-danger-border bg-danger-bg text-danger-fg',
 }
 </script>
 

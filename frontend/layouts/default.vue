@@ -76,7 +76,8 @@ const meActive = computed(() => active(['/me', '/account', '/admin']))
                  class="h-9 w-full rounded-lg border border-slate-300 px-3 text-sm outline-none focus:border-blue-500" />
         </form>
 
-        <div class="ml-auto flex items-center gap-2 md:ml-0">
+        <div class="ml-auto flex items-center gap-1 md:ml-0">
+          <UiThemeToggle />
           <NuxtLink to="/search" class="rounded-lg p-2 text-sm text-slate-500 hover:bg-slate-100 md:hidden"
                     aria-label="搜索">🔍</NuxtLink>
 
