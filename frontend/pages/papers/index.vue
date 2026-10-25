@@ -16,8 +16,7 @@ const { data } = await useFetch<Paper[]>('/api/papers')
 
 <template>
   <section class="space-y-5">
-    <h1 class="text-2xl font-bold text-slate-900">历年真题</h1>
-    <p class="text-slate-600">共 {{ data?.length ?? 0 }} 套（2005–2025），按卷面分节出题。</p>
+    <UiPageHeader title="历年真题" :subtitle="`共 ${data?.length ?? 0} 套（2005–2025），按卷面分节出题。`" />
 
     <ul class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
       <li v-for="p in data ?? []" :key="p.id">

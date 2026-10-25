@@ -18,7 +18,7 @@ function select(value: number | string) {
 </script>
 
 <template>
-  <div class="flex min-h-11 gap-2 overflow-x-auto pb-1" role="tablist">
+  <div class="scrollbar-none flex min-h-11 gap-2 overflow-x-auto pb-1" role="tablist">
     <button v-for="item in items" :key="item.value" type="button" role="tab"
             :aria-selected="item.value === modelValue"
             class="min-h-10 shrink-0 rounded-full border px-4 py-2 text-sm transition-colors"

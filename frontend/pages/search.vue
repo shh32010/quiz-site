@@ -59,12 +59,13 @@ const totalPages = computed(() => Math.max(1, Math.ceil((data.value?.total ?? 0)
 
 <template>
   <section class="space-y-4">
-    <h1 class="text-2xl font-bold text-slate-900">题库搜索</h1>
+    <UiPageHeader title="题库搜索" subtitle="按题干关键词或知识点定位题目，直接开练" />
 
     <form class="flex gap-2" @submit.prevent="submit">
-      <input v-model="q" :placeholder="kp ? '可留空，直接搜该知识点的题' : '输入题干关键词（至少 2 个字）'"
-             class="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm" />
-      <button class="rounded-lg bg-blue-600 px-5 py-2 text-sm font-medium text-white">搜索</button>
+      <input v-model="q" type="search"
+             :placeholder="kp ? '可留空，直接搜该知识点的题' : '输入题干关键词（至少 2 个字）'"
+             class="min-h-11 flex-1 rounded-lg border border-line-strong bg-surface-card px-3 text-sm text-fg-primary outline-none focus:border-brand" />
+      <button class="min-h-11 rounded-lg bg-brand px-5 text-sm font-medium text-white hover:bg-brand-hover">搜索</button>
     </form>
 
     <div v-if="kp" class="flex items-center gap-2 text-sm">

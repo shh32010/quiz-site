@@ -1,6 +1,7 @@
 <script setup lang="ts">
 // 章节下的题目列表（含子孙章节）
 const route = useRoute()
+const router = useRouter()
 const page = computed(() => Number(route.query.page) || 1)
 const type = computed(() => Number(route.query.type) || 0)
 const chapterId = computed(() => Number(route.params.id))
@@ -30,56 +31,58 @@ const allCount = computed(() =>
   Object.values(typeMap.value).reduce((s, n) => s + n, 0))
 const practiceLink = computed(() =>
   `/practice?mode=chapter&target=${chapterId.value}${type.value ? `&type=${type.value}` : ''}`)
+const typeTabs = computed(() => TYPE_TABS.map(t => ({
+  ...t,
+  count: t.value === 0 ? allCount.value : (typeMap.value[t.value] ?? 0),
+})))
+const chapterTitle = computed(() =>
+  data.value?.rows?.[0]?.chapterName || '章节题目')
+const chapterPath = computed(() =>
+  data.value?.rows?.[0]?.chapterPath || '')
+
+function switchType(value: number | string) {
+  const next = Number(value) || 0
+  router.push({ query: { ...route.query, type: next || undefined, page: undefined } })
+}
 </script>
 
 <template>
   <section class="space-y-4">
-    <NuxtLink to="/chapters" class="text-sm text-blue-600 hover:underline">← 返回章节</NuxtLink>
-    <h1 class="text-xl font-bold text-slate-900">章节题目</h1>
-    <div class="flex flex-wrap items-center gap-3">
-      <p class="text-sm text-slate-500">共 {{ data?.total ?? 0 }} 题</p>
-      <NuxtLink :to="practiceLink"
-                class="rounded-lg bg-blue-600 px-4 py-1.5 text-sm font-medium text-white">
-        开始练习{{ type ? `（${TYPE_LABEL[type]}）` : '' }}
-      </NuxtLink>
-      <span class="text-xs text-slate-400">点击任意题目可直接做这一题</span>
+    <UiPageHeader :title="chapterTitle" :subtitle="chapterPath || `共 ${data?.total ?? 0} 题`"
+                  back-to="/chapters" back-label="返回章节">
+      <template #actions>
+        <NuxtLink :to="practiceLink"
+                  class="inline-flex min-h-11 items-center rounded-lg bg-brand px-4 text-sm font-medium text-white hover:bg-brand-hover">
+          开始练习{{ type ? `（${TYPE_LABEL[type]}）` : '' }}
+        </NuxtLink>
+      </template>
+    </UiPageHeader>
+
+    <div class="sticky top-14 z-20 -mx-3 border-y border-line-subtle bg-page/95 px-3 py-2 backdrop-blur sm:-mx-4 sm:px-4">
+      <UiTabs :model-value="type" :items="typeTabs" @update:model-value="switchType" />
     </div>
 
-    <div class="flex flex-wrap gap-2">
-      <NuxtLink v-for="t in TYPE_TABS" :key="t.value"
-                :to="{ query: { type: t.value || undefined } }"
-                class="rounded-full border px-3 py-1 text-xs"
-                :class="type === t.value
-                  ? 'border-blue-600 bg-blue-600 text-white'
-                  : 'border-slate-300 text-slate-600 hover:border-blue-400'">
-        {{ t.label }}
-        <span :class="type === t.value ? 'text-blue-100' : 'text-slate-400'">
-          {{ t.value === 0 ? allCount : (typeMap[t.value] ?? 0) }}
-        </span>
-      </NuxtLink>
-    </div>
-
-    <ul class="divide-y divide-slate-100 rounded-xl border border-slate-200">
+    <ul class="divide-y divide-line-subtle overflow-hidden rounded-xl border border-line-subtle bg-surface-card">
       <li v-for="q in data?.rows ?? []" :key="q.id">
         <NuxtLink :to="`/practice?mode=single&target=${q.id}`" title="点击做这道题"
-                  class="flex items-start gap-3 px-5 py-3 hover:bg-blue-50/60">
-          <span class="mt-0.5 shrink-0 rounded bg-slate-100 px-1.5 py-0.5 text-xs text-slate-600">
-            {{ TYPE_LABEL[q.questionType] ?? q.questionType }}
-          </span>
-          <span class="min-w-0 flex-1 text-sm leading-6 text-slate-800">{{ formatText(q.stem) }}</span>
-          <span v-if="q.hasImage" class="shrink-0 text-xs text-slate-400">含图</span>
-          <span class="shrink-0 text-xs font-medium text-blue-600">做这题 →</span>
+                  class="flex min-h-14 items-start gap-3 px-4 py-3 hover:bg-surface-muted">
+          <UiBadge class="mt-0.5 shrink-0">{{ TYPE_LABEL[q.questionType] ?? q.questionType }}</UiBadge>
+          <span class="min-w-0 flex-1 text-sm leading-6 text-fg-primary">{{ formatText(q.stem) }}</span>
+          <span v-if="q.hasImage" class="shrink-0 text-xs text-fg-muted">含图</span>
+          <span class="shrink-0 text-xs font-medium text-brand">做这题 →</span>
         </NuxtLink>
       </li>
-      <li v-if="!(data?.rows ?? []).length" class="px-5 py-6 text-sm text-slate-500">
+      <li v-if="!(data?.rows ?? []).length" class="px-5 py-8 text-center text-sm text-fg-muted">
         {{ type ? '本章该题型暂无题目。' : '本章暂无题目。' }}
       </li>
     </ul>
 
     <div v-if="totalPages > 1" class="flex items-center justify-center gap-2 text-sm">
-      <NuxtLink v-if="page > 1" :to="{ query: { ...route.query, page: page - 1 } }" class="rounded border px-3 py-1">上一页</NuxtLink>
-      <span class="text-slate-500">{{ page }} / {{ totalPages }}</span>
-      <NuxtLink v-if="page < totalPages" :to="{ query: { ...route.query, page: page + 1 } }" class="rounded border px-3 py-1">下一页</NuxtLink>
+      <NuxtLink v-if="page > 1" :to="{ query: { ...route.query, page: page - 1 } }"
+                class="inline-flex min-h-11 items-center rounded-lg border border-line-strong px-4">上一页</NuxtLink>
+      <span class="tabular-nums text-fg-muted">{{ page }} / {{ totalPages }}</span>
+      <NuxtLink v-if="page < totalPages" :to="{ query: { ...route.query, page: page + 1 } }"
+                class="inline-flex min-h-11 items-center rounded-lg border border-line-strong px-4">下一页</NuxtLink>
     </div>
   </section>
 </template>

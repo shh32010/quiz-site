@@ -223,3 +223,12 @@ html.dark .question-img {
     display: none !important;
   }
 }
+
+/* 隐藏横向滚动条，保留滚动能力（题型筛选/标签栏） */
+.scrollbar-none {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}

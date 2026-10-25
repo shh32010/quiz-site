@@ -229,19 +229,19 @@ onMounted(async () => {
                 <span class="mt-1 shrink-0 text-slate-400 group-open:rotate-90">›</span>
                 <span class="min-w-0 flex-1 text-sm font-medium text-slate-800">{{ kp.title }}</span>
                 <span v-if="kp.nodeName && kp.nodeCode !== selected?.code"
-                      class="max-w-[35%] shrink-0 truncate rounded bg-slate-100 px-1.5 py-0.5 text-[11px] text-slate-400"
+                      class="max-w-[35%] shrink-0 truncate rounded bg-slate-100 px-1.5 py-0.5 text-xs text-slate-400"
                       :title="kp.nodeName">
                   {{ kp.nodeName }}
                 </span>
-                <span v-if="kp.questionCount" class="shrink-0 text-[11px] text-slate-400">{{ kp.questionCount }} 题</span>
-                <span v-else class="shrink-0 rounded bg-slate-50 px-1.5 py-0.5 text-[11px] text-slate-400">暂无关联题</span>
+                <span v-if="kp.questionCount" class="shrink-0 text-xs text-slate-400">{{ kp.questionCount }} 题</span>
+                <span v-else class="shrink-0 rounded bg-slate-50 px-1.5 py-0.5 text-xs text-slate-400">暂无关联题</span>
                 <NuxtLink v-if="kp.questionCount" :to="`/practice?mode=kp&target=${kp.id}`"
-                          class="shrink-0 rounded border border-blue-200 px-1.5 py-0.5 text-[11px] text-blue-600 hover:bg-blue-50"
+                          class="shrink-0 rounded border border-blue-200 px-1.5 py-0.5 text-xs text-blue-600 hover:bg-blue-50"
                           @click.stop>
                   练相关题
                 </NuxtLink>
                 <NuxtLink :to="`/search?kp=${kp.id}`"
-                          class="shrink-0 text-[11px] text-slate-400 hover:text-blue-600" @click.stop>搜题</NuxtLink>
+                          class="shrink-0 text-xs text-slate-400 hover:text-blue-600" @click.stop>搜题</NuxtLink>
               </summary>
               <div class="kp-content mt-2 border-l-2 border-blue-100 pl-3 text-sm leading-6 text-slate-600"
                    v-html="render(kp.content)" />

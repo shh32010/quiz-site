@@ -16,7 +16,7 @@ const tones: Record<string, string> = {
   indigo: 'bg-indigo-50 text-indigo-700',
 }
 const sizes: Record<string, string> = {
-  sm: 'px-2 py-0.5 text-[11px]',
+  sm: 'px-2 py-0.5 text-xs',
   md: 'px-2.5 py-1 text-xs',
 }
 </script>

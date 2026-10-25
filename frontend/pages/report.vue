@@ -1,23 +1,46 @@
 <script setup lang="ts">
 // 学习报告
 definePageMeta({ middleware: 'auth' })
+useHead({ title: '学习报告' })
 const api = useApi()
 const data = ref<any>(null)
+const loading = ref(true)
 const error = ref('')
 
-onMounted(async () => {
+const MODE_LABEL: Record<string, string> = {
+  chapter: '章节练习', paper: '真题练习', kp: '知识点练习', single: '单题练习',
+  course: '课程练习', wrong: '错题复习', random: '随机组卷',
+  exam: '模拟考试', random_exam: '随机模考',
+}
+
+async function load() {
+  loading.value = true
+  error.value = ''
   try {
     data.value = await api.get('/api/report')
   } catch (e: any) {
     error.value = e.message
+  } finally {
+    loading.value = false
   }
-})
+}
+onMounted(load)
 
 const rate = computed(() => {
   const s = data.value?.summary
   if (!s || !s.answered) return 0
   return Math.round((s.correct / s.answered) * 100)
 })
+const masterySorted = computed(() =>
+  [...(data.value?.mastery ?? [])].sort((a, b) => (a.rate ?? 0) - (b.rate ?? 0)))
+const kpsSorted = computed(() =>
+  [...(data.value?.kps ?? [])].sort((a, b) => (a.rate ?? 0) - (b.rate ?? 0)))
+
+function barClass(value: number) {
+  if (value >= 80) return 'bg-success-fg'
+  if (value >= 60) return 'bg-warn-fg'
+  return 'bg-danger-fg'
+}
 
 const weekly = ref<{ loading: boolean; content: string; err: string }>({ loading: false, content: '', err: '' })
 async function loadWeekly() {
@@ -33,100 +56,89 @@ async function loadWeekly() {
 
 <template>
   <section class="space-y-5">
-    <h1 class="text-2xl font-bold text-slate-900">学习报告</h1>
+    <UiPageHeader title="学习报告" subtitle="正确率、章节掌握度、知识点掌握度和最近练习" />
 
-    <p v-if="error" class="text-sm text-red-600">
-      {{ error }} <NuxtLink to="/login" class="ml-2 text-blue-600 hover:underline">去登录</NuxtLink>
-    </p>
+    <UiState :loading="loading" :error="error" @retry="load">
+      <template v-if="data">
+        <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <UiStatCard label="已答题" :value="data.summary.answered" />
+          <UiStatCard label="正确率" :value="rate" suffix="%" tone="brand" />
+          <UiStatCard label="活跃天数" :value="data.summary.activeDays" />
+          <UiStatCard label="待复习错题" :value="data.wrong.pending" tone="warn" />
+        </div>
 
-    <template v-else-if="data">
-      <div class="grid gap-3 sm:grid-cols-4">
-        <div class="rounded-xl border border-slate-200 p-4">
-          <p class="text-xs text-slate-500">已答题</p>
-          <p class="mt-1 text-2xl font-bold text-slate-800">{{ data.summary.answered }}</p>
-        </div>
-        <div class="rounded-xl border border-slate-200 p-4">
-          <p class="text-xs text-slate-500">正确率</p>
-          <p class="mt-1 text-2xl font-bold text-blue-600">{{ rate }}%</p>
-        </div>
-        <div class="rounded-xl border border-slate-200 p-4">
-          <p class="text-xs text-slate-500">活跃天数</p>
-          <p class="mt-1 text-2xl font-bold text-slate-800">{{ data.summary.activeDays }}</p>
-        </div>
-        <div class="rounded-xl border border-slate-200 p-4">
-          <p class="text-xs text-slate-500">待复习错题</p>
-          <p class="mt-1 text-2xl font-bold text-amber-600">{{ data.wrong.pending }}</p>
-        </div>
-      </div>
-
-      <div>
-        <div class="mb-2 flex items-center gap-3">
-          <h2 class="text-sm font-semibold text-slate-700">错题周报</h2>
-          <button class="rounded-lg border border-slate-300 px-3 py-1 text-xs"
-                  :disabled="weekly.loading" @click="loadWeekly">
-            {{ weekly.loading ? '生成中…' : '生成近 7 天分析' }}
-          </button>
-        </div>
-        <p v-if="weekly.err" class="text-xs text-red-600">{{ weekly.err }}</p>
-        <div v-if="weekly.content"
-             class="whitespace-pre-wrap rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
-          {{ weekly.content }}
-        </div>
-      </div>
-
-      <div v-if="data.mastery?.length">
-        <h2 class="mb-2 text-sm font-semibold text-slate-700">章节掌握度</h2>
-        <ul class="space-y-2 rounded-xl border border-slate-200 p-4">
-          <li v-for="m in data.mastery" :key="m.code" class="text-sm">
-            <div class="flex items-center justify-between text-xs">
-              <span class="text-slate-700">{{ m.code }} {{ m.name }}</span>
-              <span class="text-slate-500">{{ m.correct }}/{{ m.total }}（{{ m.rate }}%）</span>
+        <UiCard padded="md">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h2 class="text-sm font-semibold text-fg-primary">错题周报</h2>
+              <p class="mt-0.5 text-xs text-fg-muted">根据近 7 天错题生成</p>
             </div>
-            <div class="mt-1 h-2 w-full rounded bg-slate-100">
-              <div class="h-2 rounded"
-                   :class="m.rate >= 80 ? 'bg-green-500' : m.rate >= 60 ? 'bg-amber-500' : 'bg-red-500'"
-                   :style="{ width: (m.rate || 0) + '%' }" />
-            </div>
-          </li>
-        </ul>
-      </div>
+            <UiButton size="sm" variant="secondary" :loading="weekly.loading" @click="loadWeekly">
+              {{ weekly.loading ? '生成中…' : '生成近 7 天分析' }}
+            </UiButton>
+          </div>
+          <p v-if="weekly.err" class="mt-3 text-xs text-danger-fg">{{ weekly.err }}</p>
+          <p v-if="weekly.content"
+             class="mt-3 whitespace-pre-wrap rounded-xl bg-surface-muted p-4 text-sm leading-6 text-fg-secondary">
+            {{ weekly.content }}
+          </p>
+        </UiCard>
 
-      <div v-if="data.kps?.length">
-        <h2 class="mb-2 text-sm font-semibold text-slate-700">知识点掌握度</h2>
-        <ul class="space-y-2 rounded-xl border border-slate-200 p-4">
-          <li v-for="k in data.kps" :key="k.id" class="text-sm">
-            <div class="flex items-center justify-between gap-2 text-xs">
-              <NuxtLink :to="`/knowledge?kp=${k.id}`" class="truncate text-slate-700 hover:text-blue-600">
-                {{ k.title }}
+        <UiCard v-if="masterySorted.length" padded="md">
+          <h2 class="text-sm font-semibold text-fg-primary">章节掌握度</h2>
+          <p class="mt-0.5 text-xs text-fg-muted">薄弱优先</p>
+          <ul class="mt-3 space-y-3">
+            <li v-for="m in masterySorted" :key="m.code">
+              <div class="flex items-center justify-between gap-2 text-xs">
+                <span class="min-w-0 truncate text-fg-secondary">{{ m.code }} {{ m.name }}</span>
+                <span class="shrink-0 tabular-nums text-fg-muted">{{ m.correct }}/{{ m.total }}（{{ m.rate }}%）</span>
+              </div>
+              <div class="mt-1 h-2 w-full overflow-hidden rounded-full bg-surface-muted">
+                <div class="h-full rounded-full" :class="barClass(m.rate)" :style="{ width: (m.rate || 0) + '%' }" />
+              </div>
+            </li>
+          </ul>
+        </UiCard>
+
+        <UiCard v-if="kpsSorted.length" padded="md">
+          <h2 class="text-sm font-semibold text-fg-primary">知识点掌握度</h2>
+          <p class="mt-0.5 text-xs text-fg-muted">薄弱优先</p>
+          <ul class="mt-3 space-y-3">
+            <li v-for="k in kpsSorted" :key="k.id">
+              <div class="flex items-center justify-between gap-2 text-xs">
+                <NuxtLink :to="`/knowledge?kp=${k.id}`" class="min-w-0 truncate text-fg-secondary hover:text-brand">
+                  {{ k.title }}
+                </NuxtLink>
+                <span class="shrink-0 tabular-nums text-fg-muted">{{ k.correct }}/{{ k.total }}（{{ k.rate }}%）</span>
+              </div>
+              <div class="mt-1 h-2 w-full overflow-hidden rounded-full bg-surface-muted">
+                <div class="h-full rounded-full" :class="barClass(k.rate)" :style="{ width: (k.rate || 0) + '%' }" />
+              </div>
+            </li>
+          </ul>
+        </UiCard>
+
+        <UiCard :padded="'none'">
+          <div class="flex items-center justify-between px-4 py-3">
+            <h2 class="text-sm font-semibold text-fg-primary">最近练习</h2>
+            <NuxtLink to="/history" class="text-xs text-brand hover:underline">全部历史 →</NuxtLink>
+          </div>
+          <ul class="divide-y divide-line-subtle border-t border-line-subtle">
+            <li v-for="s in data.recent" :key="s.id">
+              <NuxtLink :to="`/history/${s.id}`" class="flex min-h-12 items-center justify-between gap-2 px-4 py-3 hover:bg-surface-muted">
+                <span class="min-w-0 truncate text-sm text-fg-secondary">
+                  {{ MODE_LABEL[s.mode] ?? s.mode }}
+                  <span class="ml-2 text-xs text-fg-muted">{{ (s.startedAt || '').slice(0, 16).replace('T', ' ') }}</span>
+                </span>
+                <span class="shrink-0 text-xs tabular-nums text-fg-muted">
+                  {{ s.questionCount ?? 0 }} 题 · {{ s.score ?? 0 }}/{{ s.totalScore ?? 0 }} 分
+                </span>
               </NuxtLink>
-              <span class="shrink-0 text-slate-500">{{ k.correct }}/{{ k.total }}（{{ k.rate }}%）</span>
-            </div>
-            <div class="mt-1 h-2 w-full rounded bg-slate-100">
-              <div class="h-2 rounded"
-                   :class="k.rate >= 80 ? 'bg-green-500' : k.rate >= 60 ? 'bg-amber-500' : 'bg-red-500'"
-                   :style="{ width: (k.rate || 0) + '%' }" />
-            </div>
-          </li>
-        </ul>
-      </div>
-
-      <div>
-        <h2 class="mb-2 text-sm font-semibold text-slate-700">最近练习</h2>
-        <ul class="divide-y divide-slate-100 rounded-xl border border-slate-200">
-          <li v-for="s in data.recent" :key="s.id" class="flex items-center justify-between px-5 py-3 text-sm">
-            <span class="text-slate-700">
-              {{ s.mode }}
-              <span class="ml-2 text-xs text-slate-400">{{ (s.startedAt || '').slice(0, 16).replace('T', ' ') }}</span>
-            </span>
-            <span class="text-xs text-slate-500">
-              {{ s.questionCount ?? 0 }} 题 · {{ s.score ?? 0 }}/{{ s.totalScore ?? 0 }} 分
-            </span>
-          </li>
-          <li v-if="!data.recent.length" class="px-5 py-6 text-sm text-slate-500">还没有练习记录。</li>
-        </ul>
-      </div>
-    </template>
-
-    <p v-else class="text-sm text-slate-500">加载中…</p>
+            </li>
+            <li v-if="!data.recent.length" class="px-4 py-6 text-sm text-fg-muted">还没有练习记录。</li>
+          </ul>
+        </UiCard>
+      </template>
+    </UiState>
   </section>
 </template>

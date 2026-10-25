@@ -69,10 +69,8 @@ const otherTotal = computed(() => otherNodes.value.reduce((s, n) => s + n.questi
 
 <template>
   <section class="space-y-6">
-    <div>
-      <h1 class="text-2xl font-bold text-slate-900">按章节刷题</h1>
-      <p class="mt-1 text-slate-600">理论按课程 A/B 分组，实操按技能一~六；数字为可练习题数。</p>
-    </div>
+    <UiPageHeader title="按章节刷题"
+                  subtitle="理论按课程 A/B 分组，实操按技能一~六；数字为可练习题数。" />
 
     <div class="overflow-hidden rounded-xl border border-slate-200">
       <h2 class="border-b border-slate-200 px-5 py-3 text-sm font-semibold text-slate-700">理论题库</h2>

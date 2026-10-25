@@ -660,7 +660,7 @@ onUnmounted(() => {
           <div v-if="relatedKps.length" class="mt-3 flex flex-wrap items-center gap-1.5">
             <span class="text-xs text-slate-400">相关知识点：</span>
             <NuxtLink v-for="k in relatedKps" :key="k.id" :to="`/knowledge?kp=${k.id}`"
-                      class="rounded bg-slate-100 px-1.5 py-0.5 text-[11px] text-slate-600 hover:bg-blue-50 hover:text-blue-700"
+                      class="rounded bg-slate-100 px-1.5 py-0.5 text-xs text-slate-600 hover:bg-blue-50 hover:text-blue-700"
                       :title="k.nodeName">{{ k.title }}</NuxtLink>
           </div>
 

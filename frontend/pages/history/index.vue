@@ -92,58 +92,58 @@ onMounted(async () => {
 
 <template>
   <section class="space-y-4">
-    <div class="flex flex-wrap items-center justify-between gap-2">
-      <h1 class="text-2xl font-bold text-slate-900">做题历史</h1>
-      <NuxtLink to="/report" class="text-sm text-blue-600 hover:underline">学习报告 →</NuxtLink>
-    </div>
+    <UiPageHeader title="做题历史" subtitle="每次练习、进度和得分">
+      <template #actions>
+        <NuxtLink to="/report" class="text-sm text-brand hover:underline">学习报告 →</NuxtLink>
+      </template>
+    </UiPageHeader>
 
     <ResumeCard v-if="resume" :session="resume" />
 
     <UiTabs :model-value="selectedType" :items="typeTabs" @update:model-value="switchType(Number($event))" />
 
-    <p v-if="error" class="text-sm text-red-600">{{ error }}</p>
-    <p v-if="loading" class="text-sm text-slate-500">加载中…</p>
-
-    <template v-if="!loading">
-      <p v-if="!rows.length" class="rounded-xl border border-slate-200 px-5 py-8 text-center text-sm text-slate-500">
+    <UiState :loading="loading" :error="error" @retry="load(page)">
+      <p v-if="!rows.length" class="rounded-xl border border-line-subtle bg-surface-card px-5 py-8 text-center text-sm text-fg-muted">
         {{ selectedType ? '该题型暂无做题记录。' : '还没有做题记录，去' }}
-        <NuxtLink v-if="!selectedType" to="/chapters" class="text-blue-600 hover:underline">章节练习</NuxtLink>
+        <NuxtLink v-if="!selectedType" to="/chapters" class="text-brand hover:underline">章节练习</NuxtLink>
         <span v-if="!selectedType"> 开始吧。</span>
       </p>
 
       <ul v-else class="space-y-3">
         <li v-for="s in rows" :key="s.id">
           <NuxtLink :to="`/history/${s.id}`"
-                    class="block rounded-xl border border-slate-200 p-4 transition hover:border-blue-400 hover:shadow-sm">
+                    class="block rounded-xl border border-line-subtle bg-surface-card p-4 transition hover:border-brand hover:shadow-sm">
             <div class="flex flex-wrap items-start justify-between gap-2">
               <div class="min-w-0">
-                <p class="truncate text-sm font-medium text-slate-800">
+                <p class="truncate text-sm font-medium text-fg-primary">
                   {{ MODE_LABEL[s.mode] ?? s.mode }}
-                  <span v-if="s.targetName" class="text-slate-500">· {{ s.targetName }}</span>
+                  <span v-if="s.targetName" class="text-fg-secondary">· {{ s.targetName }}</span>
                 </p>
-                <p class="mt-1 text-xs text-slate-400">
+                <p class="mt-1 text-xs text-fg-muted">
                   {{ fmtTime(s.startedAt) }} · 用时 {{ fmtDur(s.elapsedSec) }}
                 </p>
               </div>
-              <span class="shrink-0 rounded-full px-2 py-0.5 text-xs"
-                    :class="s.finishedAt ? 'bg-green-50 text-green-700' : 'bg-amber-50 text-amber-700'">
+              <UiBadge :tone="s.finishedAt ? 'green' : 'amber'" class="shrink-0">
                 {{ s.finishedAt ? '已完成' : '进行中' }}
-              </span>
+              </UiBadge>
             </div>
-            <div class="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-xs text-slate-500">
+            <div class="mt-3 flex flex-wrap items-center gap-x-5 gap-y-1 text-xs text-fg-secondary">
               <span>作答 {{ s.answeredCount }} / {{ s.questionCount }}</span>
               <span v-if="s.answeredCount">答对 {{ s.correctCount }} 题</span>
+              <span v-if="s.answeredCount" class="font-semibold tabular-nums text-brand">
+                正确率 {{ Math.round(s.correctCount / s.answeredCount * 100) }}%
+              </span>
               <span v-if="s.finishedAt">得分 {{ s.score }} / {{ s.totalScore }}</span>
             </div>
           </NuxtLink>
         </li>
       </ul>
 
-      <div v-if="totalPages > 1" class="flex items-center justify-center gap-2 text-sm">
-        <button v-if="page > 1" class="rounded border px-3 py-1" @click="load(page - 1)">上一页</button>
-        <span class="text-slate-500">{{ page }} / {{ totalPages }}</span>
-        <button v-if="page < totalPages" class="rounded border px-3 py-1" @click="load(page + 1)">下一页</button>
+      <div v-if="totalPages > 1" class="flex items-center justify-center gap-2">
+        <UiButton v-if="page > 1" variant="secondary" size="md" @click="load(page - 1)">上一页</UiButton>
+        <span class="text-sm tabular-nums text-fg-muted">{{ page }} / {{ totalPages }}</span>
+        <UiButton v-if="page < totalPages" variant="secondary" size="md" @click="load(page + 1)">下一页</UiButton>
       </div>
-    </template>
+    </UiState>
   </section>
 </template>

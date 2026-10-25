@@ -189,7 +189,7 @@ const entries = [
             <div v-for="ch in g.chapters" :key="ch.id">
               <p v-if="g.chapters.length > 1"
                  class="flex items-center gap-2 pl-12 pr-5 pt-2 text-xs text-fg-secondary">
-                <span class="rounded bg-surface-card px-1.5 py-0.5 font-mono text-[11px] text-fg-muted">{{ ch.code }}</span>
+                <span class="rounded bg-surface-card px-1.5 py-0.5 font-mono text-xs text-fg-muted">{{ ch.code }}</span>
                 <span class="font-medium">{{ ch.name }}</span>
                 <span class="text-fg-muted">{{ ch.count.toLocaleString() }} 题</span>
               </p>
