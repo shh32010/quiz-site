@@ -23,6 +23,23 @@ public class ReportController {
         this.jdbc = jdbc;
     }
 
+    /** 全站总进度：去重已做过的题 / 当前可练总题。 */
+    @GetMapping("/progress")
+    public Map<String, Object> progress(@AuthenticationPrincipal UUID uid) {
+        Map<String, Object> row = jdbc.queryForMap("""
+                select count(distinct q.id) as "total",
+                       count(distinct q.id) filter (where pa.id is not null) as "answered"
+                  from t_question q
+                  left join practice_answer pa
+                         on pa.question_id = q.id and pa.user_id = ?
+                 where not q.deleted and q.review_status = 'ok'
+                """, uid);
+        int total = ((Number) row.get("total")).intValue();
+        int answered = ((Number) row.get("answered")).intValue();
+        int pct = total > 0 ? (int) Math.round(answered * 100.0 / total) : 0;
+        return Map.of("total", total, "answered", answered, "pct", pct);
+    }
+
     /**
      * 章节进度：按 L1 章/技能统计“已做过的不同题数 / 可练总题数”。
      * 与 /api/report 的 mastery（作答次数正确率）区分，专门供 /chapters 进度条使用。

@@ -5,13 +5,18 @@ useHead({ title: '专转本计算机刷题' })
 const { loggedIn } = useAuth()
 const api = useApi()
 const resume = ref<any>(null)
+const totalProgress = ref<{ total: number; answered: number; pct: number } | null>(null)
 
 onMounted(async () => {
   if (!api.hasToken()) return
   try {
-    const r = await api.get<{ session: any }>('/api/practice/resume')
+    const [r, p] = await Promise.all([
+      api.get<{ session: any }>('/api/practice/resume'),
+      api.get<{ total: number; answered: number; pct: number }>('/api/report/progress'),
+    ])
     resume.value = r.session
-  } catch { /* 续做失败不影响首页 */ }
+    totalProgress.value = p
+  } catch { /* 未登录/网络失败时不显示进度 */ }
 })
 
 interface Node {
@@ -152,6 +157,22 @@ const entries = [
           <p class="text-xl font-bold tabular-nums text-brand">8</p>
           <p class="mt-0.5 text-xs text-fg-muted">个课程 / 技能</p>
         </div>
+      </div>
+
+      <div v-if="totalProgress" class="mt-4 border-t border-line-subtle pt-4">
+        <div class="flex items-center justify-between gap-2 text-xs">
+          <span class="font-medium text-fg-secondary">总进度</span>
+          <span class="tabular-nums text-fg-muted">
+            {{ totalProgress.answered.toLocaleString() }} / {{ totalProgress.total.toLocaleString() }} 题
+            · {{ totalProgress.pct }}%
+          </span>
+        </div>
+        <div class="mt-2 h-2 overflow-hidden rounded-full bg-surface-muted"
+             role="progressbar" :aria-valuenow="totalProgress.pct" aria-valuemin="0" aria-valuemax="100">
+          <div class="h-full rounded-full bg-brand transition-all"
+               :style="{ width: totalProgress.answered > 0 ? `max(3px, ${totalProgress.pct}%)` : '0%' }" />
+        </div>
+        <p class="mt-1 text-xs text-fg-muted">按全站已做过的不同题统计，章节、真题、组卷都会计入</p>
       </div>
     </div>
 
