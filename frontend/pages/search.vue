@@ -80,6 +80,8 @@ const totalPages = computed(() => Math.max(1, Math.ceil((data.value?.total ?? 0)
           {{ TYPE_LABEL[r.questionType] ?? r.questionType }}
         </span>
         <span class="min-w-0 flex-1 text-sm leading-6 text-slate-800">{{ formatText(r.stem) }}</span>
+        <NuxtLink :to="`/practice?mode=single&target=${r.id}&from=/search`"
+                  class="shrink-0 text-xs font-medium text-blue-600 hover:underline">练这题 →</NuxtLink>
       </li>
       <li v-if="data && !data.rows.length" class="px-5 py-6 text-sm text-slate-500">
         {{ !kp && q.trim().length < 2 ? '请输入至少 2 个字' : (kp ? '该知识点下没有匹配题目' : '没有匹配的题目') }}

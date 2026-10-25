@@ -1,12 +1,15 @@
 <script setup lang="ts">
 // 收藏夹
+definePageMeta({ middleware: 'auth' })
 const api = useApi()
 const data = ref<any>(null)
 const error = ref('')
+const loading = ref(true)
 
 async function load() {
-  if (!api.hasToken()) { error.value = '请先登录'; return }
-  try { data.value = await api.get('/api/favorites') } catch (e: any) { error.value = e.message }
+  loading.value = true
+  error.value = ''
+  try { data.value = await api.get('/api/favorites') } catch (e: any) { error.value = e.message } finally { loading.value = false }
 }
 
 async function remove(id: number) {
@@ -20,27 +23,22 @@ const TYPE_LABEL: Record<number, string> = { 1: '单选', 2: '多选', 3: '判�
 <template>
   <section class="space-y-4">
     <h1 class="text-2xl font-bold text-slate-900">收藏夹</h1>
-    <p v-if="error" class="text-sm text-red-600">
-      {{ error }} <NuxtLink to="/login" class="ml-2 text-blue-600 hover:underline">去登录</NuxtLink>
-    </p>
 
-    <template v-else-if="data">
-      <p class="text-sm text-slate-500">共 {{ data.total }} 题</p>
-      <ul class="divide-y divide-slate-100 rounded-xl border border-slate-200">
-        <li v-for="q in data.rows" :key="q.questionId" class="flex items-start gap-3 px-5 py-3">
-          <span class="mt-0.5 shrink-0 rounded bg-slate-100 px-1.5 py-0.5 text-xs text-slate-600">
-            {{ TYPE_LABEL[q.questionType] ?? q.questionType }}
-          </span>
+    <UiState :loading="loading" :error="error" :empty="!data?.rows?.length"
+             empty-text="还没有收藏。" @retry="load">
+      <p class="text-sm text-slate-500">共 {{ data?.total ?? 0 }} 题</p>
+      <ul class="mt-3 divide-y divide-slate-100 rounded-xl border border-slate-200 bg-white">
+        <li v-for="q in data?.rows ?? []" :key="q.questionId" class="flex items-start gap-3 px-5 py-3">
+          <UiBadge class="mt-0.5 shrink-0">{{ TYPE_LABEL[q.questionType] ?? q.questionType }}</UiBadge>
           <div class="min-w-0 flex-1">
             <span class="text-sm leading-6 text-slate-800">{{ formatText(q.stem) }}</span>
             <p v-if="q.kps" class="mt-0.5 text-[11px] text-slate-400">知识点：{{ q.kps }}</p>
           </div>
-          <button class="shrink-0 text-xs text-slate-400 hover:text-red-600" @click="remove(q.questionId)">移除</button>
+          <NuxtLink :to="`/practice?mode=single&target=${q.questionId}&from=/favorites`"
+                    class="shrink-0 text-xs font-medium text-blue-600 hover:underline">练这题 →</NuxtLink>
+          <UiButton variant="ghost" size="sm" class="shrink-0" @click="remove(q.questionId)">移除</UiButton>
         </li>
-        <li v-if="!data.rows.length" class="px-5 py-6 text-sm text-slate-500">还没有收藏。</li>
       </ul>
-    </template>
-
-    <p v-else class="text-sm text-slate-500">加载中…</p>
+    </UiState>
   </section>
 </template>

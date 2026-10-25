@@ -2,8 +2,17 @@
 // 首页：入口导航 + 题库概况
 useHead({ title: '专转本计算机刷题' })
 
+const { loggedIn } = useAuth()
 const api = useApi()
-const loggedIn = ref(false)
+const resume = ref<any>(null)
+
+onMounted(async () => {
+  if (!api.hasToken()) return
+  try {
+    const r = await api.get<{ session: any }>('/api/practice/resume')
+    resume.value = r.session
+  } catch { /* 续做失败不影响首页 */ }
+})
 
 interface Node {
   id: number
@@ -22,8 +31,6 @@ const { data: papers } = await useFetch<any[]>('/api/papers')
 const totalQuestions = computed(() =>
   (tree.value ?? []).reduce((s, n) => s + (n.questionCount ?? 0), 0))
 const paperCount = computed(() => (papers.value?.length ?? 0))
-
-onMounted(() => { loggedIn.value = api.hasToken() })
 
 /** 课程/技能定义与展示顺序 */
 const COURSE_META = [
@@ -102,7 +109,6 @@ const entries = [
   { to: '/chapters', title: '按章节刷题', desc: '理论 A/B、实操技能一~六，逐章推进', tone: 'blue' },
   { to: '/papers',   title: '历年真题',   desc: '27 套真题，按卷面分节练习',      tone: 'indigo' },
   { to: '/compose',  title: '随机组卷',   desc: '按大纲配比与难度生成一套卷',    tone: 'violet' },
-  { to: '/search',   title: '题库搜索',   desc: '按题干关键词快速定位',          tone: 'slate' },
   { to: '/wrong',    title: '错题本',     desc: '自动收录，按间隔复习',          tone: 'amber' },
   { to: '/report',   title: '学习报告',   desc: '正确率、章节掌握度、错题周报',  tone: 'emerald' },
 ]
@@ -110,6 +116,8 @@ const entries = [
 
 <template>
   <section class="space-y-8">
+    <ResumeCard v-if="resume" :session="resume" />
+
     <div class="rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-10 text-white">
       <h1 class="text-3xl font-bold">专转本计算机刷题</h1>
       <p class="mt-2 text-blue-50">章节练习 · 真题模考 · 错题复习 · AI 答疑</p>

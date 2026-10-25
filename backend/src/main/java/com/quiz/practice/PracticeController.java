@@ -40,6 +40,18 @@ public class PracticeController {
         return practice.next(sessionId, uid);
     }
 
+    /** 答题卡：题位、是否作答、对错、得分 */
+    @GetMapping("/{sessionId}/sheet")
+    public Map<String, Object> sheet(@AuthenticationPrincipal UUID uid, @PathVariable long sessionId) {
+        return practice.sheet(sessionId, uid);
+    }
+
+    /** 续做：最近一个进行中的有效会话 */
+    @GetMapping("/resume")
+    public Map<String, Object> resume(@AuthenticationPrincipal UUID uid) {
+        return practice.resume(uid);
+    }
+
     /** 按顺序取题（上一题/下一题） */
     @GetMapping("/{sessionId}/item/{order}")
     public Map<String, Object> item(@AuthenticationPrincipal UUID uid, @PathVariable long sessionId,

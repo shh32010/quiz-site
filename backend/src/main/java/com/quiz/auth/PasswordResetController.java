@@ -95,6 +95,9 @@ public class PasswordResetController {
     @Transactional
     @PostMapping("/reset")
     public ResponseEntity<?> reset(@Valid @RequestBody ResetReq req) {
+        if (PasswordPolicy.tooLong(req.password())) {
+            return ResponseEntity.badRequest().body(Map.of("message", PasswordPolicy.tooLongMessage()));
+        }
         // 原子消费令牌：并发请求只有一个能成功
         List<Map<String, Object>> rows = jdbc.queryForList("""
                 update password_reset_token

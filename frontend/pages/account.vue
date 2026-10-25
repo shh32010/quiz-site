@@ -1,7 +1,9 @@
 <script setup lang="ts">
 // 账号设置：绑定/修改邮箱（用于登录和找回密码）
+definePageMeta({ middleware: 'auth' })
 useHead({ title: '账号设置' })
 const api = useApi()
+const ask = useConfirm()
 const route = useRoute()
 const me = ref<any>(null)
 const email = ref('')
@@ -20,7 +22,6 @@ const pwdError = ref('')
 const pwdLoading = ref(false)
 
 async function load() {
-  if (!api.hasToken()) { error.value = '请先登录'; return }
   try {
     me.value = await api.get('/api/auth/me')
     email.value = me.value.email ?? ''
@@ -41,7 +42,12 @@ async function save() {
     error.value = '请输入当前密码确认'
     return
   }
-  if (!value && !confirm('确定解绑邮箱？解绑后将无法自助找回密码。')) {
+  if (!value && !(await ask({
+    title: '解绑邮箱',
+    message: '解绑后将无法自助找回密码，确定继续？',
+    confirmText: '解绑',
+    danger: true,
+  }))) {
     return
   }
   loading.value = true

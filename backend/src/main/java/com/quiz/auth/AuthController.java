@@ -61,6 +61,9 @@ public class AuthController {
 
     @PostMapping("/register")
     public ResponseEntity<?> register(@Valid @RequestBody RegisterReq req, HttpServletRequest request) {
+        if (PasswordPolicy.tooLong(req.password())) {
+            return ResponseEntity.badRequest().body(Map.of("message", PasswordPolicy.tooLongMessage()));
+        }
         if (users.existsByUsernameIgnoreCase(req.username())) {
             return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("message", "用户名已被占用"));
         }
@@ -88,6 +91,10 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@Valid @RequestBody LoginReq req, HttpServletRequest request) {
+        // 超长密码不进入 BCrypt.matches，统一按凭据错误返回，避免暴露长度策略
+        if (PasswordPolicy.tooLong(req.password())) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", "用户名/邮箱或密码错误"));
+        }
         String identifier = req.username().trim();
         User u = (identifier.contains("@")
                 ? users.findByEmailIgnoreCase(identifier)
@@ -124,7 +131,9 @@ public class AuthController {
         if (u == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", "用户不存在"));
         }
-        if (u.getPasswordHash() == null || !encoder.matches(req.password(), u.getPasswordHash())) {
+        if (PasswordPolicy.tooLong(req.password())
+                || u.getPasswordHash() == null
+                || !encoder.matches(req.password(), u.getPasswordHash())) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("message", "当前密码错误"));
         }
         String email = normalizeEmail(req.email());
@@ -155,8 +164,13 @@ public class AuthController {
         if (u == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", "用户不存在"));
         }
-        if (u.getPasswordHash() == null || !encoder.matches(req.oldPassword(), u.getPasswordHash())) {
+        if (PasswordPolicy.tooLong(req.oldPassword())
+                || u.getPasswordHash() == null
+                || !encoder.matches(req.oldPassword(), u.getPasswordHash())) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("message", "当前密码错误"));
+        }
+        if (PasswordPolicy.tooLong(req.newPassword())) {
+            return ResponseEntity.badRequest().body(Map.of("message", PasswordPolicy.tooLongMessage()));
         }
         if (encoder.matches(req.newPassword(), u.getPasswordHash())) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", "新密码不能与当前密码相同"));

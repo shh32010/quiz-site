@@ -69,9 +69,11 @@ npm run dev          # http://localhost:3000
 | GET | `/api/auth/me` | 当前用户（需 Bearer） |
 | GET | `/api/chapters/tree?subject=4` | 章节树（三级，含子树题数） |
 | GET | `/api/courses` | 课程题数统计 |
-| GET | `/api/papers` | 真题卷列表 |
-| GET | `/api/papers/{id}` | 卷面分节 |
+| GET | `/api/papers` | 真题卷列表（含原卷/可练题数与分值） |
+| GET | `/api/papers/{id}` | 卷面分节（含可练/缺失统计） |
 | GET | `/api/questions?chapter=&course=&page=&size=` | 题目浏览（**不含答案**） |
+| GET | `/api/practice/resume` | 最近一个可续做会话（需登录） |
+| GET | `/api/practice/{id}/sheet` | 答题卡题位与作答状态（需登录） |
 
 ## 数据来源
 

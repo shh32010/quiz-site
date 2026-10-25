@@ -1,12 +1,12 @@
 <script setup lang="ts">
 // 随机组卷：按大纲配比 + 难度 3:5:2 生成一套卷
+definePageMeta({ middleware: 'auth' })
 const api = useApi()
 const router = useRouter()
 const loading = ref(0)
 const error = ref('')
 
 async function create(subject: number) {
-  if (!api.hasToken()) { router.push('/login'); return }
   error.value = ''
   loading.value = subject
   try {

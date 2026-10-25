@@ -1,6 +1,10 @@
 <script setup lang="ts">
-// 刷题页：/practice?mode=chapter|paper|course&target=X  或  /practice?session=ID
+// 刷题页：/practice?mode=chapter|paper|course|kp|wrong|single&target=X
+//          或 /practice?session=ID
 // 未登录 = 游客模式：可试做，判分不落库、不进错题本
+definePageMeta({ layout: 'immersive' })
+useHead({ title: '刷题' })
+
 const api = useApi()
 const route = useRoute()
 const router = useRouter()
@@ -9,7 +13,9 @@ const sessionId = ref<number | null>(null)
 const guest = ref(false)
 const guestRows = ref<any[]>([])
 const guestIdx = ref(0)
+const guestState = ref<Record<number, { feedback: any; review: any; answer: string; multi: string[]; fill: string }>>({})
 
+const mode = ref('')
 const question = ref<any>(null)
 const total = ref(0)
 const answer = ref('')
@@ -20,96 +26,114 @@ const review = ref<any>(null)
 const finished = ref<any>(null)
 const loading = ref(true)
 const error = ref('')
-const ai = ref<{ loading: boolean; content: string; err: string }>({ loading: false, content: '', err: '' })
-const fb = ref({ type: 'other', content: '', msg: '' })
-const remain = ref(-1)
-let timer: ReturnType<typeof setInterval> | null = null
-let disposed = false
+const notice = ref('')
+const submitting = ref(false)
+const navigating = ref(false)
 const favorited = ref(false)
 const relatedKps = ref<any[]>([])
-const wrongModal = ref(false)
-const correctHint = ref(false)
-const submitting = ref(false)
 const answerBox = ref<HTMLTextAreaElement | null>(null)
-const guestState = ref<Record<number, { feedback: any; review: any; answer: string; multi: string[]; fill: string }>>({})
-let advanceTimer: ReturnType<typeof setTimeout> | null = null
-
-function clearAdvance() {
-  if (advanceTimer) { clearTimeout(advanceTimer); advanceTimer = null }
-}
+const ai = ref<{ loading: boolean; content: string; err: string }>({ loading: false, content: '', err: '' })
 const variant = ref<{ loading: boolean; content: string; err: string }>({ loading: false, content: '', err: '' })
+const fb = ref({ type: 'other', content: '', msg: '' })
 
+const remain = ref(-1)
+let timer: ReturnType<typeof setInterval> | null = null
+let advanceTimer: ReturnType<typeof setTimeout> | null = null
+let disposed = false
+
+const sheetOpen = ref(false)
+const finishOpen = ref(false)
+const helpOpen = ref(false)
+const advancePending = ref(false)
+const sheet = ref<{ total: number; answered: number; remaining: number; rows: any[] }>({
+  total: 0, answered: 0, remaining: 0, rows: [],
+})
+const finishInfo = ref({ unanswered: 0, firstUnanswered: 1 })
+
+const MODE_LABEL: Record<string, string> = {
+  chapter: '章节练习', paper: '真题练习', course: '课程练习', kp: '知识点练习',
+  wrong: '错题复习', single: '单题练习', random: '随机组卷', exam: '模拟考试', random_exam: '随机模考',
+}
 const TYPE_LABEL: Record<number, string> = { 1: '单选', 2: '多选', 3: '判断', 4: '填空', 5: '综合' }
+
+const modeLabel = computed(() => MODE_LABEL[mode.value] ?? '刷题')
+const isPaper = computed(() => mode.value === 'paper')
+const isSingle = computed(() => mode.value === 'single')
+const canAutoNext = computed(() =>
+  ['chapter', 'course', 'kp', 'wrong'].includes(mode.value)
+  && !isPaper.value && !isSingle.value && total.value > 1)
+const currentOrder = computed(() => Number(question.value?.itemOrder ?? 1))
+const isLast = computed(() => Boolean(question.value) && currentOrder.value >= total.value)
+const progressPercent = computed(() => total.value ? Math.min(100, Math.round(currentOrder.value / total.value * 100)) : 0)
+const remainText = computed(() => {
+  if (remain.value < 0) return ''
+  const m = Math.floor(remain.value / 60), s = remain.value % 60
+  return `${m}:${String(s).padStart(2, '0')}`
+})
 const options = computed<[string, string][]>(() => {
   try {
     return (Object.entries(JSON.parse(question.value?.optionJson || '{}')) as [string, string][])
       .map(([k, v]) => [k, formatText(v)])
   } catch { return [] }
 })
+// 判断题没有 optionJson 时用 A/B 表示对/错；单选异常缺项时也至少可点
+const choiceOptions = computed<[string, string][]>(() => {
+  if (options.value.length) return options.value
+  if (question.value?.questionType === 1 || question.value?.questionType === 3) {
+    return [['A', '正确'], ['B', '错误']]
+  }
+  return []
+})
 const images = computed<string[]>(() => {
   const raw = question.value?.imageUrls || question.value?.imageUrl || ''
   return String(raw).split(',').map(s => s.trim()).filter(Boolean)
 })
-const remainText = computed(() => {
-  if (remain.value < 0) return ''
-  const m = Math.floor(remain.value / 60), s = remain.value % 60
-  return `${m}:${String(s).padStart(2, '0')}`
+const hasAnswer = computed(() => {
+  if (!question.value) return false
+  if (question.value.questionType === 2) return multi.value.length > 0
+  if (question.value.questionType === 4 || question.value.questionType === 5) return Boolean(fill.value.trim())
+  return Boolean(answer.value)
 })
+const correctKeys = computed<string[]>(() => {
+  const raw = String(review.value?.correct ?? '')
+  return raw.toUpperCase().match(/[A-H]/g) ?? []
+})
+const primaryLabel = computed(() => {
+  if (submitting.value) return '处理中…'
+  if (!feedback.value) {
+    if (isPaper.value && !hasAnswer.value) return '跳过'
+    return hasAnswer.value ? '提交' : '不会，看答案'
+  }
+  if (isSingle.value) return '返回'
+  return isLast.value ? '交卷' : '下一题'
+})
+
+function clearAdvance() {
+  if (advanceTimer) { clearTimeout(advanceTimer); advanceTimer = null }
+  advancePending.value = false
+}
 
 function resetAnswer() {
   answer.value = ''; multi.value = []; fill.value = ''
   feedback.value = null; review.value = null
-  wrongModal.value = false; correctHint.value = false
   clearAdvance()
   ai.value = { loading: false, content: '', err: '' }
   variant.value = { loading: false, content: '', err: '' }
   fb.value = { type: 'other', content: '', msg: '' }
 }
 
-async function start() {
-  const mode = String(route.query.mode || 'chapter')
-  const target = String(route.query.target || '')
-  const type = Number(route.query.type) || 0
-  try {
-    if (route.query.session && !api.hasToken()) {
-      throw new Error('请先登录后继续练习')
-    }
-    if (mode === 'wrong' && !api.hasToken()) {
-      throw new Error('错题复习需要登录')
-    }
-    if (!api.hasToken()) {
-      // 游客：直接拉题，不建会话
-      guest.value = true
-      const qs = mode === 'paper' ? `paper=${target}`
-        : mode === 'course' ? `course=${target}`
-        : mode === 'kp' ? `kp=${target}`
-        : mode === 'single' ? `id=${target}` : `chapter=${target}`
-      const guestSize = mode === 'paper' ? 200 : 20
-      const typeQuery = type ? `&type=${type}` : ''
-      const r = await api.get<any>(`/api/questions?${qs}&size=${guestSize}${typeQuery}`)
-      guestRows.value = r.rows ?? []
-      if (!guestRows.value.length) throw new Error('该范围下没有题目')
-      total.value = guestRows.value.length
-      showGuest(0)
-    } else if (route.query.session) {
-      sessionId.value = Number(route.query.session)
-      await loadStatus()
-      await next()
-    } else {
-      // 真题/错题复习要整卷/全部错题；章节等练习默认 50 题
-      const limit = mode === 'paper' || mode === 'wrong' ? 500 : 50
-      const r = await api.post<any>('/api/practice/start', {
-        mode, target, limit, ...(type ? { type } : {}),
-      })
-      sessionId.value = r.sessionId
-      total.value = r.count
-      await loadStatus()
-      await next()
-    }
-  } catch (e: any) {
-    error.value = e.message
-  } finally {
-    loading.value = false
+function applyQuestion(q: any, forceUnanswered = false) {
+  resetAnswer()
+  question.value = q
+  total.value = Number(q.total ?? total.value)
+  // /next 返回的是“本会话已答总数”，不是当前题是否已答；只有 item 的布尔 true 才加载复盘
+  if (!forceUnanswered && q.answered === true) {
+    feedback.value = { is_correct: q.isCorrect, score_got: q.scoreGot, max_score: q.score }
+    const raw = q.userAnswer ?? ''
+    if (q.questionType === 2) multi.value = raw ? String(raw).split(',') : []
+    else if (q.questionType === 4 || q.questionType === 5) fill.value = String(raw)
+    else answer.value = String(raw)
+    loadReview(q.id)
   }
 }
 
@@ -131,112 +155,250 @@ function showGuest(i: number) {
     multi.value = saved.multi
     fill.value = saved.fill
   }
-  question.value = { id: q.id, questionType: q.questionType, stem: q.stem, optionJson: q.optionJson,
+  question.value = {
+    id: q.id, questionType: q.questionType, stem: q.stem, optionJson: q.optionJson,
     score: q.score, blankCount: q.blankCount, imageUrl: q.imageUrl, imageUrls: q.imageUrls,
     chapterId: q.chapterId, chapterCode: q.chapterCode, chapterName: q.chapterName,
-    chapterPath: q.chapterPath,
-    itemOrder: i + 1, total: guestRows.value.length, answered: i }
+    chapterPath: q.chapterPath, itemOrder: i + 1, total: guestRows.value.length,
+  }
+  total.value = guestRows.value.length
 }
 
 async function loadStatus() {
+  if (!sessionId.value) return
   try {
     const st = await api.get<any>(`/api/practice/${sessionId.value}/status`)
+    mode.value = st.mode || mode.value
     remain.value = st.remainingSec
+    if (st.expired) {
+      notice.value = '本场已超时，请交卷'
+      return
+    }
     if (!disposed && st.limitSec > 0 && !st.finished) {
+      if (timer) clearInterval(timer)
       timer = setInterval(async () => {
         remain.value = Math.max(0, remain.value - 1)
         if (remain.value === 0) {
+          if (timer) { clearInterval(timer); timer = null }
+          notice.value = '时间到，已自动交卷'
           await finishSession()
         }
       }, 1000)
     }
-  } catch { /* 忽略 */ }
+  } catch { /* 状态失败不阻塞答题 */ }
 }
 
-async function finishSession() {
+async function loadSheet() {
+  if (guest.value || !sessionId.value) return
+  try {
+    sheet.value = await api.get<any>(`/api/practice/${sessionId.value}/sheet`)
+  } catch { /* 答题卡失败不影响答题 */ }
+}
+
+async function loadReview(qid: number) {
+  if (guest.value || !sessionId.value) return
+  try {
+    const rv = await api.get(`/api/practice/${sessionId.value}/review/${qid}`)
+    if (question.value?.id === qid) review.value = rv
+  } catch { /* 保留反馈卡，解析可为空 */ }
+}
+
+async function start() {
+  const qmode = String(route.query.mode || 'chapter')
+  const target = String(route.query.target || '')
+  const type = Number(route.query.type) || 0
+  mode.value = qmode
+  try {
+    if (route.query.session && !api.hasToken()) throw new Error('请先登录后继续练习')
+    if (qmode === 'wrong' && !api.hasToken()) throw new Error('错题复习需要登录')
+
+    if (!api.hasToken()) {
+      guest.value = true
+      const qs = qmode === 'paper' ? `paper=${target}`
+        : qmode === 'course' ? `course=${target}`
+        : qmode === 'kp' ? `kp=${target}`
+        : qmode === 'single' ? `id=${target}` : `chapter=${target}`
+      const guestSize = qmode === 'paper' ? 200 : 20
+      const typeQuery = type ? `&type=${type}` : ''
+      const r = await api.get<any>(`/api/questions?${qs}&size=${guestSize}${typeQuery}`)
+      guestRows.value = r.rows ?? []
+      if (!guestRows.value.length) throw new Error('该范围下没有题目')
+      total.value = guestRows.value.length
+      showGuest(0)
+      return
+    }
+
+    if (route.query.session) {
+      sessionId.value = Number(route.query.session)
+      await loadStatus()
+      await loadSheet()
+      await loadNextInitial()
+      return
+    }
+
+    const limit = qmode === 'paper' || qmode === 'wrong' ? 500 : 50
+    const r = await api.post<any>('/api/practice/start', {
+      mode: qmode, target, limit, ...(type ? { type } : {}),
+    })
+    sessionId.value = r.sessionId
+    total.value = r.count
+    await loadStatus()
+    await loadSheet()
+    await loadNextInitial()
+  } catch (e: any) {
+    error.value = e.message ?? '加载失败'
+  } finally {
+    loading.value = false
+  }
+}
+
+async function loadNextInitial() {
   if (!sessionId.value) return
-  if (timer) { clearInterval(timer); timer = null }
-  clearAdvance()
-  try {
-    finished.value = await api.post(`/api/practice/${sessionId.value}/finish`, {})
-    question.value = null
-    wrongModal.value = false
-    error.value = ''
-  } catch (e: any) {
-    error.value = e.message ?? '交卷失败，请重试'
+  const r = await api.get<any>(`/api/practice/${sessionId.value}/next`)
+  if (r.kind === 'done') {
+    // 全部答完但还没交卷：回到第 1 题让用户复盘，并打开答题卡，而不是只弹交卷框
+    await loadSheet()
+    if ((sheet.value.rows ?? []).length) {
+      await navigate(1)
+      sheetOpen.value = true
+    } else {
+      await requestFinish()
+    }
+    return
   }
+  applyQuestion(r.question, true)
 }
 
-async function finishNow() {
-  if (!sessionId.value || finished.value) return
-  if (!confirm('确定交卷？未作答的题按 0 分计。')) return
-  await finishSession()
-}
-
-async function next() {
-  clearAdvance()
-  if (guest.value) { showGuest(guestIdx.value + 1); return }
-  try {
-    const r = await api.get<any>(`/api/practice/${sessionId.value}/next`)
-    if (r.kind === 'done') { await finishSession(); return }
-    resetAnswer()
-    question.value = r.question
-    total.value = r.question.total
-    error.value = ''
-  } catch (e: any) {
-    error.value = e.message ?? '加载下一题失败'
-  }
-}
-
-async function loadItem(order: number) {
+async function navigate(order: number) {
   if (guest.value) { showGuest(order - 1); return }
+  if (!sessionId.value || navigating.value || submitting.value) return
+  clearAdvance()
+  navigating.value = true
+  error.value = ''
   try {
     const r = await api.get<any>(`/api/practice/${sessionId.value}/item/${order}`)
-    if (r.kind === 'done') { await finishSession(); return }
-    resetAnswer()
-    const q = r.question
-    question.value = q
-    total.value = q.total
-    if (q.answered) {
-      feedback.value = { is_correct: q.isCorrect, score_got: q.scoreGot, max_score: q.score }
-      const raw = q.userAnswer ?? ''
-      if (q.questionType === 2) multi.value = raw ? String(raw).split(',') : []
-      else if (q.questionType === 4 || q.questionType === 5) fill.value = String(raw)
-      else answer.value = String(raw)
-      try {
-        review.value = await api.get(`/api/practice/${sessionId.value}/review/${q.id}`)
-      } catch { review.value = null }
-    }
+    if (r.kind === 'done') { await requestFinish(); return }
+    applyQuestion(r.question)
   } catch (e: any) {
-    error.value = e.message
+    error.value = e.message ?? '加载题目失败'
+  } finally {
+    navigating.value = false
   }
 }
 
 async function goPrev() {
   clearAdvance()
-  wrongModal.value = false
-  if (!question.value || submitting.value) return
-  const order = question.value.itemOrder ?? 1
+  if (!question.value || submitting.value || navigating.value) return
+  const order = currentOrder.value
   if (order <= 1) return
-  if (guest.value) { showGuest(order - 2); return }
-  await loadItem(order - 1)
+  await navigate(order - 1)
 }
 
 async function goNext() {
   clearAdvance()
-  wrongModal.value = false
-  if (!question.value || submitting.value) return
-  const order = question.value.itemOrder ?? 1
-  if (guest.value) { showGuest(order); return }
-  await loadItem(order + 1)
+  if (!question.value || submitting.value || navigating.value) return
+  if (currentOrder.value >= total.value) {
+    await requestFinish()
+    return
+  }
+  await navigate(currentOrder.value + 1)
+}
+
+async function requestFinish() {
+  if (guest.value) { finishGuest(); return }
+  if (!sessionId.value) return
+  await loadSheet()
+  const rows = sheet.value.rows ?? []
+  finishInfo.value = {
+    unanswered: rows.length ? sheet.value.remaining : Math.max(0, total.value - (feedback.value ? 1 : 0)),
+    firstUnanswered: rows.find(r => !r.answered)?.itemOrder ?? 1,
+  }
+  sheetOpen.value = false
+  finishOpen.value = true
+}
+
+function finishGuest() {
+  finished.value = {
+    guest: true, score: 0, total_score: 0, correct_count: 0, question_count: total.value,
+  }
+  question.value = null
+}
+
+async function finishSession() {
+  if (!sessionId.value || submitting.value) return
+  submitting.value = true
+  try {
+    finished.value = await api.post(`/api/practice/${sessionId.value}/finish`, {})
+    question.value = null
+    finishOpen.value = false
+    sheetOpen.value = false
+    if (timer) { clearInterval(timer); timer = null }
+    clearAdvance()
+  } catch (e: any) {
+    error.value = e.message ?? '交卷失败，请重试'
+  } finally {
+    submitting.value = false
+  }
+}
+
+function goFirstUnanswered() {
+  const order = finishInfo.value.firstUnanswered
+  finishOpen.value = false
+  if (order && order !== currentOrder.value) navigate(order)
+}
+
+async function primaryAction() {
+  if (!question.value || submitting.value || navigating.value) return
+  if (!feedback.value) {
+    if (isPaper.value && !hasAnswer.value) { await goNext(); return }
+    await submit()
+    return
+  }
+  if (isSingle.value) { exit(); return }
+  if (isLast.value) { await requestFinish(); return }
+  await goNext()
+}
+
+function selectOption(rawKey: string) {
+  if (!question.value || feedback.value || submitting.value) return
+  // 数字键 1-9 映射为 A-I，字母键统一大写
+  const key = /^[1-9]$/.test(rawKey) ? String.fromCharCode(64 + Number(rawKey)) : rawKey.toUpperCase()
+  if (!choiceOptions.value.some(([k]) => k === key)) return
+  clearAdvance()
+  if (question.value.questionType === 2) {
+    multi.value = multi.value.includes(key)
+      ? multi.value.filter(k => k !== key)
+      : [...multi.value, key]
+  } else {
+    answer.value = key
+  }
+}
+
+function optionSelected(key: string) {
+  return question.value?.questionType === 2 ? multi.value.includes(key) : answer.value === key
+}
+
+function optionIsCorrect(key: string) {
+  return Boolean(feedback.value) && correctKeys.value.includes(key)
+}
+
+function optionClass(key: string) {
+  if (feedback.value) {
+    if (optionIsCorrect(key)) return 'border-green-400 bg-green-50 text-green-900'
+    if (optionSelected(key)) return 'border-red-400 bg-red-50 text-red-900'
+    return 'border-slate-200 bg-white text-slate-500'
+  }
+  return optionSelected(key)
+    ? 'border-blue-500 bg-blue-50 text-slate-900'
+    : 'border-slate-200 bg-white text-slate-700 hover:border-blue-300'
 }
 
 async function submit() {
   const q = question.value
-  if (!q || feedback.value || submitting.value) return
+  if (!q || feedback.value || submitting.value || navigating.value) return
   const qid = q.id
-  const gidx = guestIdx.value
   submitting.value = true
+  error.value = ''
   try {
     let payload = ''
     if (q.questionType === 2) payload = multi.value.slice().sort().join(',')
@@ -246,33 +408,29 @@ async function submit() {
     if (guest.value) {
       const r = await api.post<any>('/api/guest/answer', { questionId: qid, answer: payload })
       const rv = { correct: r.correct, analysis: r.analysis }
-      guestState.value[gidx] = {
-        feedback: r, review: rv,
-        answer: answer.value, multi: [...multi.value], fill: fill.value,
+      guestState.value[guestIdx.value] = {
+        feedback: r, review: rv, answer: answer.value,
+        multi: [...multi.value], fill: fill.value,
       }
-      // 用户已切题：结果只写入原题缓存，不覆盖当前题
       if (question.value?.id !== qid) return
       feedback.value = r
       review.value = rv
     } else {
-      const fb = await api.post(`/api/practice/${sessionId.value}/answer`, { questionId: qid, answer: payload })
-      let rv = null
-      try {
-        rv = await api.get(`/api/practice/${sessionId.value}/review/${qid}`)
-      } catch {
-        error.value = '答案已记录，但解析加载失败，请刷新重试'
-      }
+      const result = await api.post<any>(`/api/practice/${sessionId.value}/answer`, { questionId: qid, answer: payload })
+      const rv = await api.get<any>(`/api/practice/${sessionId.value}/review/${qid}`).catch(() => null)
       if (question.value?.id !== qid) return
-      feedback.value = fb
+      feedback.value = result
       review.value = rv
+      if (!rv) notice.value = '答案已记录，但解析加载失败，可稍后重试'
+      markSheetAnswered(qid, result)
     }
 
-    // 单题练习不自动跳转，保留答题反馈
-    if (feedback.value?.is_correct && total.value > 1) {
-      correctHint.value = true
-      advanceTimer = setTimeout(() => { correctHint.value = false; goNext() }, 650)
-    } else if (!feedback.value?.is_correct) {
-      wrongModal.value = true
+    if (canAutoNext.value && feedback.value?.is_correct && !isLast.value) {
+      advancePending.value = true
+      advanceTimer = setTimeout(() => {
+        advancePending.value = false
+        if (question.value?.id === qid) goNext()
+      }, 800)
     }
   } catch (e: any) {
     error.value = e.message ?? '提交失败，请重试'
@@ -281,19 +439,40 @@ async function submit() {
   }
 }
 
-/** 键盘提交：选择题 Enter；填空/综合 Ctrl+Enter（普通 Enter 保留换行） */
-function onKeydown(e: KeyboardEvent) {
-  if (e.key !== 'Enter' || e.defaultPrevented) return
-  if (!question.value || feedback.value || submitting.value) return
-  const el = e.target as HTMLElement | null
-  const tag = el?.tagName
-  if (tag === 'BUTTON' || tag === 'A') return
-  if (tag === 'TEXTAREA') {
-    // 只处理答案输入框；反馈框等其他文本域不响应
-    if (el !== answerBox.value || !(e.ctrlKey || e.metaKey)) return
+function markSheetAnswered(qid: number, result: any) {
+  const row = sheet.value.rows.find(r => Number(r.questionId) === qid)
+  if (row) {
+    row.answered = true
+    row.isCorrect = result.is_correct
+    row.scoreGot = result.score_got
   }
-  e.preventDefault()
-  submit()
+  const answered = sheet.value.rows.filter(r => r.answered).length
+  sheet.value.answered = answered
+  sheet.value.remaining = Math.max(0, sheet.value.rows.length - answered)
+  if (!sheet.value.total) sheet.value.total = total.value
+}
+
+async function openSheet() {
+  if (guest.value) return
+  await loadSheet()
+  sheetOpen.value = true
+}
+
+function jumpTo(order: number) {
+  sheetOpen.value = false
+  if (order !== currentOrder.value) navigate(order)
+}
+
+function sheetClass(row: any) {
+  if (row.itemOrder === currentOrder.value) return 'border-blue-600 bg-blue-50 text-blue-700 ring-1 ring-blue-500'
+  if (!row.answered) return 'border-slate-200 bg-white text-slate-500'
+  if (row.isCorrect) return 'border-green-300 bg-green-50 text-green-700'
+  return 'border-red-300 bg-red-50 text-red-700'
+}
+
+function exit() {
+  const from = String(route.query.from || '')
+  router.push(from.startsWith('/') && !from.startsWith('//') ? from : '/')
 }
 
 async function askAi(guide = false) {
@@ -303,7 +482,8 @@ async function askAi(guide = false) {
   ai.value = { loading: true, content: '', err: '' }
   try {
     const r = await api.post<{ content: string }>('/api/ai/explain', {
-      questionId: qid, mode: guide ? 'guide' : 'explain' })
+      questionId: qid, mode: guide ? 'guide' : 'explain',
+    })
     if (question.value?.id !== qid) return
     ai.value = { loading: false, content: r.content, err: '' }
   } catch (e: any) {
@@ -372,206 +552,254 @@ watch(() => question.value?.id, async (id) => {
   }
 })
 
+usePracticeKeys({
+  isEnabled: () => Boolean(question.value) && !finished.value && !sheetOpen.value && !finishOpen.value && !helpOpen.value,
+  onSelect: selectOption,
+  onSubmit: () => { primaryAction() },
+  onNext: () => { goNext() },
+  onPrev: () => { goPrev() },
+  onHelp: () => { helpOpen.value = true },
+  onCancelAdvance: clearAdvance,
+})
+
 onMounted(() => {
-  window.addEventListener('keydown', onKeydown)
+  window.addEventListener('pointerdown', clearAdvance)
   start()
 })
 onUnmounted(() => {
   disposed = true
-  window.removeEventListener('keydown', onKeydown)
+  window.removeEventListener('pointerdown', clearAdvance)
   if (timer) clearInterval(timer)
   clearAdvance()
 })
 </script>
 
 <template>
-  <section class="space-y-4">
-    <p v-if="error" class="text-sm text-red-600">{{ error }}</p>
-
-    <div v-if="guest" class="rounded-lg border border-amber-300 bg-amber-50 px-4 py-2 text-xs text-amber-800">
-      游客模式：可以试做，但<b>进度不会保存</b>。
-      <NuxtLink to="/login" class="ml-1 underline">登录/注册</NuxtLink> 后可记录错题与学习报告。
-    </div>
-
-    <template v-if="finished">
-      <div class="rounded-xl border border-slate-200 p-6 text-center">
-        <p class="text-lg font-semibold text-slate-800">练习完成</p>
-        <template v-if="finished.guest">
-          <p class="mt-2 text-sm text-slate-500">游客模式未记录本次成绩</p>
-          <NuxtLink to="/login" class="mt-4 inline-block rounded-lg bg-blue-600 px-5 py-2 text-sm text-white">
-            登录后开始正式练习
-          </NuxtLink>
-        </template>
-        <template v-else>
-          <p class="mt-2 text-3xl font-bold text-blue-600">{{ finished.score }} / {{ finished.total_score }}</p>
-          <p class="mt-1 text-sm text-slate-500">
-            共 {{ finished.question_count }} 题，答对 {{ finished.correct_count }} 题
-          </p>
-          <div class="mt-4 flex justify-center gap-3">
-            <NuxtLink to="/chapters" class="rounded-lg border px-4 py-2 text-sm">返回章节</NuxtLink>
-            <NuxtLink to="/wrong" class="rounded-lg border px-4 py-2 text-sm">查看错题</NuxtLink>
+  <div class="min-h-screen bg-slate-50 text-slate-800">
+    <header class="sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur">
+      <div class="mx-auto flex max-w-3xl items-center gap-2 px-3 py-2 sm:px-4">
+        <button type="button" class="shrink-0 rounded-lg px-2 py-1.5 text-sm text-slate-500 hover:bg-slate-100 hover:text-slate-800"
+                @click="exit">← 退出</button>
+        <div class="min-w-0 flex-1">
+          <div class="flex items-center justify-between gap-2 text-xs text-slate-500">
+            <span class="truncate">{{ modeLabel }}</span>
+            <span class="shrink-0 tabular-nums">{{ question ? currentOrder : 0 }} / {{ total || '—' }}</span>
           </div>
-        </template>
-      </div>
-    </template>
-
-    <template v-else-if="question">
-      <div class="flex flex-wrap items-center justify-between gap-2 text-sm text-slate-500">
-        <button :disabled="(question.itemOrder ?? 1) <= 1 || submitting" @click="goPrev"
-                class="rounded border border-slate-300 px-2.5 py-1 text-xs disabled:opacity-40">上一题</button>
-        <span>第 {{ question.itemOrder }} / {{ total }} 题</span>
-        <span class="flex items-center gap-3">
-          <span v-if="remain >= 0" class="font-mono" :class="remain < 300 ? 'text-red-600' : ''">
-            ⏱ {{ remainText }}
-          </span>
-          <span>{{ TYPE_LABEL[question.questionType] }} · {{ question.score }} 分</span>
-        </span>
-        <span class="flex items-center gap-2">
-          <button :disabled="(question.itemOrder ?? 1) >= total || submitting" @click="goNext"
-                  class="rounded border border-slate-300 px-2.5 py-1 text-xs disabled:opacity-40">下一题</button>
-          <button v-if="!guest" :disabled="submitting" @click="finishNow"
-                  class="rounded border border-red-200 px-2.5 py-1 text-xs text-red-600 disabled:opacity-40">交卷</button>
-        </span>
-      </div>
-
-      <p v-if="correctHint" class="rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700">
-        ✓ 答对了，自动下一题…
-      </p>
-
-      <div class="rounded-xl border border-slate-200 p-5">
-        <p v-if="question.chapterPath || question.chapterName" class="mb-2 text-xs leading-5 text-slate-400">
-          所属章节：{{ question.chapterPath
-            || ((question.chapterCode ? question.chapterCode + ' ' : '') + question.chapterName) }}
-        </p>
-        <p class="whitespace-pre-wrap text-base leading-7 text-slate-800">{{ formatText(question.stem) }}</p>
-        <img v-for="(src, i) in images" :key="i" :src="src" alt="题目配图"
-             class="mt-3 max-h-80 w-auto rounded-lg border border-slate-200 object-contain" />
-
-        <div v-if="relatedKps.length" class="mt-2 flex flex-wrap items-center gap-1.5">
-          <span class="text-xs text-slate-400">相关知识点：</span>
-          <NuxtLink v-for="k in relatedKps" :key="k.id" :to="`/knowledge?kp=${k.id}`"
-                    class="rounded bg-slate-100 px-1.5 py-0.5 text-[11px] text-slate-600 hover:bg-blue-50 hover:text-blue-700"
-                    :title="k.nodeName">
-            {{ k.title }}
-          </NuxtLink>
+          <div class="mt-1 h-1 overflow-hidden rounded-full bg-slate-100">
+            <div class="h-full rounded-full bg-blue-600 transition-all" :style="{ width: `${progressPercent}%` }" />
+          </div>
         </div>
+        <span v-if="remain >= 0" class="shrink-0 rounded-lg bg-slate-50 px-2 py-1 text-xs font-medium tabular-nums"
+              :class="remain < 300 ? 'text-red-600' : 'text-slate-600'">⏱ {{ remainText }}</span>
+        <button v-if="!guest && question" type="button"
+                class="shrink-0 rounded-lg border border-slate-200 px-2 py-1.5 text-xs text-slate-600 hover:border-blue-300 hover:text-blue-700"
+                @click="openSheet">答题卡</button>
+      </div>
+    </header>
 
-        <div v-if="question.questionType === 1 || question.questionType === 3" class="mt-4 space-y-2">
-          <template v-if="options.length">
-            <label v-for="[k, v] in options" :key="k"
-                   class="flex cursor-pointer items-start gap-2 rounded-lg border p-2.5 text-sm"
-                   :class="answer === k ? 'border-blue-500 bg-blue-50' : 'border-slate-200'">
-              <input v-model="answer" type="radio" :value="k" :disabled="!!feedback" class="mt-1" />
-              <span>{{ k }}. {{ v }}</span>
-            </label>
+    <main class="mx-auto max-w-3xl px-3 pb-28 pt-4 sm:px-4">
+      <p v-if="error" class="mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{{ error }}</p>
+      <p v-if="notice" class="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">{{ notice }}</p>
+
+      <div v-if="guest" class="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+        游客模式：可以试做，但进度不会保存。
+        <NuxtLink :to="{ path: '/login', query: { redirect: route.fullPath } }" class="underline">登录/注册</NuxtLink>
+        后可记录错题与学习报告。
+      </div>
+
+      <template v-if="finished">
+        <div class="rounded-2xl border border-slate-200 bg-white p-6 text-center shadow-sm">
+          <p class="text-lg font-semibold text-slate-900">练习完成</p>
+          <template v-if="finished.guest">
+            <p class="mt-2 text-sm text-slate-500">游客模式未记录本次成绩</p>
+            <NuxtLink :to="{ path: '/login', query: { redirect: route.fullPath } }"
+                      class="mt-4 inline-block rounded-lg bg-blue-600 px-5 py-2 text-sm text-white">登录后正式练习</NuxtLink>
           </template>
           <template v-else>
-            <label class="flex cursor-pointer items-center gap-2 rounded-lg border p-2.5 text-sm"
-                   :class="answer === 'A' ? 'border-blue-500 bg-blue-50' : 'border-slate-200'">
-              <input v-model="answer" type="radio" value="A" :disabled="!!feedback" /> 对
-            </label>
-            <label class="flex cursor-pointer items-center gap-2 rounded-lg border p-2.5 text-sm"
-                   :class="answer === 'B' ? 'border-blue-500 bg-blue-50' : 'border-slate-200'">
-              <input v-model="answer" type="radio" value="B" :disabled="!!feedback" /> 错
-            </label>
+            <p class="mt-2 text-3xl font-bold text-blue-600 tabular-nums">{{ finished.score }} / {{ finished.total_score }}</p>
+            <p class="mt-1 text-sm text-slate-500">共 {{ finished.question_count }} 题，答对 {{ finished.correct_count }} 题</p>
+            <div class="mt-5 flex flex-wrap justify-center gap-2">
+              <NuxtLink to="/history" class="rounded-lg border border-slate-300 px-4 py-2 text-sm">查看记录</NuxtLink>
+              <NuxtLink to="/wrong" class="rounded-lg border border-slate-300 px-4 py-2 text-sm">复习错题</NuxtLink>
+              <button type="button" class="rounded-lg bg-blue-600 px-4 py-2 text-sm text-white" @click="exit">返回</button>
+            </div>
           </template>
         </div>
+      </template>
 
-        <div v-else-if="question.questionType === 2" class="mt-4 space-y-2">
-          <label v-for="[k, v] in options" :key="k"
-                 class="flex cursor-pointer items-start gap-2 rounded-lg border p-2.5 text-sm"
-                 :class="multi.includes(k) ? 'border-blue-500 bg-blue-50' : 'border-slate-200'">
-            <input v-model="multi" type="checkbox" :value="k" :disabled="!!feedback" class="mt-1" />
-            <span>{{ k }}. {{ v }}</span>
-          </label>
-        </div>
-
-        <div v-else class="mt-4">
-          <textarea ref="answerBox" v-model="fill" :disabled="!!feedback"
-                    :rows="question.questionType === 5 ? 5 : 3"
-                    placeholder="多空用中文分号「；」分隔；程序题可直接按行输入"
-                    class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
-        </div>
-
-        <button v-if="!feedback" :disabled="submitting"
-                class="mt-4 rounded-lg bg-blue-600 px-5 py-2 text-sm font-medium text-white disabled:opacity-40"
-                @click="submit">
-          {{ submitting ? '提交中…' : (!answer && !multi.length && !fill ? '不会，看答案' : '提交') }}
-        </button>
-        <p v-if="!feedback" class="mt-2 text-xs text-slate-400">
-          选择题按 Enter 提交；填空/综合按 Ctrl+Enter 提交；不填也能直接看答案
-        </p>
-      </div>
-
-      <div v-if="feedback" class="rounded-xl border p-5 text-sm"
-           :class="feedback.is_correct ? 'border-green-300 bg-green-50' : 'border-red-300 bg-red-50'">
-        <p class="font-semibold" :class="feedback.is_correct ? 'text-green-700' : 'text-red-700'">
-          {{ feedback.is_correct ? '✓ 回答正确' : '✗ 回答错误' }}
-          （得分 {{ feedback.score_got }} / {{ feedback.max_score }}）
-        </p>
-        <p v-if="review" class="mt-2 whitespace-pre-wrap text-slate-700"><b>正确答案：</b>{{ formatText(review.correct) }}</p>
-        <p v-if="review?.analysis" class="mt-1 whitespace-pre-wrap text-slate-600">
-          <b>解析：</b>{{ formatText(review.analysis) }}
-        </p>
-        <div class="mt-3 flex flex-wrap items-center gap-2">
-          <button class="rounded-lg bg-slate-800 px-5 py-2 text-sm text-white" @click="goNext">下一题</button>
-          <button class="rounded-lg border border-slate-300 px-3 py-2 text-xs" @click="askAi(false)">AI 讲解</button>
-          <button class="rounded-lg border border-slate-300 px-3 py-2 text-xs" @click="askAi(true)">引导思考</button>
-          <button class="rounded-lg border border-slate-300 px-3 py-2 text-xs" @click="askVariant">举一反三</button>
-          <button class="rounded-lg border border-slate-300 px-3 py-2 text-xs" @click="toggleFav">
-            {{ favorited ? '★ 已收藏' : '☆ 收藏' }}
-          </button>
-        </div>
-
-        <div v-if="variant.loading" class="mt-3 text-xs text-slate-500">正在生成变式题…</div>
-        <div v-if="variant.err" class="mt-3 text-xs text-red-600">{{ variant.err }}</div>
-        <div v-if="variant.content" class="mt-3 whitespace-pre-wrap rounded-lg bg-white/70 p-3 text-sm text-slate-700">
-          <b>同考点变式题：</b>{{ variant.content }}
-        </div>
-
-        <div v-if="ai.loading" class="mt-3 text-xs text-slate-500">AI 思考中…</div>
-        <div v-if="ai.err" class="mt-3 text-xs text-red-600">{{ ai.err }}</div>
-        <div v-if="ai.content" class="mt-3 whitespace-pre-wrap rounded-lg bg-white/70 p-3 text-sm text-slate-700">
-          {{ ai.content }}
-        </div>
-
-        <details class="mt-3 text-xs">
-          <summary class="cursor-pointer text-slate-500">题目有误？点此反馈</summary>
-          <div class="mt-2 space-y-2">
-            <select v-model="fb.type" class="rounded border border-slate-300 px-2 py-1">
-              <option value="answer">答案错误</option>
-              <option value="stem">题干错误</option>
-              <option value="option">选项错误</option>
-              <option value="image">图片问题</option>
-              <option value="other">其他</option>
-            </select>
-            <textarea v-model="fb.content" rows="2" placeholder="请描述问题"
-                      class="w-full rounded border border-slate-300 px-2 py-1" />
-            <button class="rounded bg-slate-700 px-3 py-1 text-white" @click="sendFeedback">提交反馈</button>
-            <span v-if="fb.msg" class="ml-2 text-slate-600">{{ fb.msg }}</span>
+      <template v-else-if="question">
+        <article class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div class="flex flex-wrap items-center gap-2 text-xs text-slate-500">
+              <span class="rounded-full bg-blue-50 px-2 py-0.5 text-blue-700">{{ TYPE_LABEL[question.questionType] ?? '题目' }}</span>
+              <span>{{ question.score }} 分</span>
+              <span v-if="question.chapterPath || question.chapterName" class="min-w-0 truncate">
+                {{ question.chapterPath || ((question.chapterCode ? question.chapterCode + ' ' : '') + question.chapterName) }}
+              </span>
+            </div>
+            <span class="text-xs text-slate-400">第 {{ currentOrder }} 题</span>
           </div>
-        </details>
-      </div>
-    </template>
 
-    <p v-else-if="loading" class="text-sm text-slate-500">加载中…</p>
+          <p class="mt-4 whitespace-pre-wrap text-base leading-7 text-slate-900 md:text-[17px]">{{ formatText(question.stem) }}</p>
+          <img v-for="(src, i) in images" :key="i" :src="src" alt="题目配图"
+               class="mt-3 max-h-80 w-auto rounded-lg border border-slate-200 object-contain" />
 
-    <!-- 答错弹窗：正确答案 + 解析 -->
-    <div v-if="wrongModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
-         @click.self="wrongModal = false">
-      <div class="max-h-[80vh] w-full max-w-lg overflow-auto rounded-xl bg-white p-5 shadow-xl">
-        <p class="text-base font-semibold text-red-600">✗ 回答错误</p>
-        <p v-if="review" class="mt-2 whitespace-pre-wrap text-sm text-slate-700">
-          <b>正确答案：</b>{{ formatText(review.correct) }}
-        </p>
-        <p v-if="review?.analysis" class="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-600">
-          <b>解析：</b>{{ formatText(review.analysis) }}
-        </p>
-        <div class="mt-4 flex justify-end gap-2">
-          <button class="rounded-lg border border-slate-300 px-4 py-2 text-sm" @click="wrongModal = false">关闭</button>
-          <button class="rounded-lg bg-blue-600 px-4 py-2 text-sm text-white" @click="goNext">下一题</button>
-        </div>
+          <div v-if="relatedKps.length" class="mt-3 flex flex-wrap items-center gap-1.5">
+            <span class="text-xs text-slate-400">相关知识点：</span>
+            <NuxtLink v-for="k in relatedKps" :key="k.id" :to="`/knowledge?kp=${k.id}`"
+                      class="rounded bg-slate-100 px-1.5 py-0.5 text-[11px] text-slate-600 hover:bg-blue-50 hover:text-blue-700"
+                      :title="k.nodeName">{{ k.title }}</NuxtLink>
+          </div>
+
+          <div v-if="question.questionType === 1 || question.questionType === 3" class="mt-5 space-y-2">
+            <label v-for="[k, v] in choiceOptions" :key="k"
+                   class="flex cursor-pointer items-start gap-2.5 rounded-xl border p-3 text-sm transition-colors"
+                   :class="optionClass(k)">
+              <input v-model="answer" type="radio" :value="k" :disabled="Boolean(feedback)" class="mt-1" />
+              <span class="min-w-0 flex-1"><b class="mr-1">{{ k }}.</b>{{ v }}</span>
+              <span v-if="optionIsCorrect(k)" class="text-green-600">✓</span>
+              <span v-else-if="feedback && optionSelected(k)" class="text-red-600">✗</span>
+            </label>
+          </div>
+
+          <div v-else-if="question.questionType === 2" class="mt-5 space-y-2">
+            <label v-for="[k, v] in choiceOptions" :key="k"
+                   class="flex cursor-pointer items-start gap-2.5 rounded-xl border p-3 text-sm transition-colors"
+                   :class="optionClass(k)">
+              <input v-model="multi" type="checkbox" :value="k" :disabled="Boolean(feedback)" class="mt-1" />
+              <span class="min-w-0 flex-1"><b class="mr-1">{{ k }}.</b>{{ v }}</span>
+              <span v-if="optionIsCorrect(k)" class="text-green-600">✓</span>
+              <span v-else-if="feedback && optionSelected(k)" class="text-red-600">✗</span>
+            </label>
+          </div>
+
+          <div v-else class="mt-5">
+            <textarea ref="answerBox" v-model="fill" :disabled="Boolean(feedback)"
+                      :rows="question.questionType === 5 ? 5 : 3"
+                      placeholder="多空用中文分号「；」分隔；程序题可直接按行输入"
+                      class="w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm outline-none focus:border-blue-500" />
+          </div>
+
+          <p v-if="!feedback" class="mt-3 text-xs text-slate-400">
+            选择题按 Enter 提交；填空/综合按 Ctrl+Enter 提交；← → 可切题
+          </p>
+
+          <div v-if="feedback" class="mt-5 rounded-xl border p-4 text-sm"
+               :class="feedback.is_correct ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <p class="font-semibold" :class="feedback.is_correct ? 'text-green-700' : 'text-red-700'">
+                {{ feedback.is_correct ? '✓ 回答正确' : '✗ 回答错误' }}
+                <span class="ml-1 font-normal">得分 {{ feedback.score_got }} / {{ feedback.max_score }}</span>
+              </p>
+              <span v-if="advancePending" class="text-xs text-green-600">即将进入下一题…</span>
+            </div>
+            <p v-if="review" class="mt-2 whitespace-pre-wrap text-slate-700"><b>正确答案：</b>{{ formatText(review.correct) }}</p>
+            <p v-if="review?.qcGrade === 'error'"
+               class="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+              本题解析可能不准确，建议结合 AI 讲解或提交报错。
+            </p>
+            <p v-if="review?.analysis" class="mt-1 whitespace-pre-wrap leading-6 text-slate-600">
+              <b>解析：</b>{{ formatText(review.analysis) }}
+            </p>
+            <div class="mt-3 flex flex-wrap items-center gap-2">
+              <button type="button" class="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs text-slate-600"
+                      @click="askAi(false)">AI 讲解</button>
+              <button type="button" class="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs text-slate-600"
+                      @click="askAi(true)">引导思考</button>
+              <button type="button" class="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs text-slate-600"
+                      @click="askVariant">举一反三</button>
+              <button type="button" class="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs text-slate-600"
+                      @click="toggleFav">{{ favorited ? '★ 已收藏' : '☆ 收藏' }}</button>
+            </div>
+
+            <div v-if="variant.loading" class="mt-3 text-xs text-slate-500">正在生成变式题…</div>
+            <div v-if="variant.err" class="mt-3 text-xs text-red-600">{{ variant.err }}</div>
+            <div v-if="variant.content" class="mt-3 whitespace-pre-wrap rounded-lg bg-white/80 p-3 text-sm text-slate-700">
+              <b>同考点变式题：</b>{{ variant.content }}
+            </div>
+            <div v-if="ai.loading" class="mt-3 text-xs text-slate-500">AI 思考中…</div>
+            <div v-if="ai.err" class="mt-3 text-xs text-red-600">{{ ai.err }}</div>
+            <div v-if="ai.content" class="mt-3 whitespace-pre-wrap rounded-lg bg-white/80 p-3 text-sm text-slate-700">{{ ai.content }}</div>
+
+            <details class="mt-3 text-xs">
+              <summary class="cursor-pointer text-slate-500">题目有误？点此反馈</summary>
+              <div class="mt-2 space-y-2">
+                <select v-model="fb.type" class="rounded border border-slate-300 px-2 py-1">
+                  <option value="answer">答案错误</option>
+                  <option value="stem">题干错误</option>
+                  <option value="option">选项错误</option>
+                  <option value="image">图片问题</option>
+                  <option value="other">其他</option>
+                </select>
+                <textarea v-model="fb.content" rows="2" placeholder="请描述问题"
+                          class="w-full rounded border border-slate-300 px-2 py-1" />
+                <button type="button" class="rounded bg-slate-700 px-3 py-1 text-white" @click="sendFeedback">提交反馈</button>
+                <span v-if="fb.msg" class="ml-2 text-slate-600">{{ fb.msg }}</span>
+              </div>
+            </details>
+          </div>
+        </article>
+      </template>
+
+      <p v-else-if="loading" class="py-12 text-center text-sm text-slate-500">加载中…</p>
+      <p v-else class="py-12 text-center text-sm text-slate-500">这个范围暂时没有可练习题。</p>
+    </main>
+
+    <div v-if="!finished && question" class="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-white/95 backdrop-blur">
+      <div class="mx-auto flex max-w-3xl items-center gap-2 px-3 py-2.5 pb-[max(0.625rem,env(safe-area-inset-bottom))] sm:px-4">
+        <UiButton variant="secondary" size="sm" :disabled="currentOrder <= 1 || submitting || navigating" @click="goPrev">
+          上一题
+        </UiButton>
+        <UiButton v-if="!guest" variant="ghost" size="sm" @click="toggleFav">
+          {{ favorited ? '★' : '☆' }}
+        </UiButton>
+        <UiButton variant="primary" size="md" class="flex-1" :loading="submitting" :disabled="navigating" @click="primaryAction">
+          {{ primaryLabel }}
+        </UiButton>
       </div>
     </div>
-  </section>
+
+    <UiModal v-model="sheetOpen" title="答题卡" size="md">
+      <div class="grid grid-cols-6 gap-2 sm:grid-cols-8">
+        <button v-for="row in sheet.rows" :key="row.itemOrder" type="button"
+                class="aspect-square rounded-lg border text-sm font-medium tabular-nums transition-colors"
+                :class="sheetClass(row)" @click="jumpTo(row.itemOrder)">{{ row.itemOrder }}</button>
+      </div>
+      <div class="mt-4 flex items-center justify-between text-xs text-slate-500">
+        <span>已答 {{ sheet.answered }} / {{ sheet.total }}</span>
+        <span>未答 {{ sheet.remaining }}</span>
+      </div>
+      <template #footer>
+        <UiButton variant="primary" class="w-full" :disabled="submitting" @click="requestFinish">
+          交卷（{{ sheet.remaining }} 题未答）
+        </UiButton>
+      </template>
+    </UiModal>
+
+    <UiModal v-model="finishOpen" title="确认交卷" size="sm">
+      <p class="text-sm leading-6 text-slate-600">
+        <template v-if="finishInfo.unanswered">还有 <b class="text-red-600">{{ finishInfo.unanswered }}</b> 题未答，未答题按 0 分计入总分。</template>
+        <template v-else>所有题目都已作答，确认交卷？</template>
+      </p>
+      <template #footer>
+        <div class="flex flex-wrap justify-end gap-2">
+          <UiButton variant="secondary" @click="finishOpen = false">继续答题</UiButton>
+          <UiButton v-if="finishInfo.unanswered" variant="secondary" @click="goFirstUnanswered">
+            去第 {{ finishInfo.firstUnanswered }} 题
+          </UiButton>
+          <UiButton variant="danger" :loading="submitting" @click="finishSession">确认交卷</UiButton>
+        </div>
+      </template>
+    </UiModal>
+
+    <UiModal v-model="helpOpen" title="键盘快捷键" size="sm">
+      <dl class="space-y-2 text-sm text-slate-600">
+        <div class="flex justify-between"><dt>选择选项</dt><dd class="text-slate-900">1-9 / A-H</dd></div>
+        <div class="flex justify-between"><dt>提交 / 下一题</dt><dd class="text-slate-900">Enter</dd></div>
+        <div class="flex justify-between"><dt>上一题 / 下一题</dt><dd class="text-slate-900">← / →</dd></div>
+        <div class="flex justify-between"><dt>文本题提交</dt><dd class="text-slate-900">Ctrl / Cmd + Enter</dd></div>
+        <div class="flex justify-between"><dt>本帮助</dt><dd class="text-slate-900">?</dd></div>
+      </dl>
+    </UiModal>
+  </div>
 </template>

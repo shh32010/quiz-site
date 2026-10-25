@@ -2,8 +2,10 @@
 // 登录 / 注册（同一个页面切换）
 // 登录支持用户名或邮箱；注册时邮箱选填，但会提醒绑定
 const api = useApi()
+const auth = useAuth()
 const router = useRouter()
-const loggedIn = useState('logged_in', () => false)
+const route = useRoute()
+useHead({ title: '登录 / 注册' })
 const mode = ref<'login' | 'register'>('login')
 const username = ref('')
 const email = ref('')
@@ -21,6 +23,15 @@ onMounted(() => {
 watch(mode, () => { warnNoEmail.value = false })
 watch(email, () => { if (email.value.trim()) warnNoEmail.value = false })
 
+/** 只接受站内路径，防止 redirect 被用来跳外站 */
+function safeRedirect(raw: unknown): string {
+  const s = String(raw ?? '')
+  if (!s.startsWith('/') || s.startsWith('//') || s.includes('\\')) return '/'
+  if (s === '/login' || s.startsWith('/login?')) return '/'
+  return s
+}
+const redirect = computed(() => safeRedirect(route.query.redirect))
+
 async function submit() {
   error.value = ''
   // 注册没填邮箱：先提醒一次，再点一次才继续
@@ -36,10 +47,9 @@ async function submit() {
       mode.value === 'login' ? '/api/auth/login' : '/api/auth/register',
       body,
     )
-    api.setToken(data.token)
-    loggedIn.value = true
-    // 注册时没绑邮箱，去账号页提醒补绑
-    router.push(mode.value === 'register' && !email.value.trim() ? '/account?bind=1' : '/')
+    auth.saveToken(data.token)
+    // 注册时没绑邮箱，去账号页提醒补绑；其余情况回登录前页面
+    router.push(mode.value === 'register' && !email.value.trim() ? '/account?bind=1' : redirect.value)
   } catch (e: any) {
     error.value = e.message ?? '操作失败'
   } finally {

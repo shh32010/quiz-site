@@ -19,6 +19,14 @@ export default defineNuxtConfig({
     // 前端同源访问后端：/api/* 由 Nitro 转发
     routeRules: {
       '/api/**': { proxy: `${process.env.QUIZ_API_BASE || 'http://127.0.0.1:8080'}/api/**` },
+      // 私有页依赖 localStorage 登录态，关闭 SSR，避免“服务端渲染私有内容、客户端跳登录”的水合错位
+      '/account': { ssr: false },
+      '/admin': { ssr: false },
+      '/compose': { ssr: false },
+      '/favorites': { ssr: false },
+      '/history/**': { ssr: false },
+      '/report': { ssr: false },
+      '/wrong': { ssr: false },
     },
     compressPublicAssets: true,
   },

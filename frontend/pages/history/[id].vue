@@ -1,5 +1,6 @@
 <script setup lang="ts">
 // 做题历史详情：某次练习的作答明细
+definePageMeta({ middleware: 'auth' })
 useHead({ title: '做题历史详情' })
 const api = useApi()
 const route = useRoute()

@@ -1,6 +1,8 @@
 <script setup lang="ts">
 // 管理后台（仅 admin 可见数据）
+definePageMeta({ middleware: 'auth' })
 const api = useApi()
+const ask = useConfirm()
 const stats = ref<any>(null)
 const feedback = ref<any[]>([])
 const resets = ref<any[]>([])
@@ -19,7 +21,6 @@ function fmtTime(v: string | null) {
 }
 
 async function load() {
-  if (!api.hasToken()) { error.value = '请先登录'; return }
   try {
     stats.value = await api.get('/api/admin/stats')
     const f = await api.get<{ rows: any[] }>('/api/admin/feedback')
@@ -38,7 +39,12 @@ async function resetByName() {
   resetResult.value = null
   const name = resetUser.value.trim()
   if (!name) { resetError.value = '请输入用户名'; return }
-  if (!confirm(`确定为「${name}」生成临时密码？该用户所有设备会被踢下线。`)) return
+  if (!(await ask({
+    title: '重置密码',
+    message: `确定为「${name}」生成临时密码？该用户所有设备会被踢下线。`,
+    confirmText: '生成临时密码',
+    danger: true,
+  }))) return
   try {
     resetResult.value = await api.post('/api/admin/password-resets/reset', { username: name })
     await load()

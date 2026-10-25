@@ -1,11 +1,11 @@
 <script setup lang="ts">
 // 学习报告
+definePageMeta({ middleware: 'auth' })
 const api = useApi()
 const data = ref<any>(null)
 const error = ref('')
 
 onMounted(async () => {
-  if (!api.hasToken()) { error.value = '请先登录'; return }
   try {
     data.value = await api.get('/api/report')
   } catch (e: any) {

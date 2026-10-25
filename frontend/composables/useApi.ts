@@ -12,12 +12,15 @@ export function useApi() {
       ...(opts.headers as Record<string, string> | undefined),
     }
     const t = token()
+    const hadToken = Boolean(t)
     if (t) headers.Authorization = `Bearer ${t}`
     const res = await fetch(path, { ...opts, headers })
     const text = await res.text()
     let data: any = null
     try { data = text ? JSON.parse(text) : null } catch { data = null }
-    if (res.status === 401) {
+    // 登录/注册的 401 是“账号密码错误”，不能当成 token 过期
+    const isCredentialCheck = path === '/api/auth/login' || path === '/api/auth/register'
+    if (res.status === 401 && hadToken && !isCredentialCheck) {
       try { localStorage.removeItem('quiz_token') } catch { /* 忽略 */ }
       if (typeof window !== 'undefined') window.dispatchEvent(new Event('quiz-auth-expired'))
     }

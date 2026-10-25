@@ -1,11 +1,11 @@
 <script setup lang="ts">
 // 错题本
+definePageMeta({ middleware: 'auth' })
 const api = useApi()
 const data = ref<any>(null)
 const error = ref('')
 
 onMounted(async () => {
-  if (!api.hasToken()) { error.value = '请先登录'; return }
   try {
     data.value = await api.get('/api/wrong')
   } catch (e: any) {
@@ -35,6 +35,10 @@ const filteredRows = computed(() => {
   const rows = data.value?.rows ?? []
   return selectedType.value ? rows.filter((q: any) => Number(q.questionType) === selectedType.value) : rows
 })
+const typeTabs = computed(() => TYPE_TABS.map(t => ({
+  ...t,
+  count: t.value === 0 ? (data.value?.total ?? 0) : (typeCounts.value[t.value] ?? 0),
+})))
 
 /** 浏览器的原生打印（配 Tailwind 的 print: 变体） */
 function printPage() {
@@ -55,8 +59,9 @@ function printPage() {
       <div class="flex flex-wrap items-center gap-3">
         <p class="text-sm text-slate-500">
           共 {{ data.total }} 题，待复习 {{ data.pending }} 题
+          <span v-if="data.unavailable" class="text-slate-400">（{{ data.unavailable }} 题已下架）</span>
         </p>
-        <NuxtLink v-if="data.rows.length"
+        <NuxtLink v-if="(data.total - (data.unavailable ?? 0)) > 0"
                   :to="`/practice?mode=wrong${selectedType ? `&type=${selectedType}` : ''}`"
                   class="print:hidden rounded-lg bg-blue-600 px-3 py-1 text-xs font-medium text-white">
           {{ selectedType ? '复习该题型错题' : '复习全部错题' }}
@@ -65,24 +70,16 @@ function printPage() {
                 @click="printPage">打印错题</button>
       </div>
 
-      <div class="print:hidden flex flex-wrap gap-2">
-        <button v-for="t in TYPE_TABS" :key="t.value"
-                class="rounded-full border px-3 py-1 text-xs"
-                :class="selectedType === t.value
-                  ? 'border-blue-600 bg-blue-600 text-white'
-                  : 'border-slate-300 text-slate-600 hover:border-blue-400'"
-                @click="selectedType = t.value">
-          {{ t.label }}
-          <span :class="selectedType === t.value ? 'text-blue-100' : 'text-slate-400'">
-            {{ t.value === 0 ? data.total : (typeCounts[t.value] ?? 0) }}
-          </span>
-        </button>
+      <div class="print:hidden">
+        <UiTabs v-model="selectedType" :items="typeTabs" />
       </div>
 
       <ul class="divide-y divide-slate-100 rounded-xl border border-slate-200">
         <li v-for="q in filteredRows" :key="q.questionId">
-          <NuxtLink :to="`/practice?mode=single&target=${q.questionId}`" title="点击复习这道错题"
-                    class="flex items-start gap-3 px-5 py-3 hover:bg-blue-50/60">
+          <NuxtLink :to="q.available === false ? '/wrong' : `/practice?mode=single&target=${q.questionId}`"
+                    :title="q.available === false ? '题目已下架，暂不可复习' : '点击复习这道错题'"
+                    class="flex items-start gap-3 px-5 py-3 hover:bg-blue-50/60"
+                    :class="q.available === false ? 'pointer-events-none opacity-60' : ''">
             <span class="mt-0.5 shrink-0 rounded bg-slate-100 px-1.5 py-0.5 text-xs text-slate-600">
               {{ TYPE_LABEL[q.questionType] ?? q.questionType }}
             </span>
@@ -93,10 +90,13 @@ function printPage() {
                 <span v-if="q.kps"> · 知识点：{{ q.kps }}</span>
               </p>
             </div>
-            <span class="shrink-0 text-xs" :class="q.resolved ? 'text-green-600' : 'text-amber-600'">
-              {{ q.resolved ? '已掌握' : '待复习' }}
-            </span>
-            <span class="shrink-0 text-xs font-medium text-blue-600">复习这题 →</span>
+            <span v-if="q.available === false" class="shrink-0 text-xs text-slate-400">已下架</span>
+            <template v-else>
+              <span class="shrink-0 text-xs" :class="q.resolved ? 'text-green-600' : 'text-amber-600'">
+                {{ q.resolved ? '已掌握' : '待复习' }}
+              </span>
+              <span class="shrink-0 text-xs font-medium text-blue-600">复习这题 →</span>
+            </template>
           </NuxtLink>
         </li>
         <li v-if="!filteredRows.length" class="px-5 py-6 text-sm text-slate-500">

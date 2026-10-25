@@ -31,6 +31,8 @@ public class WrongController {
                        w.next_review_at   as "nextReviewAt",
                        w.resolved,
                        q.question_type    as "questionType",
+                       q.review_status    as "reviewStatus",
+                       (q.review_status = 'ok') as "available",
                        q.stem,
                        kp.kps as "kps"
                   from wrong_question w
@@ -45,7 +47,13 @@ public class WrongController {
                  order by w.resolved asc, w.next_review_at nulls last
                  limit 300
                 """, uid);
-        long pending = rows.stream().filter(r -> Boolean.FALSE.equals(r.get("resolved"))).count();
-        return Map.of("total", rows.size(), "pending", pending, "rows", rows);
+        long pending = rows.stream()
+                .filter(r -> Boolean.FALSE.equals(r.get("resolved")) && Boolean.TRUE.equals(r.get("available")))
+                .count();
+        long unavailable = rows.stream()
+                .filter(r -> !Boolean.TRUE.equals(r.get("available")))
+                .count();
+        return Map.of("total", rows.size(), "pending", pending,
+                "unavailable", unavailable, "rows", rows);
     }
 }

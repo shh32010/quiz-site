@@ -1,9 +1,10 @@
 <script setup lang="ts">
 // 做题历史：当前用户的历史练习会话
+definePageMeta({ middleware: 'auth' })
 useHead({ title: '做题历史' })
 const api = useApi()
-const router = useRouter()
 const rows = ref<any[]>([])
+const resume = ref<any>(null)
 const total = ref(0)
 const totalAll = ref(0)
 const page = ref(1)
@@ -35,6 +36,10 @@ const MODE_LABEL: Record<string, string> = {
 }
 
 const totalPages = computed(() => Math.max(1, Math.ceil(total.value / size)))
+const typeTabs = computed(() => TYPE_TABS.map(t => ({
+  ...t,
+  count: t.value === 0 ? totalAll.value : (typeCounts.value[t.value] ?? 0),
+})))
 
 function fmtTime(v: string) {
   if (!v) return ''
@@ -75,13 +80,13 @@ function switchType(t: number) {
   load(1)
 }
 
-onMounted(() => {
-  if (!api.hasToken()) {
-    loading.value = false
-    router.push('/login')
-    return
-  }
+onMounted(async () => {
   load(1)
+  if (!api.hasToken()) return
+  try {
+    const r = await api.get<{ session: any }>('/api/practice/resume')
+    resume.value = r.session
+  } catch { /* 不影响历史列表 */ }
 })
 </script>
 
@@ -92,19 +97,9 @@ onMounted(() => {
       <NuxtLink to="/report" class="text-sm text-blue-600 hover:underline">学习报告 →</NuxtLink>
     </div>
 
-    <div class="flex flex-wrap gap-2">
-      <button v-for="t in TYPE_TABS" :key="t.value"
-              class="rounded-full border px-3 py-1 text-xs"
-              :class="selectedType === t.value
-                ? 'border-blue-600 bg-blue-600 text-white'
-                : 'border-slate-300 text-slate-600 hover:border-blue-400'"
-              @click="switchType(t.value)">
-        {{ t.label }}
-        <span :class="selectedType === t.value ? 'text-blue-100' : 'text-slate-400'">
-          {{ t.value === 0 ? totalAll : (typeCounts[t.value] ?? 0) }}
-        </span>
-      </button>
-    </div>
+    <ResumeCard v-if="resume" :session="resume" />
+
+    <UiTabs :model-value="selectedType" :items="typeTabs" @update:model-value="switchType(Number($event))" />
 
     <p v-if="error" class="text-sm text-red-600">{{ error }}</p>
     <p v-if="loading" class="text-sm text-slate-500">加载中…</p>
