@@ -35,14 +35,14 @@ public class ComposeService {
                 new Section(4, new Bucket[]{new Bucket(CODES_A, 6), new Bucket(CODES_B, 4)})
         ));
         PLANS.put(5, List.of(
-                new Section(1, new Bucket[]{
-                        new Bucket(new String[]{"S1"}, 8), new Bucket(new String[]{"S2"}, 4),
-                        new Bucket(new String[]{"S3"}, 2), new Bucket(new String[]{"S4"}, 2),
-                        new Bucket(new String[]{"S5"}, 2), new Bucket(new String[]{"S6"}, 2)}),
                 new Section(3, new Bucket[]{
                         new Bucket(new String[]{"S1"}, 3), new Bucket(new String[]{"S2"}, 1),
                         new Bucket(new String[]{"S3"}, 1), new Bucket(new String[]{"S4"}, 1),
                         new Bucket(new String[]{"S5"}, 1), new Bucket(new String[]{"S6"}, 1)}),
+                new Section(1, new Bucket[]{
+                        new Bucket(new String[]{"S1"}, 8), new Bucket(new String[]{"S2"}, 4),
+                        new Bucket(new String[]{"S3"}, 2), new Bucket(new String[]{"S4"}, 2),
+                        new Bucket(new String[]{"S5"}, 2), new Bucket(new String[]{"S6"}, 2)}),
                 new Section(4, new Bucket[]{
                         new Bucket(new String[]{"S1"}, 4), new Bucket(new String[]{"S2"}, 2),
                         new Bucket(new String[]{"S3"}, 1), new Bucket(new String[]{"S4"}, 1),

@@ -50,6 +50,31 @@ const sheet = ref<{ total: number; answered: number; remaining: number; rows: an
 })
 const finishInfo = ref({ unanswered: 0, firstUnanswered: 1 })
 
+/** 答题卡按题型分组：判断 → 单选 → 多选 → 填空 → 综合（按会话实际顺序） */
+const TYPE_TONE: Record<number, 'blue' | 'indigo' | 'amber' | 'green' | 'red'> = {
+  1: 'blue', 2: 'indigo', 3: 'amber', 4: 'green', 5: 'red',
+}
+const sheetGroups = computed(() => {
+  const groups = new Map<number, any[]>()
+  for (const row of sheet.value.rows ?? []) {
+    const t = Number(row.questionType)
+    if (!groups.has(t)) groups.set(t, [])
+    groups.get(t)!.push(row)
+  }
+  return [...groups.entries()].map(([type, rows]) => ({
+    type,
+    rows,
+    total: rows.length,
+    answered: rows.filter(r => r.answered).length,
+  }))
+})
+const sheetPct = computed(() =>
+  sheet.value.total > 0 ? Math.round(sheet.value.answered / sheet.value.total * 100) : 0)
+const sheetCorrect = computed(() =>
+  (sheet.value.rows ?? []).filter(r => r.answered && r.isCorrect).length)
+const sheetWrong = computed(() =>
+  (sheet.value.rows ?? []).filter(r => r.answered && !r.isCorrect).length)
+
 const MODE_LABEL: Record<string, string> = {
   chapter: '章节练习', chapter_random: '章节随机卷', paper: '真题练习', course: '课程练习', kp: '知识点练习',
   wrong: '错题复习', single: '单题练习', random: '随机组卷', exam: '模拟考试', random_exam: '随机模考',
@@ -473,10 +498,10 @@ function jumpTo(order: number) {
 }
 
 function sheetClass(row: any) {
-  if (row.itemOrder === currentOrder.value) return 'border-blue-600 bg-blue-50 text-blue-700 ring-1 ring-blue-500'
-  if (!row.answered) return 'border-slate-200 bg-white text-slate-500'
-  if (row.isCorrect) return 'border-green-300 bg-green-50 text-green-700'
-  return 'border-red-300 bg-red-50 text-red-700'
+  if (row.itemOrder === currentOrder.value) return 'border-brand bg-brand text-white ring-2 ring-brand/25'
+  if (!row.answered) return 'border-line-strong bg-surface-card text-fg-muted hover:border-brand hover:text-brand'
+  if (row.isCorrect) return 'border-success-border bg-success-bg text-success-fg'
+  return 'border-danger-border bg-danger-bg text-danger-fg'
 }
 
 function exit() {
@@ -774,15 +799,58 @@ onUnmounted(() => {
       </div>
     </div>
 
-    <UiModal v-model="sheetOpen" title="答题卡" size="md">
-      <div class="grid grid-cols-6 gap-2 sm:grid-cols-8">
-        <button v-for="row in sheet.rows" :key="row.itemOrder" type="button"
-                class="aspect-square rounded-lg border text-sm font-medium tabular-nums transition-colors"
-                :class="sheetClass(row)" @click="jumpTo(row.itemOrder)">{{ row.itemOrder }}</button>
-      </div>
-      <div class="mt-4 flex items-center justify-between text-xs text-slate-500">
-        <span>已答 {{ sheet.answered }} / {{ sheet.total }}</span>
-        <span>未答 {{ sheet.remaining }}</span>
+    <UiModal v-model="sheetOpen" title="答题卡" size="lg">
+      <div class="space-y-4">
+        <div class="rounded-xl border border-line-subtle bg-surface-card p-3">
+          <div class="flex items-baseline justify-between gap-2">
+            <span class="text-sm font-semibold text-fg-primary">已答 {{ sheet.answered }} / {{ sheet.total }}</span>
+            <span class="text-xs text-fg-muted">未答 {{ sheet.remaining }}</span>
+          </div>
+          <div class="mt-2 h-2 overflow-hidden rounded-full bg-surface-muted">
+            <div class="h-full rounded-full bg-brand transition-all" :style="{ width: `${sheetPct}%` }" />
+          </div>
+          <div class="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-fg-secondary">
+            <span class="text-fg-muted">题型分布</span>
+            <span v-for="(g, idx) in sheetGroups" :key="`summary-${g.type}`" class="inline-flex items-center gap-2">
+              <span v-if="idx > 0" class="text-fg-muted">·</span>
+              <span>{{ TYPE_LABEL[g.type] ?? '题目' }} {{ g.total }}</span>
+            </span>
+          </div>
+          <div class="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs">
+            <span class="inline-flex items-center gap-1.5 text-success-fg">
+              <span class="h-2.5 w-2.5 rounded-sm bg-success-fg" />答对 {{ sheetCorrect }}
+            </span>
+            <span class="inline-flex items-center gap-1.5 text-danger-fg">
+              <span class="h-2.5 w-2.5 rounded-sm bg-danger-fg" />答错 {{ sheetWrong }}
+            </span>
+            <span class="inline-flex items-center gap-1.5 text-fg-muted">
+              <span class="h-2.5 w-2.5 rounded-sm border border-line-strong bg-surface-card" />未答 {{ sheet.remaining }}
+            </span>
+            <span class="inline-flex items-center gap-1.5 text-brand">
+              <span class="h-2.5 w-2.5 rounded-sm bg-brand" />当前
+            </span>
+          </div>
+        </div>
+
+        <section v-for="g in sheetGroups" :key="`group-${g.type}`" class="space-y-2">
+          <div class="flex items-center justify-between gap-2">
+            <div class="flex items-center gap-2">
+              <UiBadge :tone="TYPE_TONE[g.type] ?? 'slate'">{{ TYPE_LABEL[g.type] ?? '题目' }}</UiBadge>
+              <span class="text-xs tabular-nums text-fg-muted">{{ g.answered }}/{{ g.total }}</span>
+            </div>
+            <span class="text-xs tabular-nums text-fg-muted">
+              第 {{ g.rows[0].itemOrder }}–{{ g.rows[g.rows.length - 1].itemOrder }} 题
+            </span>
+          </div>
+          <div class="grid grid-cols-6 gap-2 sm:grid-cols-10">
+            <button v-for="row in g.rows" :key="row.itemOrder" type="button"
+                    class="aspect-square rounded-lg border text-sm font-semibold tabular-nums transition-colors"
+                    :class="sheetClass(row)"
+                    :aria-label="`第 ${row.itemOrder} 题，${TYPE_LABEL[row.questionType] ?? '题目'}，${row.answered ? (row.isCorrect ? '答对' : '答错') : '未答'}`"
+                    :title="`第 ${row.itemOrder} 题 · ${TYPE_LABEL[row.questionType] ?? '题目'} · ${row.answered ? (row.isCorrect ? '答对' : '答错') : '未答'}`"
+                    @click="jumpTo(row.itemOrder)">{{ row.itemOrder }}</button>
+          </div>
+        </section>
       </div>
       <template #footer>
         <UiButton variant="primary" class="w-full" :disabled="submitting" @click="requestFinish">
