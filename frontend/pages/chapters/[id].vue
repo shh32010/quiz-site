@@ -3,6 +3,7 @@
 const route = useRoute()
 const router = useRouter()
 const api = useApi()
+const toast = useToast()
 const composing = ref(false)
 const composeError = ref('')
 const page = computed(() => Number(route.query.page) || 1)
@@ -17,6 +18,13 @@ const { data } = await useFetch<any>('/api/questions', {
     type: computed(() => type.value || undefined),
   },
 })
+const { data: chapterInfo } = await useFetch<any>(() => `/api/chapters/${chapterId.value}`)
+const isTopChapter = computed(() => Number(chapterInfo.value?.level) === 1)
+const isPractical = computed(() => Number(chapterInfo.value?.subjectId) === 5)
+const composeCount = computed(() => (isPractical.value ? 40 : 80))
+const composePlan = computed(() => (isPractical.value
+  ? '判断 8 · 单选 20 · 填空 10 · 综合 2'
+  : '判断 10 · 单选 50 · 多选 10 · 填空 10'))
 
 const totalPages = computed(() => Math.max(1, Math.ceil((data.value?.total ?? 0) / 50)))
 const TYPE_LABEL: Record<number, string> = { 1: '单选', 2: '多选', 3: '判断', 4: '填空', 5: '综合' }
@@ -48,9 +56,9 @@ function switchType(value: number | string) {
   router.push({ query: { ...route.query, type: next || undefined, page: undefined } })
 }
 
-/** 本章随机组卷：默认 20 题，跟随当前题型筛选 */
+/** 一级章随机组卷：理论 80 题、实操 40 题，按大纲整卷配比；不受当前题型筛选影响 */
 async function composeChapter() {
-  if (composing.value) return
+  if (composing.value || !isTopChapter.value) return
   composeError.value = ''
   if (!api.hasToken()) {
     router.push({ path: '/login', query: { redirect: route.fullPath } })
@@ -58,11 +66,11 @@ async function composeChapter() {
   }
   composing.value = true
   try {
-    const r = await api.post<{ sessionId: number }>('/api/compose/chapter', {
-      chapterId: chapterId.value,
-      count: 20,
-      type: type.value || undefined,
-    })
+    const r = await api.post<{ sessionId: number; count: number; shortfall?: number }>(
+      '/api/compose/chapter', { chapterId: chapterId.value, count: composeCount.value })
+    if ((r.shortfall ?? 0) > 0) {
+      toast.show(`本章共 ${r.count} 题，不足 ${composeCount.value} 题，已全部加入`, 'warn')
+    }
     router.push(`/practice?session=${r.sessionId}`)
   } catch (e: any) {
     composeError.value = e.message ?? '组卷失败，请重试'
@@ -77,9 +85,11 @@ async function composeChapter() {
     <UiPageHeader :title="chapterTitle" :subtitle="chapterPath || `共 ${data?.total ?? 0} 题`"
                   back-to="/chapters" back-label="返回章节">
       <template #actions>
-        <UiButton variant="secondary" size="md" :loading="composing" :disabled="!(data?.total ?? 0)"
-                  title="从本章随机抽最多 20 题，优先未做过的题" @click="composeChapter">
-          随机组卷{{ type ? `（${TYPE_LABEL[type]}）` : '' }}
+        <UiButton v-if="isTopChapter" variant="secondary" size="md"
+                  :loading="composing" :disabled="!(data?.total ?? 0)"
+                  :title="`按大纲整卷配比抽 ${composeCount} 题，不受当前题型筛选影响；优先未做过的题`"
+                  @click="composeChapter">
+          随机组卷 · {{ composeCount }} 题
         </UiButton>
         <NuxtLink :to="practiceLink"
                   class="inline-flex min-h-11 items-center rounded-lg bg-brand px-4 text-sm font-medium text-white hover:bg-brand-hover">
@@ -88,6 +98,9 @@ async function composeChapter() {
       </template>
     </UiPageHeader>
 
+    <p v-if="isTopChapter" class="text-xs text-fg-muted">
+      随机组卷按大纲整卷配比：{{ composePlan }}（共 {{ composeCount }} 题）
+    </p>
     <p v-if="composeError" class="text-sm text-danger-fg">{{ composeError }}</p>
 
     <div class="sticky top-14 z-20 -mx-3 border-y border-line-subtle bg-page/95 px-3 py-2 backdrop-blur sm:-mx-4 sm:px-4">

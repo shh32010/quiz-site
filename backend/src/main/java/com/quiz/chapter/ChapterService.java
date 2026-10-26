@@ -94,4 +94,15 @@ public class ChapterService {
     public List<Map<String, Object>> courseCounts() {
         return jdbc.queryForList("select course, cnt from v_course_counts order by course");
     }
+
+    /** 单个章节基本信息：用于判断是否一级章、选择整卷题量 */
+    public Map<String, Object> one(int id) {
+        List<Map<String, Object>> rows = jdbc.queryForList("""
+                select id, subject_id as "subjectId", parent_id as "parentId",
+                       code, name, level
+                  from t_chapter
+                 where id = ? and not deleted
+                """, id);
+        return rows.isEmpty() ? null : rows.get(0);
+    }
 }

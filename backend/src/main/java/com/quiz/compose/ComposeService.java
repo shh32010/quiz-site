@@ -129,48 +129,49 @@ public class ComposeService {
     }
 
     /**
-     * 章节内随机组卷：从章节子树抽 count 道，优先未做过的题。
+     * 一级章内随机组卷：理论固定 80 题、实操固定 40 题，按大纲题型配比抽题。
+     * 某题型不足时用其他题型补齐；一级章题量不足时才少于目标。
      * type 可选（1-5）；mode 使用 chapter_random，target_id 存章节 id。
      */
     @Transactional
     public Map<String, Object> startChapter(UUID uid, int chapterId, int count, Integer type) {
-        Integer exists = jdbc.queryForObject(
-                "select count(*) from t_chapter where id = ? and not deleted", Integer.class, chapterId);
-        if (exists == null || exists == 0) {
+        List<Map<String, Object>> chapters = jdbc.queryForList(
+                "select subject_id, level from t_chapter where id = ? and not deleted", chapterId);
+        if (chapters.isEmpty()) {
             throw new IllegalArgumentException("章节不存在");
         }
-
-        int n = Math.min(Math.max(count, 1), 100);
-        List<Object> args = new ArrayList<>();
-        args.add(chapterId);
-        String typeFilter = "";
-        if (type != null && type >= 1 && type <= 5) {
-            typeFilter = " and q.question_type = ?";
-            args.add(type);
+        int subject = ((Number) chapters.get(0).get("subject_id")).intValue();
+        int level = ((Number) chapters.get(0).get("level")).intValue();
+        if (level != 1) {
+            throw new IllegalArgumentException("随机组卷仅支持一级章");
         }
-        args.add(uid);
-        args.add(n);
+        // 一级章固定整卷题量，不因前端传参变短
+        int n = subject == 5 ? 40 : 80;
+        Integer typeFilter = (type != null && type >= 1 && type <= 5) ? type : null;
 
-        List<Integer> picked = jdbc.queryForList("""
-                with recursive sub as (
-                  select id from t_chapter where id = ?
-                  union all
-                  select c.id from t_chapter c join sub s on c.parent_id = s.id
-                )
-                select q.id
-                  from t_question q
-                  join sub on sub.id = q.chapter_id
-                 where not q.deleted and q.review_status = 'ok'
-                """ + typeFilter + """
-                 order by exists (
-                     select 1 from practice_answer pa
-                      where pa.user_id = ? and pa.question_id = q.id
-                   ) asc,
-                   random()
-                 limit ?
-                """, Integer.class, args.toArray());
-        if (picked.isEmpty()) {
+        int available = countChapterQuestions(chapterId, typeFilter);
+        if (available == 0) {
             throw new IllegalStateException("本章没有可练习题");
+        }
+        int target = Math.min(n, available);
+        List<Integer> picked = new ArrayList<>();
+
+        if (typeFilter != null) {
+            // 明确指定题型：只抽该题型，不做大纲配比
+            picked.addAll(pickChapterQuestions(uid, subject, chapterId, typeFilter, target, picked));
+        } else {
+            // 按大纲题型配比分配名额；题型不足的部分后面用其他题型补齐
+            for (Map.Entry<Integer, Integer> e : allocateTypes(subject, target).entrySet()) {
+                picked.addAll(pickChapterQuestions(uid, subject, chapterId, e.getKey(), e.getValue(), picked));
+            }
+            int deficit = target - picked.size();
+            if (deficit > 0) {
+                picked.addAll(pickChapterQuestions(uid, subject, chapterId, null, deficit, picked));
+            }
+        }
+
+        if (picked.size() < target) {
+            throw new IllegalStateException("组卷题量不足");
         }
 
         Long sessionId = jdbc.queryForObject("""
@@ -184,7 +185,134 @@ public class ComposeService {
         }
         jdbc.batchUpdate("insert into session_question (session_id, item_order, question_id) values (?,?,?)", rows);
 
-        return Map.of("sessionId", sessionId, "count", picked.size(), "chapterId", chapterId);
+        return Map.of("sessionId", sessionId, "count", picked.size(),
+                "chapterId", chapterId, "requested", n, "shortfall", n - picked.size());
+    }
+
+    /** 章节子树内可练习题数（可按题型） */
+    private int countChapterQuestions(int chapterId, Integer type) {
+        List<Object> args = new ArrayList<>();
+        args.add(chapterId);
+        String typeFilter = "";
+        if (type != null) {
+            typeFilter = " and q.question_type = ?";
+            args.add(type);
+        }
+        Integer n = jdbc.queryForObject("""
+                with recursive sub as (
+                  select id from t_chapter where id = ?
+                  union all
+                  select c.id from t_chapter c join sub s on c.parent_id = s.id
+                )
+                select count(*)
+                  from t_question q
+                  join sub on sub.id = q.chapter_id
+                 where not q.deleted and q.review_status = 'ok'
+                """ + typeFilter, Integer.class, args.toArray());
+        return n == null ? 0 : n;
+    }
+
+    /** 章节子树内抽题：优先未做过的题；type 为空表示不限题型；只抽大纲标准分值 */
+    private List<Integer> pickChapterQuestions(UUID uid, int subject, int chapterId, Integer type,
+                                               int limit, List<Integer> exclude) {
+        if (limit <= 0) {
+            return List.of();
+        }
+        List<Object> args = new ArrayList<>();
+        args.add(chapterId);
+        String typeFilter = "";
+        if (type != null) {
+            typeFilter = " and q.question_type = ?";
+            args.add(type);
+        }
+        // 只抽符合大纲分值的题，保证整卷总分稳定 150/80
+        String scoreFilter = """
+                 and q.score = case
+                   when ? = 4 then case q.question_type
+                     when 3 then 1 when 1 then 2 when 2 then 2 when 4 then 2 else q.score end
+                   when ? = 5 then case q.question_type
+                     when 3 then 1 when 1 then 2 when 4 then 2 when 5 then 6 else q.score end
+                   else q.score end
+                """;
+        args.add(subject);
+        args.add(subject);
+        String excludeFilter = "";
+        if (!exclude.isEmpty()) {
+            excludeFilter = " and q.id <> all(?)";
+            args.add(exclude.toArray(new Integer[0]));
+        }
+        args.add(uid);
+        args.add(limit);
+
+        return jdbc.queryForList("""
+                with recursive sub as (
+                  select id from t_chapter where id = ?
+                  union all
+                  select c.id from t_chapter c join sub s on c.parent_id = s.id
+                )
+                select q.id
+                  from t_question q
+                  join sub on sub.id = q.chapter_id
+                 where not q.deleted and q.review_status = 'ok'
+                """ + typeFilter + scoreFilter + excludeFilter + """
+                 order by exists (
+                     select 1 from practice_answer pa
+                      where pa.user_id = ? and pa.question_id = q.id
+                   ) asc,
+                   random()
+                 limit ?
+                """, Integer.class, args.toArray());
+    }
+
+    /**
+     * 大纲题型配比：理论 判断10:单选50:多选10:填空10；实操 判断8:单选20:填空10:综合2。
+     * 用最大余数法把 target 拆成整数题量，余数相同时优先权重大的题型，再按声明顺序。
+     */
+    private static Map<Integer, Integer> allocateTypes(int subject, int target) {
+        int[] types;
+        int[] weights;
+        if (subject == 4) {
+            types = new int[]{3, 1, 2, 4};
+            weights = new int[]{10, 50, 10, 10};
+        } else if (subject == 5) {
+            types = new int[]{3, 1, 4, 5};
+            weights = new int[]{8, 20, 10, 2};
+        } else {
+            return Map.of();
+        }
+
+        int weightSum = 0;
+        for (int w : weights) {
+            weightSum += w;
+        }
+        Map<Integer, Integer> out = new LinkedHashMap<>();
+        double[] remainders = new double[types.length];
+        int assigned = 0;
+        for (int i = 0; i < types.length; i++) {
+            double exact = target * weights[i] / (double) weightSum;
+            int base = (int) Math.floor(exact);
+            out.put(types[i], base);
+            remainders[i] = exact - base;
+            assigned += base;
+        }
+
+        Integer[] order = {0, 1, 2, 3};
+        java.util.Arrays.sort(order, (a, b) -> {
+            int cmp = Double.compare(remainders[b], remainders[a]);
+            if (cmp != 0) {
+                return cmp;
+            }
+            cmp = Integer.compare(weights[b], weights[a]);
+            if (cmp != 0) {
+                return cmp;
+            }
+            return Integer.compare(a, b);
+        });
+        for (int i = 0; i < target - assigned; i++) {
+            int idx = order[i % order.length];
+            out.merge(types[idx], 1, Integer::sum);
+        }
+        return out;
     }
 
     private int countOfType(int subject, int type, String[] codes, List<Integer> picked) {

@@ -1,6 +1,9 @@
 package com.quiz.chapter;
 
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -34,5 +37,15 @@ public class ChapterController {
     @GetMapping("/courses")
     public List<Map<String, Object>> courses() {
         return chapterService.courseCounts();
+    }
+
+    /** 单个章节信息：GET /api/chapters/5 */
+    @GetMapping("/chapters/{id}")
+    public ResponseEntity<?> one(@PathVariable int id) {
+        Map<String, Object> chapter = chapterService.one(id);
+        if (chapter == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "章节不存在"));
+        }
+        return ResponseEntity.ok(chapter);
     }
 }
