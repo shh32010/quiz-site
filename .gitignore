@@ -23,6 +23,11 @@ Thumbs.db
 *.tmp
 /backups/
 
+# 本机项目资料（留存但不进 Git）
+/private/
+/docs/project/
+/docs/reference/
+
 # Python 缓存
 __pycache__/
 *.pyc
