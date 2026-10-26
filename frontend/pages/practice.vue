@@ -55,18 +55,28 @@ const TYPE_TONE: Record<number, 'blue' | 'indigo' | 'amber' | 'green' | 'red'> =
   1: 'blue', 2: 'indigo', 3: 'amber', 4: 'green', 5: 'red',
 }
 const sheetGroups = computed(() => {
+  const rows = sheet.value.rows ?? []
   const groups = new Map<number, any[]>()
-  for (const row of sheet.value.rows ?? []) {
+  for (const row of rows) {
     const t = Number(row.questionType)
     if (!groups.has(t)) groups.set(t, [])
     groups.get(t)!.push(row)
   }
-  return [...groups.entries()].map(([type, rows]) => ({
-    type,
-    rows,
-    total: rows.length,
-    answered: rows.filter(r => r.answered).length,
-  }))
+  const present = new Set(rows.map(r => Number(r.questionType)))
+  // 理论：单选→多选→判断→填空；实操：单选→判断→填空→综合
+  const order = present.has(5) && !present.has(2) ? [1, 3, 4, 5] : [1, 2, 3, 4, 5]
+  return [...groups.entries()]
+    .sort((a, b) => {
+      const ai = order.indexOf(a[0])
+      const bi = order.indexOf(b[0])
+      return (ai < 0 ? 99 : ai) - (bi < 0 ? 99 : bi)
+    })
+    .map(([type, list]) => ({
+      type,
+      rows: list,
+      total: list.length,
+      answered: list.filter(r => r.answered).length,
+    }))
 })
 const sheetPct = computed(() =>
   sheet.value.total > 0 ? Math.round(sheet.value.answered / sheet.value.total * 100) : 0)

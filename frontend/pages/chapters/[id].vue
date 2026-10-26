@@ -19,12 +19,19 @@ const { data } = await useFetch<any>('/api/questions', {
   },
 })
 const { data: chapterInfo } = await useFetch<any>(() => `/api/chapters/${chapterId.value}`)
-const isTopChapter = computed(() => Number(chapterInfo.value?.level) === 1)
+const chapterLevel = computed(() => Number(chapterInfo.value?.level))
 const isPractical = computed(() => Number(chapterInfo.value?.subjectId) === 5)
-const composeCount = computed(() => (isPractical.value ? 40 : 80))
-const composePlan = computed(() => (isPractical.value
-  ? '判断 8 · 单选 20 · 填空 10 · 综合 2'
-  : '判断 10 · 单选 50 · 多选 10 · 填空 10'))
+const canCompose = computed(() => chapterLevel.value === 1 || chapterLevel.value === 2)
+const composeCount = computed(() =>
+  chapterLevel.value === 1 ? (isPractical.value ? 40 : 80) : 40)
+const composePlan = computed(() => {
+  if (isPractical.value) return '判断 8 · 单选 20 · 填空 10 · 综合 2'
+  return chapterLevel.value === 1
+    ? '判断 10 · 单选 50 · 多选 10 · 填空 10'
+    : '判断 5 · 单选 25 · 多选 5 · 填空 5'
+})
+const composeScore = computed(() =>
+  isPractical.value ? 80 : (chapterLevel.value === 1 ? 150 : 75))
 
 const totalPages = computed(() => Math.max(1, Math.ceil((data.value?.total ?? 0) / 50)))
 const TYPE_LABEL: Record<number, string> = { 1: '单选', 2: '多选', 3: '判断', 4: '填空', 5: '综合' }
@@ -46,6 +53,24 @@ const typeTabs = computed(() => TYPE_TABS.map(t => ({
   ...t,
   count: t.value === 0 ? allCount.value : (typeMap.value[t.value] ?? 0),
 })))
+
+/** 组卷前提示：总题量不足或某题型不足（仍会补足到目标题量） */
+const composeWarning = computed(() => {
+  if (!canCompose.value) return ''
+  const total = allCount.value
+  if (total > 0 && total < composeCount.value) {
+    return `本章共 ${total} 题，不足 ${composeCount.value} 题，将全部加入`
+  }
+  const need: Record<number, number> = isPractical.value
+    ? { 1: 20, 3: 8, 4: 10, 5: 2 }
+    : (chapterLevel.value === 1
+        ? { 1: 50, 2: 10, 3: 10, 4: 10 }
+        : { 1: 25, 2: 5, 3: 5, 4: 5 })
+  const missing = Object.entries(need)
+    .filter(([t, n]) => (typeMap.value[Number(t)] ?? 0) < n)
+    .map(([t]) => TYPE_LABEL[Number(t)])
+  return missing.length ? `本章${missing.join('、')}不足，差额已用其他题型补足（实际分值可能略低）` : ''
+})
 const chapterTitle = computed(() =>
   data.value?.rows?.[0]?.chapterName || '章节题目')
 const chapterPath = computed(() =>
@@ -56,9 +81,9 @@ function switchType(value: number | string) {
   router.push({ query: { ...route.query, type: next || undefined, page: undefined } })
 }
 
-/** 一级章随机组卷：理论 80 题、实操 40 题，按大纲整卷配比；不受当前题型筛选影响 */
+/** 一级/二级章随机组卷：一级理论 80、一级实操 40、二级统一 40；不受当前题型筛选影响 */
 async function composeChapter() {
-  if (composing.value || !isTopChapter.value) return
+  if (composing.value || !canCompose.value) return
   composeError.value = ''
   if (!api.hasToken()) {
     router.push({ path: '/login', query: { redirect: route.fullPath } })
@@ -85,9 +110,9 @@ async function composeChapter() {
     <UiPageHeader :title="chapterTitle" :subtitle="chapterPath || `共 ${data?.total ?? 0} 题`"
                   back-to="/chapters" back-label="返回章节">
       <template #actions>
-        <UiButton v-if="isTopChapter" variant="secondary" size="md"
+        <UiButton v-if="canCompose" variant="secondary" size="md"
                   :loading="composing" :disabled="!(data?.total ?? 0)"
-                  :title="`按大纲整卷配比抽 ${composeCount} 题，不受当前题型筛选影响；优先未做过的题`"
+                  :title="`按大纲配比抽 ${composeCount} 题，不受当前题型筛选影响；优先未做过的题`"
                   @click="composeChapter">
           随机组卷 · {{ composeCount }} 题
         </UiButton>
@@ -98,9 +123,10 @@ async function composeChapter() {
       </template>
     </UiPageHeader>
 
-    <p v-if="isTopChapter" class="text-xs text-fg-muted">
-      随机组卷按大纲整卷配比：{{ composePlan }}（共 {{ composeCount }} 题）
+    <p v-if="canCompose" class="text-xs text-fg-muted">
+      随机组卷按大纲配比：{{ composePlan }}（共 {{ composeCount }} 题 · {{ composeScore }} 分）
     </p>
+    <p v-if="composeWarning" class="text-xs text-warn-fg">{{ composeWarning }}</p>
     <p v-if="composeError" class="text-sm text-danger-fg">{{ composeError }}</p>
 
     <div class="sticky top-14 z-20 -mx-3 border-y border-line-subtle bg-page/95 px-3 py-2 backdrop-blur sm:-mx-4 sm:px-4">

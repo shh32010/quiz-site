@@ -29,20 +29,20 @@ public class ComposeService {
 
     static {
         PLANS.put(4, List.of(
-                new Section(3, new Bucket[]{new Bucket(CODES_A, 6), new Bucket(CODES_B, 4)}),
                 new Section(1, new Bucket[]{new Bucket(CODES_A, 30), new Bucket(CODES_B, 20)}),
                 new Section(2, new Bucket[]{new Bucket(CODES_A, 6), new Bucket(CODES_B, 4)}),
+                new Section(3, new Bucket[]{new Bucket(CODES_A, 6), new Bucket(CODES_B, 4)}),
                 new Section(4, new Bucket[]{new Bucket(CODES_A, 6), new Bucket(CODES_B, 4)})
         ));
         PLANS.put(5, List.of(
-                new Section(3, new Bucket[]{
-                        new Bucket(new String[]{"S1"}, 3), new Bucket(new String[]{"S2"}, 1),
-                        new Bucket(new String[]{"S3"}, 1), new Bucket(new String[]{"S4"}, 1),
-                        new Bucket(new String[]{"S5"}, 1), new Bucket(new String[]{"S6"}, 1)}),
                 new Section(1, new Bucket[]{
                         new Bucket(new String[]{"S1"}, 8), new Bucket(new String[]{"S2"}, 4),
                         new Bucket(new String[]{"S3"}, 2), new Bucket(new String[]{"S4"}, 2),
                         new Bucket(new String[]{"S5"}, 2), new Bucket(new String[]{"S6"}, 2)}),
+                new Section(3, new Bucket[]{
+                        new Bucket(new String[]{"S1"}, 3), new Bucket(new String[]{"S2"}, 1),
+                        new Bucket(new String[]{"S3"}, 1), new Bucket(new String[]{"S4"}, 1),
+                        new Bucket(new String[]{"S5"}, 1), new Bucket(new String[]{"S6"}, 1)}),
                 new Section(4, new Bucket[]{
                         new Bucket(new String[]{"S1"}, 4), new Bucket(new String[]{"S2"}, 2),
                         new Bucket(new String[]{"S3"}, 1), new Bucket(new String[]{"S4"}, 1),
@@ -129,8 +129,8 @@ public class ComposeService {
     }
 
     /**
-     * 一级章内随机组卷：理论固定 80 题、实操固定 40 题，按大纲题型配比抽题。
-     * 某题型不足时用其他题型补齐；一级章题量不足时才少于目标。
+     * 一级/二级章内随机组卷：一级理论 80 题、一级实操 40 题、二级统一 40 题。
+     * 按大纲题型配比抽题；某题型不足时用其他题型补齐，整章题量不足时才少于目标。
      * type 可选（1-5）；mode 使用 chapter_random，target_id 存章节 id。
      */
     @Transactional
@@ -142,11 +142,15 @@ public class ComposeService {
         }
         int subject = ((Number) chapters.get(0).get("subject_id")).intValue();
         int level = ((Number) chapters.get(0).get("level")).intValue();
-        if (level != 1) {
-            throw new IllegalArgumentException("随机组卷仅支持一级章");
+        if (level != 1 && level != 2) {
+            throw new IllegalArgumentException("随机组卷仅支持一级/二级章");
         }
-        // 一级章固定整卷题量，不因前端传参变短
-        int n = subject == 5 ? 40 : 80;
+        int n;
+        if (level == 1) {
+            n = subject == 5 ? 40 : 80;
+        } else {
+            n = 40;
+        }
         Integer typeFilter = (type != null && type >= 1 && type <= 5) ? type : null;
 
         int available = countChapterQuestions(chapterId, typeFilter);
@@ -272,11 +276,11 @@ public class ComposeService {
         int[] types;
         int[] weights;
         if (subject == 4) {
-            types = new int[]{3, 1, 2, 4};
-            weights = new int[]{10, 50, 10, 10};
+            types = new int[]{1, 2, 3, 4};
+            weights = new int[]{50, 10, 10, 10};
         } else if (subject == 5) {
-            types = new int[]{3, 1, 4, 5};
-            weights = new int[]{8, 20, 10, 2};
+            types = new int[]{1, 3, 4, 5};
+            weights = new int[]{20, 8, 10, 2};
         } else {
             return Map.of();
         }

@@ -32,11 +32,11 @@ public class ComposeController {
         return compose.start(uid, subject);
     }
 
-    /** 章节内随机组卷：默认 20 题，可按题型筛选 */
+    /** 章节内随机组卷：理论默认/可选 40/80 题，实操固定 40 题 */
     @PostMapping("/chapter")
     public Map<String, Object> startChapter(@AuthenticationPrincipal UUID uid,
                                             @Valid @RequestBody ChapterReq req) {
-        int count = req.count() == null ? 20 : req.count();
+        int count = req.count() == null ? 40 : req.count();
         return compose.startChapter(uid, req.chapterId(), count, req.type());
     }
 }
