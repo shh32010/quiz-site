@@ -28,6 +28,7 @@ const TYPE_TABS = [
 
 const MODE_LABEL: Record<string, string> = {
   chapter: '章节练习',
+  chapter_random: '章节随机卷',
   paper: '真题练习',
   kp: '知识点练习',
   single: '单题练习',

@@ -3,7 +3,7 @@
 const props = defineProps<{ session: any }>()
 
 const MODE_LABEL: Record<string, string> = {
-  chapter: '章节练习', paper: '真题练习', course: '课程练习', kp: '知识点练习',
+  chapter: '章节练习', chapter_random: '章节随机卷', paper: '真题练习', course: '课程练习', kp: '知识点练习',
   wrong: '错题复习', random: '随机组卷', exam: '模拟考试', random_exam: '随机模考',
 }
 const percent = computed(() => {

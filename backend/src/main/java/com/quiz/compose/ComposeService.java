@@ -128,6 +128,65 @@ public class ComposeService {
         return Map.of("sessionId", sessionId, "count", picked.size(), "subject", subject);
     }
 
+    /**
+     * 章节内随机组卷：从章节子树抽 count 道，优先未做过的题。
+     * type 可选（1-5）；mode 使用 chapter_random，target_id 存章节 id。
+     */
+    @Transactional
+    public Map<String, Object> startChapter(UUID uid, int chapterId, int count, Integer type) {
+        Integer exists = jdbc.queryForObject(
+                "select count(*) from t_chapter where id = ? and not deleted", Integer.class, chapterId);
+        if (exists == null || exists == 0) {
+            throw new IllegalArgumentException("章节不存在");
+        }
+
+        int n = Math.min(Math.max(count, 1), 100);
+        List<Object> args = new ArrayList<>();
+        args.add(chapterId);
+        String typeFilter = "";
+        if (type != null && type >= 1 && type <= 5) {
+            typeFilter = " and q.question_type = ?";
+            args.add(type);
+        }
+        args.add(uid);
+        args.add(n);
+
+        List<Integer> picked = jdbc.queryForList("""
+                with recursive sub as (
+                  select id from t_chapter where id = ?
+                  union all
+                  select c.id from t_chapter c join sub s on c.parent_id = s.id
+                )
+                select q.id
+                  from t_question q
+                  join sub on sub.id = q.chapter_id
+                 where not q.deleted and q.review_status = 'ok'
+                """ + typeFilter + """
+                 order by exists (
+                     select 1 from practice_answer pa
+                      where pa.user_id = ? and pa.question_id = q.id
+                   ) asc,
+                   random()
+                 limit ?
+                """, Integer.class, args.toArray());
+        if (picked.isEmpty()) {
+            throw new IllegalStateException("本章没有可练习题");
+        }
+
+        Long sessionId = jdbc.queryForObject("""
+                insert into practice_session (user_id, mode, target_id, started_at)
+                values (?, 'chapter_random', ?, now()) returning id
+                """, Long.class, uid, chapterId);
+
+        List<Object[]> rows = new ArrayList<>();
+        for (int i = 0; i < picked.size(); i++) {
+            rows.add(new Object[]{sessionId, i + 1, picked.get(i)});
+        }
+        jdbc.batchUpdate("insert into session_question (session_id, item_order, question_id) values (?,?,?)", rows);
+
+        return Map.of("sessionId", sessionId, "count", picked.size(), "chapterId", chapterId);
+    }
+
     private int countOfType(int subject, int type, String[] codes, List<Integer> picked) {
         if (picked.isEmpty()) {
             return 0;

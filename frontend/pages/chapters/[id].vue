@@ -2,6 +2,9 @@
 // 章节下的题目列表（含子孙章节）
 const route = useRoute()
 const router = useRouter()
+const api = useApi()
+const composing = ref(false)
+const composeError = ref('')
 const page = computed(() => Number(route.query.page) || 1)
 const type = computed(() => Number(route.query.type) || 0)
 const chapterId = computed(() => Number(route.params.id))
@@ -44,6 +47,29 @@ function switchType(value: number | string) {
   const next = Number(value) || 0
   router.push({ query: { ...route.query, type: next || undefined, page: undefined } })
 }
+
+/** 本章随机组卷：默认 20 题，跟随当前题型筛选 */
+async function composeChapter() {
+  if (composing.value) return
+  composeError.value = ''
+  if (!api.hasToken()) {
+    router.push({ path: '/login', query: { redirect: route.fullPath } })
+    return
+  }
+  composing.value = true
+  try {
+    const r = await api.post<{ sessionId: number }>('/api/compose/chapter', {
+      chapterId: chapterId.value,
+      count: 20,
+      type: type.value || undefined,
+    })
+    router.push(`/practice?session=${r.sessionId}`)
+  } catch (e: any) {
+    composeError.value = e.message ?? '组卷失败，请重试'
+  } finally {
+    composing.value = false
+  }
+}
 </script>
 
 <template>
@@ -51,12 +77,18 @@ function switchType(value: number | string) {
     <UiPageHeader :title="chapterTitle" :subtitle="chapterPath || `共 ${data?.total ?? 0} 题`"
                   back-to="/chapters" back-label="返回章节">
       <template #actions>
+        <UiButton variant="secondary" size="md" :loading="composing" :disabled="!(data?.total ?? 0)"
+                  title="从本章随机抽最多 20 题，优先未做过的题" @click="composeChapter">
+          随机组卷{{ type ? `（${TYPE_LABEL[type]}）` : '' }}
+        </UiButton>
         <NuxtLink :to="practiceLink"
                   class="inline-flex min-h-11 items-center rounded-lg bg-brand px-4 text-sm font-medium text-white hover:bg-brand-hover">
           开始练习{{ type ? `（${TYPE_LABEL[type]}）` : '' }}
         </NuxtLink>
       </template>
     </UiPageHeader>
+
+    <p v-if="composeError" class="text-sm text-danger-fg">{{ composeError }}</p>
 
     <div class="sticky top-14 z-20 -mx-3 border-y border-line-subtle bg-page/95 px-3 py-2 backdrop-blur sm:-mx-4 sm:px-4">
       <UiTabs :model-value="type" :items="typeTabs" @update:model-value="switchType" />

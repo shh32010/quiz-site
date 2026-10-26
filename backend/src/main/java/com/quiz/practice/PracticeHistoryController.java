@@ -24,6 +24,7 @@ public class PracticeHistoryController {
     private static final String TARGET_NAME = """
             case s.mode
               when 'chapter' then (select trim(coalesce(c.code, '') || ' ' || c.name) from t_chapter c where c.id = s.target_id)
+              when 'chapter_random' then (select trim(coalesce(c.code, '') || ' ' || c.name) from t_chapter c where c.id = s.target_id)
               when 'paper' then (select p.name from t_exam_paper p where p.id = s.target_id)
               when 'kp' then (select k.title from t_knowledge_point k where k.id = s.target_id)
               when 'single' then (select left(q.stem, 60) from t_question q where q.id = s.target_id)
