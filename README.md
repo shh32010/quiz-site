@@ -7,7 +7,7 @@
 | 层 | 选型 |
 |---|---|
 | 前端 | Nuxt 3（Vue 3 + SSR） + Tailwind |
-| 后端 | Spring Boot 3.3 + Java 21 + Spring Security(JWT) |
+| 后端 | Spring Boot 3.5.16 + Java 21 + Spring Security(JWT) |
 | 数据库 | PostgreSQL 17 |
 | 缓存 | Redis 8 |
 
@@ -27,7 +27,10 @@ quiz-v2/
 │   ├── pages/chapters/  章节树 + 题目列表
 │   ├── pages/papers/    真题列表 + 详情
 │   └── nuxt.config.ts   /api 反代到后端
-└── docs/
+├── docs/           SQL、脚本、数据迁移
+├── docs/project/   本机项目文档（Git 忽略）
+├── docs/reference/ 大纲与真题（Git 忽略）
+└── private/        本机原始资料/历史归档（Git 忽略）
 ```
 
 ## 本地开发
@@ -77,12 +80,13 @@ npm run dev          # http://localhost:3000
 
 ## 数据来源
 
-题库 54,216 行（活跃 44,820），来自江苏专转本真题与配套题库，
+题库 54,216 行（活跃 44,484），来自江苏专转本真题与配套题库，
 经大模型逐题精读（分类/难度/质检/答案四维）后入库。
-数据工程详见 `题库交付/04-项目文档/`。
+当前文档见 `docs/project/`（本机保留，Git 忽略）；考试大纲/真题见 `docs/reference/`（本机保留，Git 忽略）。
 
 ## 约定
 
 - **答案永不下发**：`correct` 不出现在任何浏览接口中，只在作答后经受控接口返回
 - 密钥只走环境变量，仓库不含任何凭据
 - 中文注释，代码风格见 `CLAUDE.md`
+- Git 只提交代码、SQL 迁移和脚本；`docs/project/`、`docs/reference/`、`private/` 为本机资料，已忽略
