@@ -44,6 +44,14 @@ public class KnowledgeController {
         return service.search(q, page, size);
     }
 
+    /** 节阅读器：GET /api/knowledge/section/123?page=1&size=60 */
+    @GetMapping("/section/{id}")
+    public Map<String, Object> section(@org.springframework.web.bind.annotation.PathVariable int id,
+                                       @RequestParam(defaultValue = "1") int page,
+                                       @RequestParam(defaultValue = "60") int size) {
+        return service.section(id, page, size);
+    }
+
     /** 单条知识点：GET /api/knowledge/123 */
     @GetMapping("/{id}")
     public Map<String, Object> detail(@org.springframework.web.bind.annotation.PathVariable int id) {
