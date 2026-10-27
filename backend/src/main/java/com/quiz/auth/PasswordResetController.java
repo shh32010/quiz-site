@@ -71,7 +71,8 @@ public class PasswordResetController {
         jdbc.update("delete from password_reset_token where created_at < now() - interval '7 days'");
 
         boolean sent = false;
-        if (mail.enabled()) {
+        // 只有完成归属验证的邮箱才自动发重置链接；未验证走管理员兜底
+        if (Boolean.TRUE.equals(u.getEmailVerified()) && mail.enabled()) {
             String raw = newToken();
             // 同一用户旧令牌作废
             jdbc.update("update password_reset_token set used_at = now() where profile_id = ? and used_at is null", u.getId());

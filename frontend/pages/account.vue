@@ -12,7 +12,9 @@ const password = ref('')
 const msg = ref('')
 const error = ref('')
 const loading = ref(false)
-const remind = computed(() => String(route.query.bind ?? '') === '1')
+const resending = ref(false)
+const remind = computed(() =>
+  String(route.query.bind ?? '') === '1' || String(route.query.verify ?? '') === '1')
 
 // 修改密码
 const oldPwd = ref('')
@@ -25,7 +27,7 @@ const pwdLoading = ref(false)
 async function load() {
   try {
     me.value = await api.get('/api/auth/me')
-    email.value = me.value.email ?? ''
+    email.value = me.value.pendingEmail || me.value.email || ''
   } catch (e: any) {
     error.value = e.message
   }
@@ -53,15 +55,47 @@ async function save() {
   }
   loading.value = true
   try {
-    const r = await api.post<{ email: string }>('/api/auth/email', { email: value, password: password.value })
-    me.value.email = r.email
-    email.value = r.email
+    const r = await api.post<{ email: string; pendingEmail?: string; mailSent?: boolean }>(
+      '/api/auth/email', { email: value, password: password.value })
     password.value = ''
-    msg.value = r.email ? '邮箱已绑定，之后可用邮箱登录和找回密码。' : '邮箱已解绑。'
+    if (r.pendingEmail) {
+      // 新邮箱先进入待验证状态，点击邮件里的链接后才生效
+      me.value.pendingEmail = r.pendingEmail
+      me.value.email = r.email
+      email.value = r.pendingEmail
+      msg.value = r.mailSent
+        ? `验证邮件已发送到 ${r.pendingEmail}，请查收并在 24 小时内完成验证。`
+        : '验证邮件发送失败，请稍后点击“重新发送验证邮件”。'
+    } else {
+      me.value.email = r.email
+      me.value.emailVerified = false
+      me.value.pendingEmail = ''
+      email.value = r.email
+      msg.value = r.email ? '邮箱已绑定。' : '邮箱已解绑。'
+    }
   } catch (e: any) {
     error.value = e.message ?? '保存失败'
   } finally {
     loading.value = false
+  }
+}
+
+/** 重新发送验证邮件（待验证邮箱或未验证的历史邮箱） */
+async function resend() {
+  msg.value = ''
+  error.value = ''
+  resending.value = true
+  try {
+    const r = await api.post<{ sent: boolean }>('/api/auth/email/resend', {})
+    if (r.sent) {
+      msg.value = '验证邮件已重新发送，请查收。'
+    } else {
+      error.value = '验证邮件发送失败，请稍后重试或联系管理员。'
+    }
+  } catch (e: any) {
+    error.value = e.message ?? '发送失败'
+  } finally {
+    resending.value = false
   }
 }
 
@@ -100,7 +134,11 @@ onMounted(load)
     </p>
 
     <template v-if="me">
-      <p v-if="remind && !me.email"
+      <p v-if="remind && (me.pendingEmail || (me.email && !me.emailVerified))"
+         class="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+        验证邮件已发送到 {{ me.pendingEmail || me.email }}，请查收并点击链接完成验证。
+      </p>
+      <p v-else-if="remind && !me.email"
          class="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800">
         注册成功！建议现在绑定邮箱：忘记密码时可以自助重置，否则只能联系管理员。
       </p>
@@ -108,15 +146,32 @@ onMounted(load)
       <div class="rounded-xl border border-slate-200 p-4 text-sm">
         <p class="text-slate-500">用户名</p>
         <p class="mt-0.5 font-medium text-slate-800">{{ me.username }}</p>
+        <p class="mt-3 text-slate-500">邮箱</p>
+        <p v-if="me.email" class="mt-0.5 font-medium text-slate-800">
+          {{ me.email }}
+          <span class="ml-2 rounded px-1.5 py-0.5 text-xs"
+                :class="me.emailVerified ? 'bg-green-50 text-green-700' : 'bg-amber-50 text-amber-700'">
+            {{ me.emailVerified ? '已验证' : '未验证' }}
+          </span>
+        </p>
+        <p v-else class="mt-0.5 text-slate-500">未绑定</p>
+        <p v-if="me.pendingEmail" class="mt-1 text-xs text-amber-700">
+          待验证新邮箱：{{ me.pendingEmail }}
+        </p>
+        <button v-if="me.pendingEmail || (me.email && !me.emailVerified)" type="button"
+                class="mt-2 min-h-11 rounded-lg border border-amber-300 px-3 text-xs text-amber-800 hover:bg-amber-50 disabled:opacity-50"
+                :disabled="resending" @click="resend">
+          {{ resending ? '发送中…' : '重新发送验证邮件' }}
+        </button>
       </div>
 
       <form class="space-y-3" @submit.prevent="save">
         <div>
-          <label class="text-sm text-slate-600">绑定邮箱</label>
+          <label class="text-sm text-slate-600">绑定 / 修改邮箱</label>
           <input v-model="email" type="email" placeholder="name@example.com" autocomplete="email"
                  class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
           <p class="mt-1 text-xs text-slate-400">
-            绑定后可用邮箱登录，忘记密码时接收重置链接。
+            新邮箱需点击验证邮件中的链接后生效；验证前仍可使用用户名登录。
           </p>
         </div>
         <input v-model="password" type="password" placeholder="当前密码（确认修改）" autocomplete="current-password"

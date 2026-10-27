@@ -76,4 +76,38 @@ public class MailService {
             return false;
         }
     }
+
+    /**
+     * 发送邮箱归属验证链接。
+     * @return true=已交给 SMTP；false=未配置或发送失败
+     */
+    public boolean sendVerificationLink(String to, String nickname, String token) {
+        if (!enabled()) {
+            return false;
+        }
+        JavaMailSender sender = senderProvider.getIfAvailable();
+        if (sender == null) {
+            return false;
+        }
+        try {
+            SimpleMailMessage msg = new SimpleMailMessage();
+            msg.setFrom(from);
+            msg.setTo(to);
+            msg.setSubject("验证邮箱 - 专转本计算机题库");
+            msg.setText("""
+                    %s，你好：
+
+                    请在 24 小时内打开下面的链接完成邮箱验证：
+                    %s/verify-email?token=%s
+
+                    验证后该邮箱可用于登录和找回密码。如果这不是你本人的操作，请忽略这封邮件。
+                    """.formatted(nickname == null || nickname.isBlank() ? "同学" : nickname, siteUrl, token));
+            sender.send(msg);
+            return true;
+        } catch (Exception e) {
+            // 不记录令牌和邮箱，避免敏感信息进日志
+            log.warn("邮箱验证邮件发送失败: {}", e.getMessage());
+            return false;
+        }
+    }
 }

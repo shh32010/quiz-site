@@ -27,6 +27,14 @@ public class User {
     /** 登录/找回密码用，唯一（不区分大小写），可为空 */
     private String email;
 
+    /** 邮箱是否已完成归属验证；历史邮箱在迁移时标记为已验证 */
+    @Column(name = "email_verified")
+    private Boolean emailVerified = false;
+
+    /** 待验证的新邮箱；验证通过后才替换 email */
+    @Column(name = "pending_email")
+    private String pendingEmail;
+
     private String nickname;
 
     @Column(name = "avatar_url")

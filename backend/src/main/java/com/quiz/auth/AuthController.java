@@ -50,13 +50,16 @@ public class AuthController {
     private final PasswordEncoder encoder;
     private final JwtService jwt;
     private final org.springframework.jdbc.core.JdbcTemplate jdbc;
+    private final EmailVerificationService verification;
 
     public AuthController(UserRepository users, PasswordEncoder encoder, JwtService jwt,
-                          org.springframework.jdbc.core.JdbcTemplate jdbc) {
+                          org.springframework.jdbc.core.JdbcTemplate jdbc,
+                          EmailVerificationService verification) {
         this.users = users;
         this.encoder = encoder;
         this.jwt = jwt;
         this.jdbc = jdbc;
+        this.verification = verification;
     }
 
     @PostMapping("/register")
@@ -75,6 +78,8 @@ public class AuthController {
         u.setId(UUID.randomUUID());
         u.setUsername(req.username());
         u.setEmail(email);
+        u.setEmailVerified(false);
+        u.setPendingEmail(null);
         u.setNickname(req.username());
         u.setRole("user");
         u.setPasswordHash(encoder.encode(req.password()));
@@ -86,7 +91,12 @@ public class AuthController {
             return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("message", "用户名或邮箱已被占用"));
         }
         recordLogin(u.getId(), request);
-        return ResponseEntity.ok(Map.of("token", jwt.issue(u), "username", u.getUsername(), "role", u.getRole()));
+        boolean verificationSent = email != null && verification.send(u.getId(), email, u.getUsername());
+        return ResponseEntity.ok(Map.of(
+                "token", jwt.issue(u),
+                "username", u.getUsername(),
+                "role", u.getRole(),
+                "emailVerificationSent", verificationSent));
     }
 
     @PostMapping("/login")
@@ -117,6 +127,8 @@ public class AuthController {
                         "id", u.getId(), "username", u.getUsername(),
                         "nickname", u.getNickname() == null ? "" : u.getNickname(),
                         "email", u.getEmail() == null ? "" : u.getEmail(),
+                        "emailVerified", Boolean.TRUE.equals(u.getEmailVerified()),
+                        "pendingEmail", u.getPendingEmail() == null ? "" : u.getPendingEmail(),
                         "role", u.getRole())))
                 .orElseGet(() -> ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", "用户不存在")));
     }
@@ -137,19 +149,51 @@ public class AuthController {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("message", "当前密码错误"));
         }
         String email = normalizeEmail(req.email());
-        if (email != null) {
-            User other = users.findByEmailIgnoreCase(email).orElse(null);
-            if (other != null && !other.getId().equals(uid)) {
+        if (email == null) {
+            // 解绑：同时清掉未验证的新邮箱
+            u.setEmail(null);
+            u.setEmailVerified(false);
+            u.setPendingEmail(null);
+            try {
+                users.save(u);
+            } catch (DataIntegrityViolationException e) {
                 return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("message", "邮箱已被使用"));
             }
+            return ResponseEntity.ok(Map.of(
+                    "ok", true, "email", "", "pendingEmail", "", "mailSent", false));
         }
-        u.setEmail(email);
+
+        // 已绑定且已验证的同一邮箱：无需重复发送
+        if (email.equalsIgnoreCase(u.getEmail() == null ? "" : u.getEmail())
+                && Boolean.TRUE.equals(u.getEmailVerified())) {
+            return ResponseEntity.ok(Map.of(
+                    "ok", true, "email", email, "pendingEmail", "", "mailSent", false));
+        }
+
+        User other = users.findByEmailIgnoreCase(email).orElse(null);
+        if (other != null && !other.getId().equals(uid)) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("message", "邮箱已被使用"));
+        }
+        Integer pendingCount = jdbc.queryForObject("""
+                select count(*) from profiles where lower(pending_email) = lower(?) and id <> ?
+                """, Integer.class, email, uid);
+        if (pendingCount != null && pendingCount > 0) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("message", "该邮箱正在被其他账号验证"));
+        }
+
+        // 新邮箱先写 pending_email，验证通过后才替换 email
+        u.setPendingEmail(email);
         try {
             users.save(u);
         } catch (DataIntegrityViolationException e) {
             return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("message", "邮箱已被使用"));
         }
-        return ResponseEntity.ok(Map.of("ok", true, "email", email == null ? "" : email));
+        boolean sent = verification.send(uid, email, u.getUsername());
+        return ResponseEntity.ok(Map.of(
+                "ok", true,
+                "email", u.getEmail() == null ? "" : u.getEmail(),
+                "pendingEmail", email,
+                "mailSent", sent));
     }
 
     /** 修改密码（需当前密码确认）；成功后作废所有未使用的重置令牌 */

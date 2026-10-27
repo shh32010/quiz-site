@@ -13,6 +13,7 @@ Disallow: /wrong
 Disallow: /practice
 Disallow: /me
 Disallow: /search
+Disallow: /verify-email
 Disallow: /api/
 
 Sitemap: https://quiz.teacher-wishes.asia/sitemap.xml

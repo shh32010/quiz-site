@@ -7,7 +7,7 @@ const route = useRoute()
 const siteUrl = 'https://quiz.teacher-wishes.asia'
 const privatePrefixes = [
   '/account', '/admin', '/compose', '/favorites', '/history', '/login',
-  '/forgot', '/reset', '/report', '/wrong', '/practice', '/me', '/search',
+  '/forgot', '/reset', '/report', '/wrong', '/practice', '/me', '/search', '/verify-email',
 ]
 const isPrivate = computed(() =>
   privatePrefixes.some(p => route.path === p || route.path.startsWith(p + '/')))

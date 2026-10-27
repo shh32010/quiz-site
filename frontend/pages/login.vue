@@ -48,8 +48,11 @@ async function submit() {
       body,
     )
     auth.saveToken(data.token)
-    // 注册时没绑邮箱，去账号页提醒补绑；其余情况回登录前页面
-    router.push(mode.value === 'register' && !email.value.trim() ? '/account?bind=1' : redirect.value)
+    // 注册后去账号页：填了邮箱提示查收验证邮件，没填则提醒补绑
+    const target = mode.value === 'register'
+      ? (email.value.trim() ? '/account?verify=1' : '/account?bind=1')
+      : redirect.value
+    router.push(target)
   } catch (e: any) {
     error.value = e.message ?? '操作失败'
   } finally {
