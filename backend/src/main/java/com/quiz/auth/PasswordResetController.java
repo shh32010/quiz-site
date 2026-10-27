@@ -62,8 +62,17 @@ public class PasswordResetController {
         if (!validEmail(email)) {
             return Map.of("ok", true);
         }
-        User u = users.findByEmailIgnoreCase(email).orElse(null);
+        List<User> matches = users.findByEmailIgnoreCase(email);
+        if (matches.isEmpty()) {
+            return Map.of("ok", true);
+        }
+        // 未验证邮箱允许重复：优先取已验证账号；都未验证时不自动发信
+        User u = matches.stream()
+                .filter(x -> Boolean.TRUE.equals(x.getEmailVerified()))
+                .findFirst()
+                .orElse(null);
         if (u == null) {
+            requestAdmin(matches.get(0), email, "邮箱未完成归属验证，转人工核实");
             return Map.of("ok", true);
         }
 
@@ -72,7 +81,7 @@ public class PasswordResetController {
 
         boolean sent = false;
         // 只有完成归属验证的邮箱才自动发重置链接；未验证走管理员兜底
-        if (Boolean.TRUE.equals(u.getEmailVerified()) && mail.enabled()) {
+        if (mail.enabled()) {
             String raw = newToken();
             // 同一用户旧令牌作废
             jdbc.update("update password_reset_token set used_at = now() where profile_id = ? and used_at is null", u.getId());
@@ -83,12 +92,7 @@ public class PasswordResetController {
             sent = mail.sendResetLink(email, u.getUsername(), raw);
         }
         if (!sent) {
-            // 邮件不可用：转管理员人工处理（前台文案保持一致）
-            jdbc.update("""
-                    insert into password_reset_request(username, contact, note)
-                    values (?, ?, ?)
-                    """, u.getUsername(), email, "邮件服务未配置或发送失败，系统自动转人工");
-            log.warn("重置邮件未发出，已转管理员处理: {}", u.getUsername());
+            requestAdmin(u, email, "邮件服务未配置或发送失败，系统自动转人工");
         }
         return Map.of("ok", true);
     }
@@ -117,6 +121,22 @@ public class PasswordResetController {
         // 其余未使用令牌一并作废
         jdbc.update("update password_reset_token set used_at = now() where profile_id = ? and used_at is null", profileId);
         return ResponseEntity.ok(Map.of("ok", true));
+    }
+
+    /** 转管理员人工处理；同一用户已有 open 工单时不重复插入 */
+    private void requestAdmin(User user, String contact, String note) {
+        Integer open = jdbc.queryForObject("""
+                select count(*) from password_reset_request
+                 where username = ? and status = 'open'
+                """, Integer.class, user.getUsername());
+        if (open != null && open > 0) {
+            return;
+        }
+        jdbc.update("""
+                insert into password_reset_request(username, contact, note)
+                values (?, ?, ?)
+                """, user.getUsername(), contact, note);
+        log.warn("密码找回转管理员处理: {}", user.getUsername());
     }
 
     private static boolean validEmail(String email) {

@@ -55,23 +55,31 @@ async function save() {
   }
   loading.value = true
   try {
-    const r = await api.post<{ email: string; pendingEmail?: string; mailSent?: boolean }>(
-      '/api/auth/email', { email: value, password: password.value })
+    const r = await api.post<{
+      email: string; emailVerified?: boolean; pendingEmail?: string; mailSent?: boolean
+    }>('/api/auth/email', { email: value, password: password.value })
     password.value = ''
     if (r.pendingEmail) {
       // 新邮箱先进入待验证状态，点击邮件里的链接后才生效
       me.value.pendingEmail = r.pendingEmail
       me.value.email = r.email
+      me.value.emailVerified = Boolean(r.emailVerified)
       email.value = r.pendingEmail
       msg.value = r.mailSent
         ? `验证邮件已发送到 ${r.pendingEmail}，请查收并在 24 小时内完成验证。`
-        : '验证邮件发送失败，请稍后点击“重新发送验证邮件”。'
+        : '验证邮件发送失败或发送过于频繁，请稍后点击“重新发送验证邮件”。'
     } else {
       me.value.email = r.email
-      me.value.emailVerified = false
+      me.value.emailVerified = Boolean(r.emailVerified)
       me.value.pendingEmail = ''
       email.value = r.email
-      msg.value = r.email ? '邮箱已绑定。' : '邮箱已解绑。'
+      if (!r.email) {
+        msg.value = '邮箱已解绑。'
+      } else if (r.emailVerified) {
+        msg.value = '邮箱已验证，无需重复绑定。'
+      } else {
+        msg.value = '邮箱已绑定。'
+      }
     }
   } catch (e: any) {
     error.value = e.message ?? '保存失败'

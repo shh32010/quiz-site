@@ -71,7 +71,8 @@ public class AuthController {
             return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("message", "用户名已被占用"));
         }
         String email = normalizeEmail(req.email());
-        if (email != null && users.existsByEmailIgnoreCase(email)) {
+        // 未验证邮箱允许重复（QQ 等收不到验证邮件时仍可注册）；只拦截已验证邮箱
+        if (email != null && users.findFirstByEmailIgnoreCaseAndEmailVerifiedTrue(email).isPresent()) {
             return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("message", "邮箱已被使用"));
         }
         User u = new User();
@@ -106,9 +107,17 @@ public class AuthController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", "用户名/邮箱或密码错误"));
         }
         String identifier = req.username().trim();
-        User u = (identifier.contains("@")
-                ? users.findByEmailIgnoreCase(identifier)
-                : users.findByUsernameIgnoreCase(identifier)).orElse(null);
+        User u;
+        if (identifier.contains("@")) {
+            // 邮箱可能被多个未验证账号重复占用：优先已验证账号；多个未验证账号时要求改用用户名
+            var matches = users.findByEmailIgnoreCase(identifier);
+            u = matches.stream()
+                    .filter(x -> Boolean.TRUE.equals(x.getEmailVerified()))
+                    .findFirst()
+                    .orElse(matches.size() == 1 ? matches.get(0) : null);
+        } else {
+            u = users.findByUsernameIgnoreCase(identifier).orElse(null);
+        }
         if (u == null || u.getPasswordHash() == null
                 || !encoder.matches(req.password(), u.getPasswordHash())) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", "用户名/邮箱或密码错误"));
@@ -150,35 +159,36 @@ public class AuthController {
         }
         String email = normalizeEmail(req.email());
         if (email == null) {
-            // 解绑：同时清掉未验证的新邮箱
+            // 解绑：清掉邮箱和待验证状态，并作废未使用的验证令牌
             u.setEmail(null);
             u.setEmailVerified(false);
             u.setPendingEmail(null);
             try {
                 users.save(u);
+                verification.invalidate(uid);
             } catch (DataIntegrityViolationException e) {
                 return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("message", "邮箱已被使用"));
             }
             return ResponseEntity.ok(Map.of(
-                    "ok", true, "email", "", "pendingEmail", "", "mailSent", false));
+                    "ok", true, "email", "", "emailVerified", false,
+                    "pendingEmail", "", "mailSent", false));
         }
 
-        // 已绑定且已验证的同一邮箱：无需重复发送
+        // 已绑定且已验证的同一邮箱：清掉待验证状态，避免旧令牌继续生效
         if (email.equalsIgnoreCase(u.getEmail() == null ? "" : u.getEmail())
                 && Boolean.TRUE.equals(u.getEmailVerified())) {
+            u.setPendingEmail(null);
+            users.save(u);
+            verification.invalidate(uid);
             return ResponseEntity.ok(Map.of(
-                    "ok", true, "email", email, "pendingEmail", "", "mailSent", false));
+                    "ok", true, "email", email, "emailVerified", true,
+                    "pendingEmail", "", "mailSent", false));
         }
 
-        User other = users.findByEmailIgnoreCase(email).orElse(null);
+        // 只拦截已验证邮箱；未验证邮箱允许真实持有人通过验证接管
+        User other = users.findFirstByEmailIgnoreCaseAndEmailVerifiedTrue(email).orElse(null);
         if (other != null && !other.getId().equals(uid)) {
             return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("message", "邮箱已被使用"));
-        }
-        Integer pendingCount = jdbc.queryForObject("""
-                select count(*) from profiles where lower(pending_email) = lower(?) and id <> ?
-                """, Integer.class, email, uid);
-        if (pendingCount != null && pendingCount > 0) {
-            return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("message", "该邮箱正在被其他账号验证"));
         }
 
         // 新邮箱先写 pending_email，验证通过后才替换 email
@@ -192,6 +202,7 @@ public class AuthController {
         return ResponseEntity.ok(Map.of(
                 "ok", true,
                 "email", u.getEmail() == null ? "" : u.getEmail(),
+                "emailVerified", Boolean.TRUE.equals(u.getEmailVerified()),
                 "pendingEmail", email,
                 "mailSent", sent));
     }

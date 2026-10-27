@@ -33,12 +33,20 @@ public class EmailVerificationService {
         this.mail = mail;
     }
 
-    /** 生成令牌并发送验证邮件；返回 false 表示邮件未配置或发送失败 */
-    @Transactional
+    /** 生成令牌并发送验证邮件；返回 false 表示冷却中、未配置或发送失败 */
     public boolean send(UUID profileId, String email, String nickname) {
         if (email == null || email.isBlank()) {
             return false;
         }
+        // 同一用户 60 秒内只发一封，防止绑定/注册接口被用来轰炸邮箱
+        Integer recent = jdbc.queryForObject("""
+                select count(*) from email_verification_token
+                 where profile_id = ? and created_at > now() - interval '60 seconds'
+                """, Integer.class, profileId);
+        if (recent != null && recent > 0) {
+            return false;
+        }
+
         // 清理 7 天前旧令牌；同一用户未使用的旧令牌作废
         jdbc.update("delete from email_verification_token where created_at < now() - interval '7 days'");
         jdbc.update("update email_verification_token set used_at = now() where profile_id = ? and used_at is null", profileId);
@@ -48,11 +56,17 @@ public class EmailVerificationService {
                 insert into email_verification_token(profile_id, token_hash, email, expires_at)
                 values (?, ?, ?, now() + interval '%d hours')
                 """.formatted(TOKEN_HOURS), profileId, sha256(raw), email);
+        // SMTP 调用放在事务外，避免慢邮件长时间占用数据库连接
         return mail.sendVerificationLink(email, nickname, raw);
     }
 
-    /** 当前用户重新发送验证邮件：优先 pending_email，其次是未验证的 email */
+    /** 作废当前用户未使用的验证令牌（解绑/撤回邮箱时调用） */
     @Transactional
+    public void invalidate(UUID profileId) {
+        jdbc.update("update email_verification_token set used_at = now() where profile_id = ? and used_at is null", profileId);
+    }
+
+    /** 当前用户重新发送验证邮件：优先 pending_email，其次是未验证的 email */
     public boolean sendForCurrent(UUID profileId) {
         List<Map<String, Object>> rows = jdbc.queryForList("""
                 select username, email, pending_email, email_verified
@@ -105,18 +119,26 @@ public class EmailVerificationService {
         String email = rows.get(0).get("email").toString();
 
         Integer taken = jdbc.queryForObject("""
-                select count(*) from profiles where lower(email) = lower(?) and id <> ?
+                select count(*) from profiles
+                 where lower(email) = lower(?) and email_verified and id <> ?
                 """, Integer.class, email, profileId);
         if (taken != null && taken > 0) {
             throw new IllegalArgumentException("该邮箱已被其他账号使用");
         }
 
         try {
-            jdbc.update("""
+            // 令牌必须仍对应当前待验证邮箱；解绑/撤回后旧链接自动失效
+            int updated = jdbc.update("""
                     update profiles
                        set email = ?, email_verified = true, pending_email = null
-                     where id = ?
-                    """, email, profileId);
+                     where id = ? and (
+                       lower(pending_email) = lower(?)
+                       or (pending_email is null and lower(email) = lower(?) and not email_verified)
+                     )
+                    """, email, profileId, email, email);
+            if (updated == 0) {
+                throw new IllegalArgumentException("验证链接已失效（邮箱已变更），请重新发送");
+            }
         } catch (DataIntegrityViolationException e) {
             throw new IllegalArgumentException("该邮箱已被其他账号使用");
         }
