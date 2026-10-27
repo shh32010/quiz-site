@@ -19,6 +19,8 @@ const props = defineProps<{
   displayName?: string
   /** 当前章的已做进度（只在根章节显示） */
   progress?: { answered: number; total: number; pct: number }
+  /** 可选锚点 id，用于从首页课程卡定位 */
+  anchorId?: string
 }>()
 
 const emit = defineEmits<{ (e: 'toggle', id: number): void }>()
@@ -38,7 +40,7 @@ function num(code: string | null): string {
 </script>
 
 <template>
-  <li>
+  <li :id="anchorId" class="scroll-mt-20">
     <div class="flex items-center justify-between py-2 pr-5" :class="pad">
       <button class="flex min-w-0 items-center gap-2 text-left" :disabled="isLeaf"
               @click="emit('toggle', node.id)">

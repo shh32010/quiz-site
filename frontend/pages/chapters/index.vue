@@ -17,6 +17,7 @@ const { data: practical } = await useFetch<Node[]>('/api/chapters/tree', {
   query: { subject: 5 },
 })
 
+const route = useRoute()
 const api = useApi()
 const progress = ref<Record<string, { answered: number; total: number; pct: number }>>({})
 
@@ -91,16 +92,66 @@ const otherNodes = computed(() => {
   return [...sortByCode(t), ...sortByCode(p)]
 })
 const otherTotal = computed(() => otherNodes.value.reduce((s, n) => s + n.questionCount, 0))
+
+/** 展开全部/收起全部：首页课程树移走后保留一键展开能力 */
+function collectIds(nodes: Node[], out: number[] = []): number[] {
+  for (const n of nodes) {
+    if (n.children?.length) {
+      out.push(n.id)
+      collectIds(n.children, out)
+    }
+  }
+  return out
+}
+const allIds = computed(() => [...collectIds(theory.value ?? []), ...collectIds(practical.value ?? [])])
+const allExpanded = computed(() => allIds.value.length > 0 && allIds.value.every(id => open.value[id]))
+function toggleAll() {
+  const next = !allExpanded.value
+  for (const id of allIds.value) open.value[id] = next
+}
+
+/** 首页课程卡跳转：/chapters?course=A#course-A 时展开并定位到对应课程/技能 */
+const FOCUS_CODES = new Set(['A', 'B', 'S1', 'S2', 'S3', 'S4', 'S5', 'S6'])
+const focusCourse = computed(() => {
+  const raw = route.query.course
+  const value = Array.isArray(raw) ? raw[0] : raw
+  const code = String(value ?? '').trim().toUpperCase()
+  return FOCUS_CODES.has(code) ? code : ''
+})
+
+async function focusFromQuery() {
+  const code = focusCourse.value
+  if (!code) return
+  // 实操技能默认展开一层，便于直接看到节；理论课程只定位到课程区块
+  if (code.startsWith('S')) {
+    const skill = skills.value.find(s => s.code === code)
+    if (skill?.node) open.value[skill.node.id] = true
+  }
+  await nextTick()
+  document.getElementById(`course-${code}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
+
+onMounted(focusFromQuery)
+watch(() => route.query.course, focusFromQuery)
 </script>
 
 <template>
   <section class="space-y-6">
     <UiPageHeader title="按章节刷题"
-                  subtitle="理论按课程 A/B 分组，实操按技能一~六；数字为可练习题数。" />
+                  subtitle="理论按课程 A/B 分组，实操按技能一~六；数字为可练习题数。">
+      <template #actions>
+        <button type="button"
+                class="inline-flex min-h-11 items-center rounded-lg border border-slate-300 px-3 text-sm text-slate-600 hover:border-blue-400 hover:text-blue-600"
+                @click="toggleAll">
+          {{ allExpanded ? '收起全部' : '展开全部' }}
+        </button>
+      </template>
+    </UiPageHeader>
 
     <div class="overflow-hidden rounded-xl border border-slate-200">
       <h2 class="border-b border-slate-200 px-5 py-3 text-sm font-semibold text-slate-700">理论题库</h2>
-      <div v-for="course in theoryCourses" :key="course.code" class="border-b border-slate-100 last:border-b-0">
+      <div v-for="course in theoryCourses" :key="course.code" :id="`course-${course.code}`"
+           class="scroll-mt-20 border-b border-slate-100 last:border-b-0">
         <div class="flex items-center justify-between bg-slate-50 px-5 py-2.5">
           <div class="flex items-center gap-2">
             <span class="rounded bg-white px-1.5 py-0.5 text-xs text-slate-500">课程 {{ course.code }}</span>
@@ -121,7 +172,7 @@ const otherTotal = computed(() => otherNodes.value.reduce((s, n) => s + n.questi
       <ul class="divide-y divide-slate-100">
         <template v-for="s in skills" :key="s.code">
           <ChapterTreeItem v-if="s.node" :node="s.node" :open="open" :depth="0"
-                           :label="s.label" :display-name="s.name"
+                           :label="s.label" :display-name="s.name" :anchor-id="`course-${s.code}`"
                            :progress="progressOf(s.node.code)" @toggle="toggle" />
         </template>
       </ul>

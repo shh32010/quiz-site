@@ -49,66 +49,24 @@ const COURSE_META = [
   { code: 'S6', name: 'CentOS 7 管理' },
 ]
 
-interface Section { id: number; code: string | null; name: string; count: number }
-interface ChapterGroup {
-  id: number; code: string | null; name: string
-  count: number; sections: Section[]; rest: number
-}
-
-/** 章节 code → 课程 code：A1→A，B3→B，S1→S1；X9/XA 等不算课程 */
-function courseOf(code: string | null): string | null {
-  if (!code) return null
-  if (/^A\d/.test(code)) return 'A'
-  if (/^B\d/.test(code)) return 'B'
-  if (/^S[1-6]$/.test(code)) return code
-  return null
-}
-
-/** 8 个课程/技能 → 章 → 节（含每节题量、章内未细分题量） */
-const groups = computed(() => {
-  const byCourse = new Map<string, ChapterGroup[]>()
-  for (const root of tree.value ?? []) {
-    if (!root.children?.length) continue
-    const course = courseOf(root.code)
-    if (!course) continue
-    // 理论树只要 A/B 章；实操树只要 S1~S6 技能（A/B 零散根节点不展示）
-    if (root.subjectId === 4 && course !== 'A' && course !== 'B') continue
-    if (root.subjectId === 5 && !course.startsWith('S')) continue
-
-    const sections = root.children.map(s => ({
-      id: s.id, code: s.code, name: s.name, count: s.questionCount,
-    }))
-    const secSum = sections.reduce((a, s) => a + s.count, 0)
-    const list = byCourse.get(course) ?? []
-    list.push({
-      id: root.id, code: root.code, name: root.name,
-      count: root.questionCount, sections,
-      rest: Math.max(0, root.questionCount - secSum),
-    })
-    byCourse.set(course, list)
-  }
-  return COURSE_META.map(m => {
-    const chapters = (byCourse.get(m.code) ?? [])
-      .sort((a, b) => (a.code ?? '').localeCompare(b.code ?? '', 'en', { numeric: true }))
-    return { ...m, chapters, total: chapters.reduce((a, c) => a + c.count, 0) }
+/** 课程/技能卡：首页只汇总课程级题数，完整章节树统一放在 /chapters */
+const courseCards = computed(() => COURSE_META.map(m => {
+  const roots = (tree.value ?? []).filter(root => {
+    const code = root.code ?? ''
+    if ((root.questionCount ?? 0) <= 0) return false
+    if (m.code === 'A') return root.subjectId === 4 && /^A\d/.test(code)
+    if (m.code === 'B') return root.subjectId === 4 && /^B\d/.test(code)
+    return root.subjectId === 5 && code === m.code
   })
-})
-
-/** 展开状态；默认全部收起 */
-const open = ref<Record<string, boolean>>({})
-function toggle(code: string) { open.value[code] = !open.value[code] }
-const allOpen = computed(() => groups.value.every(g => open.value[g.code]))
-function toggleAll() {
-  const next = !allOpen.value
-  for (const g of groups.value) open.value[g.code] = next
-}
-
-/** 从 code 取序号：A1-1.1 → 1.1；S1-3 → 3 */
-function num(code: string | null): string {
-  if (!code) return ''
-  const i = code.indexOf('-')
-  return i >= 0 ? code.slice(i + 1) : ''
-}
+  const isSkill = m.code.startsWith('S')
+  return {
+    ...m,
+    bank: isSkill ? '实操' : '理论',
+    count: isSkill ? (roots[0]?.children?.length ?? 0) : roots.length,
+    unit: isSkill ? '节' : '章',
+    total: roots.reduce((s, n) => s + (n.questionCount ?? 0), 0),
+  }
+}))
 
 const entries = [
   { to: '/chapters', title: '按章节刷题', desc: '理论 A/B、实操技能一~六，逐章推进', tone: 'blue' },
@@ -188,57 +146,23 @@ const entries = [
       <div class="flex items-center justify-between px-5 py-3">
         <div>
           <h2 class="text-sm font-semibold text-fg-primary">课程 / 技能</h2>
-          <p class="mt-0.5 text-xs text-fg-muted">展开到每一节；点节名直接开始练习</p>
+          <p class="mt-0.5 text-xs text-fg-muted">8 个课程/技能，点击进入完整章节树</p>
         </div>
-        <button class="min-h-11 text-xs text-brand hover:underline" @click="toggleAll">
-          {{ allOpen ? '收起全部' : '展开全部' }}
-        </button>
+        <NuxtLink to="/chapters" class="inline-flex min-h-11 items-center text-xs text-brand hover:underline">
+          查看全部章节
+        </NuxtLink>
       </div>
-      <ul class="divide-y divide-line-subtle border-t border-line-subtle">
-        <li v-for="g in groups" :key="g.code">
-          <button class="flex min-h-[52px] w-full items-center justify-between px-5 py-3 text-left hover:bg-surface-muted"
-                  @click="toggle(g.code)">
-            <span class="flex items-center gap-2">
-              <span class="w-4 text-fg-muted">{{ g.chapters.length ? (open[g.code] ? '−' : '+') : '' }}</span>
-              <span class="rounded bg-surface-muted px-1.5 py-0.5 text-xs text-fg-secondary">{{ g.code }}</span>
-              <span class="text-sm font-medium text-fg-primary">{{ g.name }}</span>
-            </span>
-            <span class="text-xs text-fg-muted">{{ g.total.toLocaleString() }} 题</span>
-          </button>
-
-          <div v-if="open[g.code] && g.chapters.length" class="bg-surface-muted/60 pb-2">
-            <div v-for="ch in g.chapters" :key="ch.id">
-              <p v-if="g.chapters.length > 1"
-                 class="flex items-center gap-2 pl-12 pr-5 pt-2 text-xs text-fg-secondary">
-                <span class="rounded bg-surface-card px-1.5 py-0.5 font-mono text-xs text-fg-muted">{{ ch.code }}</span>
-                <span class="font-medium">{{ ch.name }}</span>
-                <span class="text-fg-muted">{{ ch.count.toLocaleString() }} 题</span>
-              </p>
-              <ul>
-                <li v-for="sec in ch.sections" :key="sec.id">
-                  <NuxtLink :to="`/practice?mode=chapter&target=${sec.id}`"
-                            class="flex min-h-11 items-center justify-between pr-5 hover:bg-surface-card"
-                            :class="g.chapters.length > 1 ? 'pl-20' : 'pl-12'">
-                    <span class="flex min-w-0 items-center gap-2">
-                      <span class="w-12 shrink-0 font-mono text-xs text-fg-muted">{{ num(sec.code) }}</span>
-                      <span class="truncate text-xs text-fg-secondary">{{ sec.name }}</span>
-                    </span>
-                    <span class="shrink-0 text-xs text-fg-muted">{{ sec.count.toLocaleString() }} 题 ›</span>
-                  </NuxtLink>
-                </li>
-                <li v-if="ch.rest > 0">
-                  <NuxtLink :to="`/chapters/${ch.id}`"
-                            class="flex min-h-11 items-center justify-between text-xs text-fg-muted hover:bg-surface-card"
-                            :class="g.chapters.length > 1 ? 'pl-20' : 'pl-12'">
-                    <span>其他（未细分到节）</span>
-                    <span class="pr-5">{{ ch.rest.toLocaleString() }} 题 ›</span>
-                  </NuxtLink>
-                </li>
-              </ul>
-            </div>
+      <div class="grid gap-3 border-t border-line-subtle p-4 sm:grid-cols-2 lg:grid-cols-4">
+        <NuxtLink v-for="c in courseCards" :key="c.code" :to="`/chapters?course=${c.code}#course-${c.code}`"
+                  class="group rounded-lg border border-line-subtle p-3 transition hover:border-brand hover:shadow-sm">
+          <div class="flex items-center gap-2">
+            <span class="shrink-0 rounded bg-surface-muted px-1.5 py-0.5 text-xs text-fg-secondary">{{ c.code }}</span>
+            <span class="truncate text-sm font-medium text-fg-primary group-hover:text-brand">{{ c.name }}</span>
           </div>
-        </li>
-      </ul>
+          <p class="mt-2 text-xs text-fg-muted">{{ c.bank }} · {{ c.count }} {{ c.unit }}</p>
+          <p class="mt-1 text-sm font-semibold tabular-nums text-brand">{{ c.total.toLocaleString() }} 题 ›</p>
+        </NuxtLink>
+      </div>
     </div>
 
   </section>

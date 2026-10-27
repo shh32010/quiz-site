@@ -20,6 +20,8 @@ export function usePracticeKeys(handlers: PracticeKeyHandlers) {
 
   function onKeydown(e: KeyboardEvent) {
     if (e.defaultPrevented || e.isComposing || e.altKey || e.metaKey) return
+    // 弹窗/交卷/复盘等状态下先整体禁用，避免文本框 Ctrl+Enter 绕过
+    if (!handlers.isEnabled()) return
     const el = e.target as HTMLElement | null
     const tag = el?.tagName
 
@@ -33,7 +35,6 @@ export function usePracticeKeys(handlers: PracticeKeyHandlers) {
       return
     }
     if (isTyping(el) || e.ctrlKey) return
-    if (!handlers.isEnabled()) return
 
     handlers.onCancelAdvance()
     if (e.key === 'Enter') {

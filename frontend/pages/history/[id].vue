@@ -40,13 +40,24 @@ function imgs(a: any): string[] {
   return String(raw).split(',').map(s => s.trim()).filter(Boolean)
 }
 
+const lightboxOpen = ref(false)
+const lightboxImages = ref<string[]>([])
+const lightboxIndex = ref(0)
+
+function openLightbox(a: any, i: number) {
+  lightboxImages.value = imgs(a)
+  lightboxIndex.value = i
+  lightboxOpen.value = true
+}
+
 async function load(p = page.value) {
   loading.value = true
   error.value = ''
   try {
     const r = await api.get<any>(`/api/practice/history/${sessionId}?page=${p}&size=${size}`)
     session.value = r.session
-    rows.value = r.rows ?? []
+    // 预计算图片数组，避免模板里每行重复 split
+    rows.value = (r.rows ?? []).map((row: any) => ({ ...row, images: imgs(row) }))
     total.value = r.total ?? 0
     page.value = r.page ?? p
   } catch (e: any) {
@@ -107,8 +118,14 @@ onMounted(() => load(1))
           </div>
 
           <p class="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-800">{{ formatText(a.stem) }}</p>
-          <img v-for="(src, i) in imgs(a)" :key="i" :src="src" alt="题目配图"
-               class="mt-2 max-h-60 w-auto rounded-lg border border-slate-200 object-contain" />
+          <div v-if="a.images.length" class="mt-2 flex flex-wrap items-start gap-2">
+            <button v-for="(src, i) in a.images" :key="i" type="button"
+                    class="cursor-zoom-in" :aria-label="`放大第 ${i + 1} 张题目配图`"
+                    @click="openLightbox(a, i)">
+              <img :src="src" alt="题目配图"
+                   class="max-h-60 w-auto rounded-lg border border-slate-200 object-contain" />
+            </button>
+          </div>
 
           <div class="mt-3 grid gap-2 text-sm sm:grid-cols-2">
             <p class="rounded-lg bg-slate-50 px-3 py-2 text-slate-600">
@@ -144,5 +161,7 @@ onMounted(() => load(1))
         <button v-if="page < totalPages" class="rounded border px-3 py-1" @click="load(page + 1)">下一页</button>
       </div>
     </template>
+
+    <UiImageLightbox v-model="lightboxOpen" :images="lightboxImages" :start-index="lightboxIndex" />
   </section>
 </template>

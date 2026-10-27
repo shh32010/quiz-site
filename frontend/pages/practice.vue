@@ -44,6 +44,8 @@ let disposed = false
 const sheetOpen = ref(false)
 const finishOpen = ref(false)
 const helpOpen = ref(false)
+const lightboxOpen = ref(false)
+const lightboxIndex = ref(0)
 const advancePending = ref(false)
 const sheet = ref<{ total: number; answered: number; remaining: number; rows: any[] }>({
   total: 0, answered: 0, remaining: 0, rows: [],
@@ -153,6 +155,7 @@ function clearAdvance() {
 function resetAnswer() {
   answer.value = ''; multi.value = []; fill.value = ''
   feedback.value = null; review.value = null
+  lightboxOpen.value = false
   clearAdvance()
   ai.value = { loading: false, content: '', err: '' }
   variant.value = { loading: false, content: '', err: '' }
@@ -365,6 +368,7 @@ function finishGuest() {
   finished.value = {
     guest: true, score: 0, total_score: 0, correct_count: 0, question_count: total.value,
   }
+  lightboxOpen.value = false
   question.value = null
 }
 
@@ -373,6 +377,7 @@ async function finishSession() {
   submitting.value = true
   try {
     finished.value = await api.post(`/api/practice/${sessionId.value}/finish`, {})
+    lightboxOpen.value = false
     question.value = null
     finishOpen.value = false
     sheetOpen.value = false
@@ -597,7 +602,8 @@ watch(() => question.value?.id, async (id) => {
 })
 
 usePracticeKeys({
-  isEnabled: () => Boolean(question.value) && !finished.value && !sheetOpen.value && !finishOpen.value && !helpOpen.value,
+  isEnabled: () => Boolean(question.value) && !finished.value && !sheetOpen.value && !finishOpen.value
+    && !helpOpen.value && !lightboxOpen.value,
   onSelect: selectOption,
   onSubmit: () => { primaryAction() },
   onNext: () => { goNext() },
@@ -691,8 +697,15 @@ onUnmounted(() => {
           </div>
 
           <p class="mt-4 whitespace-pre-wrap text-base leading-7 text-slate-900 md:text-[17px]">{{ formatText(question.stem) }}</p>
-          <img v-for="(src, i) in images" :key="i" :src="src" alt="题目配图"
-               class="question-img mt-3 max-h-80 w-auto object-contain" />
+          <div v-if="images.length" class="mt-3 space-y-2">
+            <button v-for="(src, i) in images" :key="i" type="button"
+                    class="block w-fit max-w-full cursor-zoom-in text-left"
+                    :aria-label="`放大第 ${i + 1} 张题目配图`" @click="lightboxIndex = i; lightboxOpen = true">
+              <img :src="src" alt="题目配图"
+                   class="question-img max-h-80 w-auto max-w-full object-contain" />
+            </button>
+            <p class="text-xs text-fg-muted">点击图片放大</p>
+          </div>
 
           <div v-if="relatedKps.length" class="mt-3 flex flex-wrap items-center gap-1.5">
             <span class="text-xs text-slate-400">相关知识点：</span>
@@ -894,5 +907,7 @@ onUnmounted(() => {
         <div class="flex justify-between"><dt>本帮助</dt><dd class="text-slate-900">?</dd></div>
       </dl>
     </UiModal>
+
+    <UiImageLightbox v-model="lightboxOpen" :images="images" :start-index="lightboxIndex" />
   </div>
 </template>

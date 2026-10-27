@@ -131,7 +131,40 @@ function go(p: number) {
   load()
 }
 
+/** 移动端目录抽屉：打开时锁页面滚动，Esc 关闭；切到桌面宽度自动收起 */
+const sidebarToggle = ref<HTMLButtonElement | null>(null)
+const sidebarClose = ref<HTMLButtonElement | null>(null)
+const isDesktop = ref(false)
+
+function onKeydown(e: KeyboardEvent) {
+  if (e.key === 'Escape' && sidebarOpen.value) sidebarOpen.value = false
+}
+function onDesktop(e: MediaQueryListEvent) {
+  isDesktop.value = e.matches
+  if (e.matches) sidebarOpen.value = false
+}
+let desktopQuery: MediaQueryList | null = null
+watch(sidebarOpen, async (open) => {
+  if (typeof document === 'undefined') return
+  document.body.style.overflow = open && !isDesktop.value ? 'hidden' : ''
+  if (open) {
+    await nextTick()
+    sidebarClose.value?.focus()
+  } else if (!isDesktop.value) {
+    sidebarToggle.value?.focus()
+  }
+})
+onUnmounted(() => {
+  window.removeEventListener('keydown', onKeydown)
+  desktopQuery?.removeEventListener('change', onDesktop)
+  if (typeof document !== 'undefined') document.body.style.overflow = ''
+})
+
 onMounted(async () => {
+  window.addEventListener('keydown', onKeydown)
+  desktopQuery = window.matchMedia('(min-width: 1024px)')
+  isDesktop.value = desktopQuery.matches
+  desktopQuery.addEventListener('change', onDesktop)
   const kpId = Number(route.query.kp)
   if (kpId) {
     try {
@@ -159,16 +192,31 @@ onMounted(async () => {
       <p class="mt-1 text-slate-600">按大纲树浏览课程、章、节的知识点；数字为知识点条数。没有关联题的知识点也可以正常阅读学习；题目关联由历史匹配生成，供辅助练习。</p>
     </div>
 
-    <button class="flex w-full items-center justify-between rounded-lg border border-slate-200 px-4 py-2 text-sm lg:hidden"
+    <button ref="sidebarToggle"
+            class="flex w-full items-center justify-between rounded-lg border border-slate-200 px-4 py-2 text-sm lg:hidden"
+            aria-controls="knowledge-sidebar" :aria-expanded="sidebarOpen"
             @click="sidebarOpen = !sidebarOpen">
-      <span>选择章节：{{ selected ? selected.name : '未选择' }}</span>
+      <span>目录：{{ selected ? selected.name : '选择章节' }}</span>
       <span class="text-xs text-slate-400">{{ sidebarOpen ? '收起' : '展开' }}</span>
     </button>
 
+    <!-- 移动端目录遮罩（高于 header / 底部导航的 z-40） -->
+    <div v-if="sidebarOpen" class="fixed inset-0 z-50 bg-black/50 lg:hidden"
+         @click="sidebarOpen = false" />
+
     <div class="grid gap-4 lg:grid-cols-[300px_1fr]">
-      <!-- 左侧大纲树 -->
-      <aside class="max-h-[75vh] overflow-auto rounded-xl border border-slate-200"
-             :class="sidebarOpen ? 'block' : 'hidden lg:block'">
+      <!-- 左侧大纲树：桌面常驻，移动端左侧抽屉 -->
+      <aside id="knowledge-sidebar" aria-label="章节目录"
+             :inert="!isDesktop && !sidebarOpen ? true : undefined"
+             :aria-hidden="!isDesktop && !sidebarOpen ? 'true' : undefined"
+             class="fixed inset-y-0 left-0 z-[60] w-[85vw] max-w-xs overflow-auto border-r border-slate-200 bg-surface-card shadow-xl transition-transform duration-200 ease-out lg:static lg:z-auto lg:max-h-[75vh] lg:w-auto lg:max-w-none lg:translate-x-0 lg:rounded-xl lg:border lg:shadow-none"
+             :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'">
+        <div class="flex items-center justify-between border-b border-slate-200 px-4 py-2.5 lg:hidden">
+          <span class="text-sm font-semibold text-slate-800">章节目录</span>
+          <button ref="sidebarClose" type="button"
+                  class="flex h-11 w-11 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100"
+                  aria-label="关闭目录" @click="sidebarOpen = false">✕</button>
+        </div>
         <div v-for="g in groups" :key="g.code" class="border-b border-slate-100 last:border-b-0">
           <div class="flex items-center justify-between bg-slate-50 px-4 py-2.5">
             <div class="flex items-center gap-2">
