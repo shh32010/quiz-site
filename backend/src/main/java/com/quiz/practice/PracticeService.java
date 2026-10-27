@@ -94,6 +94,7 @@ public class PracticeService {
                     typeFilter = " and q.question_type = ?";
                     params.add(type);
                 }
+                params.add(limit);
                 yield jdbc.queryForList("""
                         select w.question_id
                           from wrong_question w
@@ -101,7 +102,7 @@ public class PracticeService {
                          where w.user_id = ? and not q.deleted and q.review_status = 'ok'
                         """ + typeFilter + """
                          order by w.resolved asc, w.next_review_at nulls last, w.question_id
-                         limit 500
+                         limit ?
                         """, Integer.class, params.toArray());
             }
             default -> throw new IllegalArgumentException("mode 非法: " + mode);

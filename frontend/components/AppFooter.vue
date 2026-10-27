@@ -4,7 +4,7 @@ const year = useState('footer-year', () => new Date().getFullYear())
 </script>
 
 <template>
-  <footer class="mt-10 border-t border-line-subtle pt-6 text-center text-xs leading-6 text-fg-muted">
+  <footer class="mt-10 border-t border-line-subtle pt-6 text-center text-xs leading-6 text-fg-muted print:hidden">
     <p>© {{ year }} 专转本刷题 · 仅供学习交流</p>
     <p class="mt-1 flex flex-wrap items-center justify-center gap-x-3 gap-y-1">
       <a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer" class="hover:text-brand">

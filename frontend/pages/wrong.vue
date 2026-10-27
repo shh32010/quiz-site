@@ -39,22 +39,60 @@ const typeTabs = computed(() => TYPE_TABS.map(t => ({
   count: t.value === 0 ? (data.value?.total ?? 0) : (typeCounts.value[t.value] ?? 0),
 })))
 
-/** 浏览器的原生打印（配 Tailwind 的 print: 变体） */
-function printPage() {
-  if (typeof window !== 'undefined') window.print()
+const printing = ref(false)
+const printRows = ref<any[]>([])
+
+/** 解析选项 JSON，按 A/B/C/D 排序 */
+function options(row: any): [string, string][] {
+  try {
+    const raw = row.optionJson
+    if (!raw) return []
+    const obj = typeof raw === 'string' ? JSON.parse(raw) : raw
+    return Object.entries(obj as Record<string, string>)
+      .sort(([a], [b]) => a.localeCompare(b))
+  } catch {
+    return []
+  }
+}
+
+/** 加载完整题目后调用浏览器打印；打印区只在 print 媒体下显示 */
+async function printPage() {
+  if (typeof window === 'undefined') return
+  if (!printRows.value.length) {
+    printing.value = true
+    try {
+      const r = await api.get<{ rows: any[] }>('/api/wrong/print')
+      printRows.value = r.rows ?? []
+    } catch (e: any) {
+      error.value = e.message ?? '打印数据加载失败'
+      return
+    } finally {
+      printing.value = false
+    }
+  }
+  await nextTick()
+  window.print()
 }
 </script>
 
 <template>
   <section class="space-y-4">
-    <UiPageHeader title="错题本" subtitle="按间隔复习；已下架题不可进入">
+    <UiPageHeader title="错题本" subtitle="按间隔复习；已下架题不可进入" class="print:hidden">
       <template #actions>
         <NuxtLink v-if="data && (data.total - (data.unavailable ?? 0)) > 0"
                   :to="`/practice?mode=wrong${selectedType ? `&type=${selectedType}` : ''}`"
                   class="print:hidden inline-flex min-h-11 items-center rounded-lg bg-brand px-4 text-sm font-medium text-white hover:bg-brand-hover">
           {{ selectedType ? '复习该题型错题' : '复习全部错题' }}
         </NuxtLink>
-        <UiButton v-if="data" class="print:hidden" variant="secondary" size="md" @click="printPage">打印错题</UiButton>
+        <NuxtLink v-if="data && (data.total - (data.unavailable ?? 0)) > 0"
+                  :to="`/practice?mode=wrong&limit=20${selectedType ? `&type=${selectedType}` : ''}`"
+                  class="print:hidden inline-flex min-h-11 items-center rounded-lg border border-line-strong px-4 text-sm font-medium text-fg-secondary hover:border-brand hover:text-brand">
+          抽测 20 题
+        </NuxtLink>
+        <UiButton v-if="data" class="print:hidden" variant="secondary" size="md"
+                  :loading="printing" @click="printPage">
+          {{ printing ? '准备中…' : '打印错题' }}
+        </UiButton>
       </template>
     </UiPageHeader>
 
@@ -85,7 +123,7 @@ function printPage() {
           {{ selectedType ? '该题型暂无错题。' : '还没有错题。' }}
         </p>
 
-        <ul v-else class="divide-y divide-line-subtle overflow-hidden rounded-xl border border-line-subtle bg-surface-card">
+        <ul v-else class="divide-y divide-line-subtle overflow-hidden rounded-xl border border-line-subtle bg-surface-card print:hidden">
           <li v-for="q in filteredRows" :key="q.questionId">
             <NuxtLink :to="q.available === false ? '/wrong' : `/practice?mode=single&target=${q.questionId}`"
                       :title="q.available === false ? '题目已下架，暂不可复习' : '点击复习这道错题'"
@@ -111,5 +149,23 @@ function printPage() {
         </ul>
       </template>
     </UiState>
+
+    <!-- 打印视图：只在浏览器打印/导出 PDF 时显示 -->
+    <div v-if="printRows.length" class="hidden print:block">
+      <h1 class="text-lg font-bold">错题本</h1>
+      <p class="mt-1 text-xs text-slate-500">共 {{ printRows.length }} 题</p>
+      <ol class="mt-4 space-y-4">
+        <li v-for="(row, i) in printRows" :key="row.questionId" class="break-inside-avoid">
+          <p class="whitespace-pre-wrap text-sm font-medium">{{ i + 1 }}. {{ formatText(row.stem) }}</p>
+          <p v-for="[k, v] in options(row)" :key="k" class="ml-4 whitespace-pre-wrap text-sm">
+            {{ k }}. {{ formatText(v) }}
+          </p>
+          <p class="mt-1 text-sm"><b>正确答案：</b>{{ formatText(row.correct) }}</p>
+          <p v-if="row.analysis" class="mt-1 whitespace-pre-wrap text-sm text-slate-600">
+            <b>解析：</b>{{ formatText(row.analysis) }}
+          </p>
+        </li>
+      </ol>
+    </div>
   </section>
 </template>

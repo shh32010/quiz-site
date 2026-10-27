@@ -56,4 +56,24 @@ public class WrongController {
         return Map.of("total", rows.size(), "pending", pending,
                 "unavailable", unavailable, "rows", rows);
     }
+
+    /** 打印用：返回可练习错题的题干、选项、答案和解析（仅当前用户） */
+    @GetMapping("/print")
+    public Map<String, Object> print(@AuthenticationPrincipal UUID uid) {
+        List<Map<String, Object>> rows = jdbc.queryForList("""
+                select w.question_id      as "questionId",
+                       w.wrong_count      as "wrongCount",
+                       q.question_type    as "questionType",
+                       q.stem,
+                       q.option_json      as "optionJson",
+                       q.correct,
+                       q.analysis
+                  from wrong_question w
+                  join t_question q on q.id = w.question_id
+                 where w.user_id = ? and not q.deleted and q.review_status = 'ok'
+                 order by w.resolved asc, w.next_review_at nulls last, w.question_id
+                 limit 300
+                """, uid);
+        return Map.of("rows", rows);
+    }
 }

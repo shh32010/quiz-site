@@ -43,7 +43,7 @@ const reviewItems = [
 
 <template>
   <div class="min-h-screen bg-page text-fg-primary">
-    <header class="sticky top-0 z-40 border-b border-line-subtle bg-surface-glass backdrop-blur">
+    <header class="sticky top-0 z-40 border-b border-line-subtle bg-surface-glass backdrop-blur print:hidden">
       <div class="mx-auto flex h-14 max-w-6xl items-center gap-3 px-3 sm:px-4">
         <NuxtLink to="/" class="shrink-0 text-base font-semibold text-brand sm:text-lg">专转本刷题</NuxtLink>
 
@@ -96,7 +96,7 @@ const reviewItems = [
       <AppFooter />
     </main>
 
-    <nav class="fixed inset-x-0 bottom-0 z-40 border-t border-line-subtle bg-surface-glass backdrop-blur lg:hidden">
+    <nav class="fixed inset-x-0 bottom-0 z-40 border-t border-line-subtle bg-surface-glass backdrop-blur print:hidden lg:hidden">
       <div class="grid grid-cols-4 pb-[env(safe-area-inset-bottom)]">
         <NuxtLink to="/" class="flex flex-col items-center gap-0.5 py-2 text-xs"
                   :class="homeActive ? 'text-brand' : 'text-fg-muted'">
