@@ -1,0 +1,17 @@
+<script setup lang="ts">
+// 全站页脚：备案信息、隐私政策、用户协议
+const year = useState('footer-year', () => new Date().getFullYear())
+</script>
+
+<template>
+  <footer class="mt-10 border-t border-line-subtle pt-6 text-center text-xs leading-6 text-fg-muted">
+    <p>© {{ year }} 专转本刷题 · 仅供学习交流</p>
+    <p class="mt-1 flex flex-wrap items-center justify-center gap-x-3 gap-y-1">
+      <a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer" class="hover:text-brand">
+        苏ICP备2026082091号-1
+      </a>
+      <NuxtLink to="/privacy" class="hover:text-brand">隐私政策</NuxtLink>
+      <NuxtLink to="/terms" class="hover:text-brand">用户协议</NuxtLink>
+    </p>
+  </footer>
+</template>

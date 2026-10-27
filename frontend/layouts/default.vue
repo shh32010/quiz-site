@@ -93,6 +93,7 @@ const reviewItems = [
 
     <main class="mx-auto max-w-6xl px-3 py-5 pb-24 sm:px-4 lg:pb-8">
       <slot />
+      <AppFooter />
     </main>
 
     <nav class="fixed inset-x-0 bottom-0 z-40 border-t border-line-subtle bg-surface-glass backdrop-blur lg:hidden">

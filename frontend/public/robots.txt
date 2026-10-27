@@ -1,0 +1,18 @@
+User-agent: *
+Allow: /
+Disallow: /account
+Disallow: /admin
+Disallow: /compose
+Disallow: /favorites
+Disallow: /history
+Disallow: /login
+Disallow: /forgot
+Disallow: /reset
+Disallow: /report
+Disallow: /wrong
+Disallow: /practice
+Disallow: /me
+Disallow: /search
+Disallow: /api/
+
+Sitemap: https://quiz.teacher-wishes.asia/sitemap.xml
