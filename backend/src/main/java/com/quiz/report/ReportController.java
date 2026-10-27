@@ -113,7 +113,7 @@ public class ReportController {
                   join t_question q on q.id = pa.question_id
                   join anc on anc.id = q.chapter_id
                   join t_chapter l on l.id = anc.root
-                 where pa.user_id = ?
+                 where pa.user_id = ? and not q.deleted and q.review_status = 'ok'
                  group by l.code, l.name
                  order by l.code
                 """, uid);
@@ -140,7 +140,7 @@ public class ReportController {
                   join anc on anc.id = q.chapter_id
                   join t_chapter l on l.id = anc.root
                   join t_chapter s on s.id = anc.section
-                 where pa.user_id = ?
+                 where pa.user_id = ? and not q.deleted and q.review_status = 'ok'
                  group by l.code, l.name, s.code, s.name
                  order by l.code, s.code
                 """, uid);

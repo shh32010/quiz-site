@@ -41,6 +41,9 @@ const typeTabs = computed(() => TYPE_TABS.map(t => ({
 
 const printing = ref(false)
 const printRows = ref<any[]>([])
+const filteredPrintRows = computed(() => selectedType.value
+  ? printRows.value.filter(row => Number(row.questionType) === selectedType.value)
+  : printRows.value)
 
 /** 解析选项 JSON，按 A/B/C/D 排序 */
 function options(row: any): [string, string][] {
@@ -71,6 +74,10 @@ async function printPage() {
     }
   }
   await nextTick()
+  if (!filteredPrintRows.value.length) {
+    error.value = '当前题型暂无可打印错题'
+    return
+  }
   window.print()
 }
 </script>
@@ -151,11 +158,11 @@ async function printPage() {
     </UiState>
 
     <!-- 打印视图：只在浏览器打印/导出 PDF 时显示 -->
-    <div v-if="printRows.length" class="hidden print:block">
+    <div v-if="filteredPrintRows.length" class="hidden print:block">
       <h1 class="text-lg font-bold">错题本</h1>
-      <p class="mt-1 text-xs text-slate-500">共 {{ printRows.length }} 题</p>
+      <p class="mt-1 text-xs text-slate-500">共 {{ filteredPrintRows.length }} 题</p>
       <ol class="mt-4 space-y-4">
-        <li v-for="(row, i) in printRows" :key="row.questionId" class="break-inside-avoid">
+        <li v-for="(row, i) in filteredPrintRows" :key="row.questionId" class="break-inside-avoid">
           <p class="whitespace-pre-wrap text-sm font-medium">{{ i + 1 }}. {{ formatText(row.stem) }}</p>
           <p v-for="[k, v] in options(row)" :key="k" class="ml-4 whitespace-pre-wrap text-sm">
             {{ k }}. {{ formatText(v) }}

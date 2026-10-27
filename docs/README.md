@@ -36,6 +36,7 @@
 | 文件 | 用途 |
 |---|---|
 | `schema_email_verification_20261027.sql` | 邮箱归属验证：`profiles.email_verified`/`pending_email` 与 `email_verification_token`；历史邮箱标记已验证 |
+| `schema_email_claiming_20261027.sql` | 邮箱防抢占：未验证邮箱允许重复，唯一索引只约束已验证邮箱 |
 | `schema_page_view_20261027.sql` | 匿名访问统计：`page_view` 表（路径/匿名访客 ID/来源域名/是否移动端），不存 IP/UA |
 
 > 新环境按依赖顺序执行；已有库不要重复跑破坏性脚本，先备份 `/opt/quiz-backups/`。

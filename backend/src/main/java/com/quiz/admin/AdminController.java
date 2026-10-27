@@ -78,13 +78,15 @@ public class AdminController {
     @GetMapping("/visits")
     public Map<String, Object> visits(@RequestParam(defaultValue = "7") int days) {
         int d = Math.min(Math.max(days, 1), 90);
+        // 统一从“近 N 天第一个自然日 00:00（Asia/Shanghai）”起算，保证 summary/top/daily 口径一致
+        String start = "((now() at time zone 'Asia/Shanghai')::date - (?::int - 1))::timestamp at time zone 'Asia/Shanghai'";
         Map<String, Object> summary = jdbc.queryForMap("""
                 select count(*) as "pv",
                        count(distinct visitor_id) as "uv",
                        count(*) filter (where is_mobile) as "mobilePv"
                   from page_view
-                 where created_at > now() - make_interval(days => ?)
-                """, d);
+                 where created_at >= %s
+                """.formatted(start), d);
         List<Map<String, Object>> daily = jdbc.queryForList("""
                 with days as (
                   select generate_series(
@@ -92,26 +94,32 @@ public class AdminController {
                     (now() at time zone 'Asia/Shanghai')::date,
                     interval '1 day'
                   )::date as day
+                ),
+                agg as (
+                  select (created_at at time zone 'Asia/Shanghai')::date as day,
+                         count(*) as pv,
+                         count(distinct visitor_id) as uv
+                    from page_view
+                   where created_at >= %s
+                   group by 1
                 )
                 select to_char(d.day, 'MM-DD') as "day",
-                       count(pv.id) as "pv",
-                       count(distinct pv.visitor_id) as "uv"
+                       coalesce(agg.pv, 0) as "pv",
+                       coalesce(agg.uv, 0) as "uv"
                   from days d
-                  left join page_view pv
-                    on (pv.created_at at time zone 'Asia/Shanghai')::date = d.day
-                 group by d.day
+                  left join agg on agg.day = d.day
                  order by d.day
-                """, d);
+                """.formatted(start), d, d);
         List<Map<String, Object>> top = jdbc.queryForList("""
                 select path,
                        count(*) as "pv",
                        count(distinct visitor_id) as "uv"
                   from page_view
-                 where created_at > now() - make_interval(days => ?)
+                 where created_at >= %s
                  group by path
                  order by "pv" desc
                  limit 20
-                """, d);
+                """.formatted(start), d);
         return Map.of("days", d, "summary", summary, "daily", daily, "top", top);
     }
 }

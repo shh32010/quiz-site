@@ -2,6 +2,7 @@ package com.quiz.stats;
 
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
@@ -25,6 +26,7 @@ public class StatsController {
 
     public record CollectReq(String path, String visitorId, String referrer, Boolean mobile) {}
 
+    @Transactional
     @PostMapping("/collect")
     public Map<String, Object> collect(@RequestBody(required = false) CollectReq req,
                                        HttpServletRequest request) {
@@ -41,6 +43,9 @@ public class StatsController {
         if (ua == null || ua.isBlank() || isBot(ua)) {
             return Map.of("ok", true);
         }
+
+        // 同一访客+路径的事务级 advisory lock，避免并发“先查后插”同时插入
+        jdbc.queryForList("select pg_advisory_xact_lock(hashtext(?), hashtext(?))", visitor, path);
 
         Integer recent = jdbc.queryForObject("""
                 select count(*) from page_view

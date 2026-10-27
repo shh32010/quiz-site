@@ -21,7 +21,8 @@ export default defineNuxtPlugin((nuxtApp) => {
 
   function track(path: string) {
     if (!path.startsWith('/') || path.startsWith('/api/')
-        || path.startsWith('/admin') || path.startsWith('/verify-email')) return
+        || path.startsWith('/admin') || path.startsWith('/verify-email')
+        || path.startsWith('/login')) return
     if (navigator.doNotTrack === '1' || (window as any).doNotTrack === '1') return
     const id = visitorId()
     if (!id) return
@@ -48,8 +49,9 @@ export default defineNuxtPlugin((nuxtApp) => {
     }
   }
 
-  router.afterEach((to, from) => {
-    if (to.path !== from.path) track(to.path)
+  router.afterEach((to, from, failure) => {
+    // 鉴权中间件重定向会产生 failure，不能把未实际展示的页面计入 PV
+    if (!failure && to.path !== from.path) track(to.path)
   })
   nuxtApp.hook('app:mounted', () => track(router.currentRoute.value.path))
 })
