@@ -118,6 +118,33 @@ public class ReportController {
                  order by l.code
                 """, uid);
 
+        // 节级掌握度（按 L2 节汇总；章直属题没有节，不纳入）
+        List<Map<String, Object>> sections = jdbc.queryForList("""
+                with recursive anc as (
+                  select id, parent_id, id as root,
+                         case when level = 2 then id end as section
+                    from t_chapter where level = 1 and not deleted
+                  union all
+                  select c.id, c.parent_id, a.root,
+                         case when c.level = 2 then c.id else a.section end
+                    from t_chapter c join anc a on c.parent_id = a.id
+                   where not c.deleted
+                )
+                select l.code as "chapterCode", l.name as "chapterName",
+                       s.code as "sectionCode", s.name as "sectionName",
+                       count(*) as "total",
+                       count(*) filter (where pa.is_correct) as "correct",
+                       round(100.0 * count(*) filter (where pa.is_correct) / count(*)) as "rate"
+                  from practice_answer pa
+                  join t_question q on q.id = pa.question_id
+                  join anc on anc.id = q.chapter_id
+                  join t_chapter l on l.id = anc.root
+                  join t_chapter s on s.id = anc.section
+                 where pa.user_id = ?
+                 group by l.code, l.name, s.code, s.name
+                 order by l.code, s.code
+                """, uid);
+
         // 知识点掌握度（已答题关联知识点，至少答过 2 次）
         List<Map<String, Object>> kps = jdbc.queryForList("""
                 select k.id, k.title,
@@ -135,6 +162,6 @@ public class ReportController {
                 """, uid);
 
         return Map.of("summary", summary, "recent", recent, "wrong", wrong,
-                "mastery", mastery, "kps", kps);
+                "mastery", mastery, "sections", sections, "kps", kps);
     }
 }

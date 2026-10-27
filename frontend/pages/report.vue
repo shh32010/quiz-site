@@ -27,10 +27,15 @@ const rate = computed(() => {
   if (!s || !s.answered) return 0
   return Math.round((s.correct / s.answered) * 100)
 })
-const masterySorted = computed(() =>
-  [...(data.value?.mastery ?? [])].sort((a, b) => (a.rate ?? 0) - (b.rate ?? 0)))
-const kpsSorted = computed(() =>
-  [...(data.value?.kps ?? [])].sort((a, b) => (a.rate ?? 0) - (b.rate ?? 0)))
+const sortMode = ref<'weak' | 'volume'>('weak')
+function sortRows(rows: any[]): any[] {
+  return [...rows].sort((a, b) => sortMode.value === 'volume'
+    ? (b.total ?? 0) - (a.total ?? 0)
+    : (a.rate ?? 0) - (b.rate ?? 0))
+}
+const masterySorted = computed(() => sortRows(data.value?.mastery ?? []))
+const sectionsSorted = computed(() => sortRows(data.value?.sections ?? []))
+const kpsSorted = computed(() => sortRows(data.value?.kps ?? []))
 
 function barClass(value: number) {
   if (value >= 80) return 'bg-success-fg'
@@ -81,8 +86,13 @@ async function loadWeekly() {
         </UiCard>
 
         <UiCard v-if="masterySorted.length" padded="md">
-          <h2 class="text-sm font-semibold text-fg-primary">章节掌握度</h2>
-          <p class="mt-0.5 text-xs text-fg-muted">薄弱优先</p>
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h2 class="text-sm font-semibold text-fg-primary">章节掌握度</h2>
+              <p class="mt-0.5 text-xs text-fg-muted">按一级章/技能统计正确率</p>
+            </div>
+            <ReportSortToggle v-model="sortMode" />
+          </div>
           <ul class="mt-3 space-y-3">
             <li v-for="m in masterySorted" :key="m.code">
               <div class="flex items-center justify-between gap-2 text-xs">
@@ -96,9 +106,38 @@ async function loadWeekly() {
           </ul>
         </UiCard>
 
+        <UiCard v-if="sectionsSorted.length" padded="md">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h2 class="text-sm font-semibold text-fg-primary">节级掌握度</h2>
+              <p class="mt-0.5 text-xs text-fg-muted">按二级节统计正确率；章直属题不计入</p>
+            </div>
+            <ReportSortToggle v-model="sortMode" />
+          </div>
+          <ul class="mt-3 max-h-[420px] space-y-3 overflow-auto pr-1">
+            <li v-for="s in sectionsSorted" :key="s.sectionCode">
+              <div class="flex items-center justify-between gap-2 text-xs">
+                <span class="min-w-0 truncate text-fg-secondary">
+                  <span class="mr-1 rounded bg-surface-muted px-1 py-0.5 text-fg-muted">{{ s.chapterCode }}</span>
+                  {{ s.sectionCode }} {{ s.sectionName }}
+                </span>
+                <span class="shrink-0 tabular-nums text-fg-muted">{{ s.correct }}/{{ s.total }}（{{ s.rate }}%）</span>
+              </div>
+              <div class="mt-1 h-2 w-full overflow-hidden rounded-full bg-surface-muted">
+                <div class="h-full rounded-full" :class="barClass(s.rate)" :style="{ width: (s.rate || 0) + '%' }" />
+              </div>
+            </li>
+          </ul>
+        </UiCard>
+
         <UiCard v-if="kpsSorted.length" padded="md">
-          <h2 class="text-sm font-semibold text-fg-primary">知识点掌握度</h2>
-          <p class="mt-0.5 text-xs text-fg-muted">薄弱优先</p>
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h2 class="text-sm font-semibold text-fg-primary">知识点掌握度</h2>
+              <p class="mt-0.5 text-xs text-fg-muted">至少作答 2 次；按关联知识点统计</p>
+            </div>
+            <ReportSortToggle v-model="sortMode" />
+          </div>
           <ul class="mt-3 space-y-3">
             <li v-for="k in kpsSorted" :key="k.id">
               <div class="flex items-center justify-between gap-2 text-xs">
