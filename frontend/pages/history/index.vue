@@ -1,5 +1,7 @@
 <script setup lang="ts">
 // 做题历史：当前用户的历史练习会话
+import { TYPE_TABS, MODE_LABEL, fmtTime, fmtDur } from '~/utils/constants'
+
 definePageMeta({ middleware: 'auth' })
 useHead({ title: '做题历史' })
 const api = useApi()
@@ -17,47 +19,11 @@ const error = ref('')
 const selectedType = ref(0)
 const typeCounts = ref<Record<number, number>>({})
 
-const TYPE_TABS = [
-  { value: 0, label: '全部' },
-  { value: 1, label: '单选' },
-  { value: 2, label: '多选' },
-  { value: 3, label: '判断' },
-  { value: 4, label: '填空' },
-  { value: 5, label: '综合' },
-]
-
-const MODE_LABEL: Record<string, string> = {
-  chapter: '章节练习',
-  chapter_random: '章节随机卷',
-  paper: '真题练习',
-  kp: '知识点练习',
-  single: '单题练习',
-  course: '课程练习',
-  wrong: '错题复习',
-  random: '随机组卷',
-  exam: '模拟考试',
-  random_exam: '随机模考',
-}
-
 const totalPages = computed(() => Math.max(1, Math.ceil(total.value / size)))
 const typeTabs = computed(() => TYPE_TABS.map(t => ({
   ...t,
   count: t.value === 0 ? totalAll.value : (typeCounts.value[t.value] ?? 0),
 })))
-
-function fmtTime(v: string) {
-  if (!v) return ''
-  return new Date(v).toLocaleString('zh-CN', {
-    month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit',
-  })
-}
-
-function fmtDur(sec: number) {
-  if (!sec || sec <= 0) return '—'
-  const m = Math.floor(sec / 60)
-  const s = sec % 60
-  return m > 0 ? `${m} 分 ${s} 秒` : `${s} 秒`
-}
 
 async function load(p = page.value) {
   loading.value = true

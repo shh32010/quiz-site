@@ -1,5 +1,7 @@
 <script setup lang="ts">
 // 首页：入口导航 + 题库概况
+import { ALL_COURSES as COURSE_META } from '~/utils/constants'
+
 useHead({ title: '专转本计算机刷题' })
 
 const { loggedIn } = useAuth()
@@ -36,18 +38,6 @@ const { data: papers } = await useFetch<any[]>('/api/papers')
 const totalQuestions = computed(() =>
   (tree.value ?? []).reduce((s, n) => s + (n.questionCount ?? 0), 0))
 const paperCount = computed(() => (papers.value?.length ?? 0))
-
-/** 课程/技能定义与展示顺序 */
-const COURSE_META = [
-  { code: 'A',  name: '计算机应用基础' },
-  { code: 'B',  name: '信息技术导论' },
-  { code: 'S1', name: 'C 语言程序设计' },
-  { code: 'S2', name: '数据库（MySQL）' },
-  { code: 'S3', name: 'UML 建模' },
-  { code: 'S4', name: '局域网组建' },
-  { code: 'S5', name: 'Windows 10 管理' },
-  { code: 'S6', name: 'CentOS 7 管理' },
-]
 
 /** 课程/技能卡：首页只汇总课程级题数，完整章节树统一放在 /chapters */
 const courseCards = computed(() => COURSE_META.map(m => {

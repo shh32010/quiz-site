@@ -1,5 +1,7 @@
 <script setup lang="ts">
 // 错题本
+import { TYPE_LABEL, TYPE_TABS } from '~/utils/constants'
+
 definePageMeta({ middleware: 'auth' })
 const api = useApi()
 const data = ref<any>(null)
@@ -19,15 +21,6 @@ async function load() {
 }
 onMounted(load)
 
-const TYPE_LABEL: Record<number, string> = { 1: '单选', 2: '多选', 3: '判断', 4: '填空', 5: '综合' }
-const TYPE_TABS = [
-  { value: 0, label: '全部' },
-  { value: 1, label: '单选' },
-  { value: 2, label: '多选' },
-  { value: 3, label: '判断' },
-  { value: 4, label: '填空' },
-  { value: 5, label: '综合' },
-]
 const selectedType = ref(0)
 const typeCounts = computed<Record<number, number>>(() => {
   const m: Record<number, number> = {}

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 // 知识点学习页：左侧大纲树（课程→章→节），右侧知识点列表
 import { marked } from 'marked'
+import { ALL_COURSES as COURSES } from '~/utils/constants'
 
 useHead({ title: '知识点学习' })
 
@@ -37,17 +38,6 @@ interface KP {
 
 const route = useRoute()
 const { data: tree } = await useFetch<KNode[]>('/api/knowledge/tree')
-
-const COURSES = [
-  { code: 'A', name: '计算机应用基础' },
-  { code: 'B', name: '信息技术导论' },
-  { code: 'S1', name: 'C 语言程序设计', label: '技能一' },
-  { code: 'S2', name: '数据库（MySQL）', label: '技能二' },
-  { code: 'S3', name: 'UML 建模', label: '技能三' },
-  { code: 'S4', name: '局域网组建', label: '技能四' },
-  { code: 'S5', name: 'Windows 10 管理', label: '技能五' },
-  { code: 'S6', name: 'CentOS 7 管理', label: '技能六' },
-]
 
 /** 课程 → 章（理论 A/B 各含多个章；实操 S1~S6 各一章） */
 const groups = computed(() => COURSES.map(c => {

@@ -1,5 +1,7 @@
 <script setup lang="ts">
 // 章节下的题目列表（含子孙章节）
+import { TYPE_LABEL, TYPE_TABS } from '~/utils/constants'
+
 const route = useRoute()
 const router = useRouter()
 const api = useApi()
@@ -34,15 +36,6 @@ const composeScore = computed(() =>
   isPractical.value ? 80 : (chapterLevel.value === 1 ? 150 : 75))
 
 const totalPages = computed(() => Math.max(1, Math.ceil((data.value?.total ?? 0) / 50)))
-const TYPE_LABEL: Record<number, string> = { 1: '单选', 2: '多选', 3: '判断', 4: '填空', 5: '综合' }
-const TYPE_TABS = [
-  { value: 0, label: '全部' },
-  { value: 1, label: '单选' },
-  { value: 2, label: '多选' },
-  { value: 3, label: '判断' },
-  { value: 4, label: '填空' },
-  { value: 5, label: '综合' },
-]
 const typeMap = computed<Record<number, number>>(() =>
   Object.fromEntries((data.value?.typeCounts ?? []).map((x: any) => [Number(x.type), Number(x.count)])))
 const allCount = computed(() =>

@@ -1,5 +1,7 @@
 <script setup lang="ts">
 // 收藏夹
+import { TYPE_LABEL } from '~/utils/constants'
+
 definePageMeta({ middleware: 'auth' })
 const api = useApi()
 const data = ref<any>(null)
@@ -17,7 +19,6 @@ async function remove(id: number) {
 }
 
 onMounted(load)
-const TYPE_LABEL: Record<number, string> = { 1: '单选', 2: '多选', 3: '判断', 4: '填空', 5: '综合' }
 </script>
 
 <template>

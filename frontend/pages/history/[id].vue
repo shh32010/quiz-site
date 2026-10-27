@@ -1,5 +1,7 @@
 <script setup lang="ts">
 // 做题历史详情：某次练习的作答明细
+import { TYPE_LABEL, MODE_LABEL, fmtTime, fmtDur } from '~/utils/constants'
+
 definePageMeta({ middleware: 'auth' })
 useHead({ title: '做题历史详情' })
 const api = useApi()
@@ -13,27 +15,7 @@ const size = 50
 const loading = ref(true)
 const error = ref('')
 
-const TYPE_LABEL: Record<number, string> = { 1: '单选', 2: '多选', 3: '判断', 4: '填空', 5: '综合' }
-const MODE_LABEL: Record<string, string> = {
-  chapter: '章节练习', chapter_random: '章节随机卷', paper: '真题练习', kp: '知识点练习', single: '单题练习',
-  course: '课程练习', wrong: '错题复习', random: '随机组卷',
-  exam: '模拟考试', random_exam: '随机模考',
-}
 const totalPages = computed(() => Math.max(1, Math.ceil(total.value / size)))
-
-function fmtTime(v: string) {
-  if (!v) return ''
-  return new Date(v).toLocaleString('zh-CN', {
-    month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit',
-  })
-}
-
-function fmtDur(sec: number) {
-  if (!sec || sec <= 0) return '—'
-  const m = Math.floor(sec / 60)
-  const s = sec % 60
-  return m > 0 ? `${m} 分 ${s} 秒` : `${s} 秒`
-}
 
 function imgs(a: any): string[] {
   const raw = a?.imageUrls || a?.imageUrl || ''

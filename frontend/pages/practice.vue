@@ -2,6 +2,8 @@
 // 刷题页：/practice?mode=chapter|paper|course|kp|wrong|single&target=X
 //          或 /practice?session=ID
 // 未登录 = 游客模式：可试做，判分不落库、不进错题本
+import { MODE_LABEL, TYPE_LABEL } from '~/utils/constants'
+
 definePageMeta({ layout: 'immersive' })
 useHead({ title: '刷题' })
 
@@ -86,12 +88,6 @@ const sheetCorrect = computed(() =>
   (sheet.value.rows ?? []).filter(r => r.answered && r.isCorrect).length)
 const sheetWrong = computed(() =>
   (sheet.value.rows ?? []).filter(r => r.answered && !r.isCorrect).length)
-
-const MODE_LABEL: Record<string, string> = {
-  chapter: '章节练习', chapter_random: '章节随机卷', paper: '真题练习', course: '课程练习', kp: '知识点练习',
-  wrong: '错题复习', single: '单题练习', random: '随机组卷', exam: '模拟考试', random_exam: '随机模考',
-}
-const TYPE_LABEL: Record<number, string> = { 1: '单选', 2: '多选', 3: '判断', 4: '填空', 5: '综合' }
 
 const modeLabel = computed(() => MODE_LABEL[mode.value] ?? '刷题')
 const isPaper = computed(() => mode.value === 'paper')

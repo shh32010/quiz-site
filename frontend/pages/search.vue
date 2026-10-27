@@ -1,5 +1,7 @@
 <script setup lang="ts">
 // 题库搜索（题干关键词）
+import { TYPE_LABEL } from '~/utils/constants'
+
 const route = useRoute()
 const router = useRouter()
 const api = useApi()
@@ -53,7 +55,6 @@ onMounted(async () => {
   run()
 })
 
-const TYPE_LABEL: Record<number, string> = { 1: '单选', 2: '多选', 3: '判断', 4: '填空', 5: '综合' }
 const totalPages = computed(() => Math.max(1, Math.ceil((data.value?.total ?? 0) / 20)))
 </script>
 

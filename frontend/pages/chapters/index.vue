@@ -1,5 +1,7 @@
 <script setup lang="ts">
 // 章节树：理论按课程 A/B 分组，实操按技能一~六；未归类节点单独折叠
+import { THEORY_COURSES as COURSES, SKILLS } from '~/utils/constants'
+
 interface Node {
   id: number
   subjectId: number
@@ -48,20 +50,6 @@ const open = ref<Record<number, boolean>>({})
 function toggle(id: number) {
   open.value[id] = !open.value[id]
 }
-
-/** 课程/技能定义与展示顺序 */
-const COURSES = [
-  { code: 'A', name: '计算机应用基础' },
-  { code: 'B', name: '信息技术导论' },
-]
-const SKILLS = [
-  { code: 'S1', name: 'C 语言程序设计', label: '技能一' },
-  { code: 'S2', name: '数据库（MySQL）', label: '技能二' },
-  { code: 'S3', name: 'UML 建模', label: '技能三' },
-  { code: 'S4', name: '局域网组建', label: '技能四' },
-  { code: 'S5', name: 'Windows 10 管理', label: '技能五' },
-  { code: 'S6', name: 'CentOS 7 管理', label: '技能六' },
-]
 
 function sortByCode(nodes: Node[]): Node[] {
   return [...nodes].sort((a, b) =>
