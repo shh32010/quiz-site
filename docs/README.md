@@ -31,6 +31,13 @@
 | `data_write_feedback_20261026.sql` | 题目反馈 25/26/28：334440 C 选项、335849 B 选项修正，335757 测试反馈关闭 |
 | `data_write_feedback_20261026_duplicate.sql` | 题目反馈 27：OCR 重复副本 336899 软删，保留 335843 |
 
+### 2026-10-27 批次（均已执行于生产）
+
+| 文件 | 用途 |
+|---|---|
+| `schema_email_verification_20261027.sql` | 邮箱归属验证：`profiles.email_verified`/`pending_email` 与 `email_verification_token`；历史邮箱标记已验证 |
+| `schema_page_view_20261027.sql` | 匿名访问统计：`page_view` 表（路径/匿名访客 ID/来源域名/是否移动端），不存 IP/UA |
+
 > 新环境按依赖顺序执行；已有库不要重复跑破坏性脚本，先备份 `/opt/quiz-backups/`。
 
 ## SQL 命名与登记约定（自 2026-10-26 起）

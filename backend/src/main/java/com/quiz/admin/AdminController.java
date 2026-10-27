@@ -73,4 +73,45 @@ public class AdminController {
                        (select count(*) from feedback where status = 'open')               as "feedbackPending"
                 """);
     }
+
+    /** 访问统计：近 N 天 PV/UV、每日趋势、热门页面 */
+    @GetMapping("/visits")
+    public Map<String, Object> visits(@RequestParam(defaultValue = "7") int days) {
+        int d = Math.min(Math.max(days, 1), 90);
+        Map<String, Object> summary = jdbc.queryForMap("""
+                select count(*) as "pv",
+                       count(distinct visitor_id) as "uv",
+                       count(*) filter (where is_mobile) as "mobilePv"
+                  from page_view
+                 where created_at > now() - make_interval(days => ?)
+                """, d);
+        List<Map<String, Object>> daily = jdbc.queryForList("""
+                with days as (
+                  select generate_series(
+                    (now() at time zone 'Asia/Shanghai')::date - (?::int - 1),
+                    (now() at time zone 'Asia/Shanghai')::date,
+                    interval '1 day'
+                  )::date as day
+                )
+                select to_char(d.day, 'MM-DD') as "day",
+                       count(pv.id) as "pv",
+                       count(distinct pv.visitor_id) as "uv"
+                  from days d
+                  left join page_view pv
+                    on (pv.created_at at time zone 'Asia/Shanghai')::date = d.day
+                 group by d.day
+                 order by d.day
+                """, d);
+        List<Map<String, Object>> top = jdbc.queryForList("""
+                select path,
+                       count(*) as "pv",
+                       count(distinct visitor_id) as "uv"
+                  from page_view
+                 where created_at > now() - make_interval(days => ?)
+                 group by path
+                 order by "pv" desc
+                 limit 20
+                """, d);
+        return Map.of("days", d, "summary", summary, "daily", daily, "top", top);
+    }
 }

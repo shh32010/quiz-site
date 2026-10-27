@@ -13,6 +13,21 @@ const resetError = ref('')
 const error = ref('')
 const note = ref<Record<number, string>>({})
 
+const visits = ref<any>(null)
+const visitDays = ref(7)
+const visitError = ref('')
+const maxDailyPv = computed(() =>
+  Math.max(1, ...(visits.value?.daily ?? []).map((d: any) => Number(d.pv) || 0)))
+
+async function loadVisits() {
+  visitError.value = ''
+  try {
+    visits.value = await api.get(`/api/admin/visits?days=${visitDays.value}`)
+  } catch (e: any) {
+    visitError.value = e.message
+  }
+}
+
 function fmtTime(v: string | null) {
   if (!v) return '—'
   return new Date(v).toLocaleString('zh-CN', {
@@ -29,6 +44,7 @@ async function load() {
     resets.value = r.rows
     const u = await api.get<{ rows: any[] }>('/api/admin/users')
     users.value = u.rows
+    await loadVisits()
   } catch (e: any) {
     error.value = e.message
   }
@@ -92,6 +108,65 @@ onMounted(load)
         <p class="text-xs text-slate-500">{{ k }}</p>
         <p class="mt-1 text-xl font-bold text-slate-800">{{ v }}</p>
       </div>
+    </div>
+
+    <div class="rounded-xl border border-slate-200 p-4">
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <h2 class="text-sm font-semibold text-slate-700">访问统计</h2>
+          <p class="mt-0.5 text-xs text-slate-400">匿名 PV / UV，不记录 IP 与原始 UA</p>
+        </div>
+        <select v-model.number="visitDays"
+                class="rounded-lg border border-slate-300 px-2 py-1.5 text-xs"
+                @change="loadVisits">
+          <option :value="7">近 7 天</option>
+          <option :value="30">近 30 天</option>
+          <option :value="90">近 90 天</option>
+        </select>
+      </div>
+
+      <p v-if="visitError" class="mt-2 text-sm text-red-600">{{ visitError }}</p>
+
+      <template v-if="visits">
+        <div class="mt-3 grid grid-cols-3 gap-3">
+          <div class="rounded-lg border border-slate-200 p-3">
+            <p class="text-xs text-slate-500">PV</p>
+            <p class="mt-1 text-xl font-bold tabular-nums text-slate-800">{{ visits.summary.pv }}</p>
+          </div>
+          <div class="rounded-lg border border-slate-200 p-3">
+            <p class="text-xs text-slate-500">UV</p>
+            <p class="mt-1 text-xl font-bold tabular-nums text-slate-800">{{ visits.summary.uv }}</p>
+          </div>
+          <div class="rounded-lg border border-slate-200 p-3">
+            <p class="text-xs text-slate-500">移动端 PV</p>
+            <p class="mt-1 text-xl font-bold tabular-nums text-slate-800">{{ visits.summary.mobilePv }}</p>
+          </div>
+        </div>
+
+        <div class="mt-4 grid gap-4 lg:grid-cols-2">
+          <div>
+            <p class="text-xs text-slate-400">每日 PV / UV</p>
+            <div class="mt-2 flex h-32 items-end gap-1">
+              <div v-for="d in visits.daily" :key="d.day" class="flex min-w-0 flex-1 flex-col items-center gap-1">
+                <div class="w-full rounded-t bg-blue-500/70"
+                     :style="{ height: `${Number(d.pv) ? Math.max(2, Math.round(Number(d.pv) / maxDailyPv * 100)) : 0}%` }"
+                     :title="`${d.day}：PV ${d.pv} / UV ${d.uv}`" />
+                <span class="text-[10px] text-slate-400">{{ d.day }}</span>
+              </div>
+            </div>
+          </div>
+          <div>
+            <p class="text-xs text-slate-400">热门页面</p>
+            <ul class="mt-2 space-y-1 text-xs">
+              <li v-for="p in visits.top" :key="p.path" class="flex items-center justify-between gap-2">
+                <span class="truncate font-mono text-slate-600">{{ p.path }}</span>
+                <span class="shrink-0 tabular-nums text-slate-400">{{ p.pv }} PV / {{ p.uv }} UV</span>
+              </li>
+              <li v-if="!visits.top.length" class="text-slate-400">暂无访问数据。</li>
+            </ul>
+          </div>
+        </div>
+      </template>
     </div>
 
     <div class="rounded-xl border border-slate-200 p-4">
