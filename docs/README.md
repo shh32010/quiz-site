@@ -82,4 +82,5 @@
 
 - `verify_data.py`：题数/知识点/章节一致性核对
 - `final_check.sh`、`test_practice.sh`：部署后冒烟
-- 当前项目结论见 `project/项目状态与待办_20261021.md` 与 `project/项目交接_20261026.md`（本机保留，不进 Git）
+- 当前项目结论见 `project/项目状态与待办_20261027.md` 与 `project/项目交接_20261027.md`；待办见 `project/待办_20261027.md`（本机保留，不进 Git）
+- 历史状态/交接见 `project/archive/`；过程评审见 `private/delivery-20261026/`（历史参考，不作为当前结论）
