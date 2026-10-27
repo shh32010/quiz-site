@@ -55,9 +55,6 @@ const sheet = ref<{ total: number; answered: number; remaining: number; rows: an
 const finishInfo = ref({ unanswered: 0, firstUnanswered: 1 })
 
 /** 答题卡按题型分组：判断 → 单选 → 多选 → 填空 → 综合（按会话实际顺序） */
-const TYPE_TONE: Record<number, 'blue' | 'indigo' | 'amber' | 'green' | 'red'> = {
-  1: 'blue', 2: 'indigo', 3: 'amber', 4: 'green', 5: 'red',
-}
 const sheetGroups = computed(() => {
   const rows = sheet.value.rows ?? []
   const groups = new Map<number, any[]>()
@@ -279,7 +276,11 @@ async function start() {
       return
     }
 
-    const limit = qmode === 'paper' || qmode === 'wrong' ? 500 : 50
+    // 错题抽测可通过 ?limit=20 指定题量；默认保持原有 500/50
+    const requested = Number(route.query.limit) || 0
+    const limit = requested > 0
+      ? Math.min(requested, 500)
+      : (qmode === 'paper' || qmode === 'wrong' ? 500 : 50)
     const r = await api.post<any>('/api/practice/start', {
       mode: qmode, target, limit, ...(type ? { type } : {}),
     })
@@ -508,13 +509,6 @@ function jumpTo(order: number) {
   if (order !== currentOrder.value) navigate(order)
 }
 
-function sheetClass(row: any) {
-  if (row.itemOrder === currentOrder.value) return 'border-brand bg-brand text-white ring-2 ring-brand/25'
-  if (!row.answered) return 'border-line-strong bg-surface-card text-fg-muted hover:border-brand hover:text-brand'
-  if (row.isCorrect) return 'border-success-border bg-success-bg text-success-fg'
-  return 'border-danger-border bg-danger-bg text-danger-fg'
-}
-
 function exit() {
   const from = String(route.query.from || '')
   router.push(from.startsWith('/') && !from.startsWith('//') ? from : '/')
@@ -622,27 +616,10 @@ onUnmounted(() => {
 
 <template>
   <div class="min-h-screen text-fg-primary">
-    <header class="sticky top-0 z-30 border-b border-line-subtle bg-surface-glass backdrop-blur">
-      <div class="mx-auto flex max-w-3xl items-center gap-2 px-3 py-2 sm:px-4">
-        <button type="button" class="shrink-0 rounded-lg px-2 py-1.5 text-sm text-slate-500 hover:bg-slate-100 hover:text-slate-800"
-                @click="exit">← 退出</button>
-        <div class="min-w-0 flex-1">
-          <div class="flex items-center justify-between gap-2 text-xs text-slate-500">
-            <span class="truncate">{{ modeLabel }}</span>
-            <span class="shrink-0 tabular-nums">{{ question ? currentOrder : 0 }} / {{ total || '—' }}</span>
-          </div>
-          <div class="mt-1 h-1 overflow-hidden rounded-full bg-slate-100">
-            <div class="h-full rounded-full bg-blue-600 transition-all" :style="{ width: `${progressPercent}%` }" />
-          </div>
-        </div>
-        <UiThemeToggle class="shrink-0" />
-        <span v-if="remain >= 0" class="shrink-0 rounded-lg bg-surface-muted px-2 py-1 text-xs font-medium tabular-nums"
-              :class="remain < 300 ? 'text-danger-fg' : 'text-fg-secondary'">⏱ {{ remainText }}</span>
-        <button v-if="!guest && question" type="button"
-                class="min-h-11 shrink-0 rounded-lg border border-line-subtle px-2.5 py-1.5 text-xs text-fg-secondary hover:border-brand hover:text-brand"
-                @click="openSheet">答题卡</button>
-      </div>
-    </header>
+    <PracticeHeader :mode-label="modeLabel" :current-order="currentOrder" :total="total"
+                    :progress-percent="progressPercent" :remain="remain" :remain-text="remainText"
+                    :guest="guest" :has-question="Boolean(question)"
+                    @exit="exit" @open-sheet="openSheet" />
 
     <main class="mx-auto max-w-3xl px-3 pb-28 pt-4 sm:px-4">
       <p v-if="error" class="mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{{ error }}</p>
@@ -654,30 +631,7 @@ onUnmounted(() => {
         后可记录错题与学习报告。
       </div>
 
-      <template v-if="finished">
-        <div class="rounded-2xl border border-slate-200 bg-white p-6 text-center shadow-sm">
-          <p class="text-lg font-semibold text-slate-900">练习完成</p>
-          <template v-if="finished.guest">
-            <p class="mt-2 text-sm text-slate-500">游客模式未记录本次成绩</p>
-            <NuxtLink :to="{ path: '/login', query: { redirect: route.fullPath } }"
-                      class="mt-4 inline-block rounded-lg bg-blue-600 px-5 py-2 text-sm text-white">登录后正式练习</NuxtLink>
-          </template>
-          <template v-else>
-            <p class="mt-2 text-3xl font-bold text-blue-600 tabular-nums">{{ finished.score }} / {{ finished.total_score }}</p>
-            <p class="mt-1 text-sm text-slate-500">共 {{ finished.question_count }} 题，答对 {{ finished.correct_count }} 题</p>
-            <p v-if="finished.paperScore != null"
-               class="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-              可练满分 {{ finished.total_score }} 分；原卷 {{ finished.paperScore }} 分，
-              {{ Math.max(0, (finished.paperQuestionCount ?? finished.question_count) - finished.question_count) }} 题暂不可练、不计入总分。
-            </p>
-            <div class="mt-5 flex flex-wrap justify-center gap-2">
-              <NuxtLink to="/history" class="rounded-lg border border-slate-300 px-4 py-2 text-sm">查看记录</NuxtLink>
-              <NuxtLink to="/wrong" class="rounded-lg border border-slate-300 px-4 py-2 text-sm">复习错题</NuxtLink>
-              <button type="button" class="rounded-lg bg-blue-600 px-4 py-2 text-sm text-white" @click="exit">返回</button>
-            </div>
-          </template>
-        </div>
-      </template>
+      <PracticeResult v-if="finished" :finished="finished" @exit="exit" />
 
       <template v-else-if="question">
         <article class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
@@ -818,81 +772,12 @@ onUnmounted(() => {
       </div>
     </div>
 
-    <UiModal v-model="sheetOpen" title="答题卡" size="lg">
-      <div class="space-y-4">
-        <div class="rounded-xl border border-line-subtle bg-surface-card p-3">
-          <div class="flex items-baseline justify-between gap-2">
-            <span class="text-sm font-semibold text-fg-primary">已答 {{ sheet.answered }} / {{ sheet.total }}</span>
-            <span class="text-xs text-fg-muted">未答 {{ sheet.remaining }}</span>
-          </div>
-          <div class="mt-2 h-2 overflow-hidden rounded-full bg-surface-muted">
-            <div class="h-full rounded-full bg-brand transition-all" :style="{ width: `${sheetPct}%` }" />
-          </div>
-          <div class="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-fg-secondary">
-            <span class="text-fg-muted">题型分布</span>
-            <span v-for="(g, idx) in sheetGroups" :key="`summary-${g.type}`" class="inline-flex items-center gap-2">
-              <span v-if="idx > 0" class="text-fg-muted">·</span>
-              <span>{{ TYPE_LABEL[g.type] ?? '题目' }} {{ g.total }}</span>
-            </span>
-          </div>
-          <div class="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs">
-            <span class="inline-flex items-center gap-1.5 text-success-fg">
-              <span class="h-2.5 w-2.5 rounded-sm bg-success-fg" />答对 {{ sheetCorrect }}
-            </span>
-            <span class="inline-flex items-center gap-1.5 text-danger-fg">
-              <span class="h-2.5 w-2.5 rounded-sm bg-danger-fg" />答错 {{ sheetWrong }}
-            </span>
-            <span class="inline-flex items-center gap-1.5 text-fg-muted">
-              <span class="h-2.5 w-2.5 rounded-sm border border-line-strong bg-surface-card" />未答 {{ sheet.remaining }}
-            </span>
-            <span class="inline-flex items-center gap-1.5 text-brand">
-              <span class="h-2.5 w-2.5 rounded-sm bg-brand" />当前
-            </span>
-          </div>
-        </div>
+    <PracticeSheet v-model="sheetOpen" :sheet="sheet" :groups="sheetGroups" :pct="sheetPct"
+                   :correct="sheetCorrect" :wrong="sheetWrong" :current-order="currentOrder"
+                   :submitting="submitting" @jump="jumpTo" @finish="requestFinish" />
 
-        <section v-for="g in sheetGroups" :key="`group-${g.type}`" class="space-y-2">
-          <div class="flex items-center justify-between gap-2">
-            <div class="flex items-center gap-2">
-              <UiBadge :tone="TYPE_TONE[g.type] ?? 'slate'">{{ TYPE_LABEL[g.type] ?? '题目' }}</UiBadge>
-              <span class="text-xs tabular-nums text-fg-muted">{{ g.answered }}/{{ g.total }}</span>
-            </div>
-            <span class="text-xs tabular-nums text-fg-muted">
-              第 {{ g.rows[0].itemOrder }}–{{ g.rows[g.rows.length - 1].itemOrder }} 题
-            </span>
-          </div>
-          <div class="grid grid-cols-6 gap-2 sm:grid-cols-10">
-            <button v-for="row in g.rows" :key="row.itemOrder" type="button"
-                    class="aspect-square rounded-lg border text-sm font-semibold tabular-nums transition-colors"
-                    :class="sheetClass(row)"
-                    :aria-label="`第 ${row.itemOrder} 题，${TYPE_LABEL[row.questionType] ?? '题目'}，${row.answered ? (row.isCorrect ? '答对' : '答错') : '未答'}`"
-                    :title="`第 ${row.itemOrder} 题 · ${TYPE_LABEL[row.questionType] ?? '题目'} · ${row.answered ? (row.isCorrect ? '答对' : '答错') : '未答'}`"
-                    @click="jumpTo(row.itemOrder)">{{ row.itemOrder }}</button>
-          </div>
-        </section>
-      </div>
-      <template #footer>
-        <UiButton variant="primary" class="w-full" :disabled="submitting" @click="requestFinish">
-          交卷（{{ sheet.remaining }} 题未答）
-        </UiButton>
-      </template>
-    </UiModal>
-
-    <UiModal v-model="finishOpen" title="确认交卷" size="sm">
-      <p class="text-sm leading-6 text-slate-600">
-        <template v-if="finishInfo.unanswered">还有 <b class="text-red-600">{{ finishInfo.unanswered }}</b> 题未答，未答题按 0 分计入总分。</template>
-        <template v-else>所有题目都已作答，确认交卷？</template>
-      </p>
-      <template #footer>
-        <div class="flex flex-wrap justify-end gap-2">
-          <UiButton variant="secondary" @click="finishOpen = false">继续答题</UiButton>
-          <UiButton v-if="finishInfo.unanswered" variant="secondary" @click="goFirstUnanswered">
-            去第 {{ finishInfo.firstUnanswered }} 题
-          </UiButton>
-          <UiButton variant="danger" :loading="submitting" @click="finishSession">确认交卷</UiButton>
-        </div>
-      </template>
-    </UiModal>
+    <PracticeFinishModal v-model="finishOpen" :info="finishInfo" :submitting="submitting"
+                         @go-first="goFirstUnanswered" @finish="finishSession" />
 
     <UiModal v-model="helpOpen" title="键盘快捷键" size="sm">
       <dl class="space-y-2 text-sm text-slate-600">
