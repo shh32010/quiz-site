@@ -3,6 +3,8 @@
  * 题目图片放大查看器：多图切换、Esc 关闭、方向键翻页、+/- 缩放。
  * 只负责展示，不修改题目数据；打开时锁页面滚动并管理焦点。
  */
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
+
 const props = withDefaults(defineProps<{
   modelValue: boolean
   images: string[]

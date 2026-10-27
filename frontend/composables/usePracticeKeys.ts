@@ -2,6 +2,8 @@
  * 刷题页键盘操作。输入框/文本域内不抢按键；
  * 文本域只响应 Ctrl/Cmd+Enter 提交。
  */
+import { onMounted, onUnmounted } from 'vue'
+
 export interface PracticeKeyHandlers {
   isEnabled: () => boolean
   onSelect: (key: string) => void
