@@ -50,10 +50,11 @@ describe('usePracticeKeys', () => {
     expect(ctx.handlers.onSubmit).not.toHaveBeenCalled()
   })
 
-  it('文本域普通 Enter 不提交，Ctrl+Enter 提交', () => {
+  it('主作答文本域普通 Enter 不提交，Ctrl+Enter 提交', () => {
     const ctx = setup()
     wrapper = ctx.wrapper
     const textarea = document.createElement('textarea')
+    textarea.setAttribute('data-practice-answer', 'true')
     document.body.appendChild(textarea)
 
     keydown(textarea, { key: 'Enter' })
@@ -63,5 +64,29 @@ describe('usePracticeKeys', () => {
     expect(ctx.handlers.onSubmit).toHaveBeenCalledTimes(1)
 
     textarea.remove()
+  })
+
+  it('反馈等附属文本域的 Ctrl+Enter 不会提交本题', () => {
+    const ctx = setup()
+    wrapper = ctx.wrapper
+    const textarea = document.createElement('textarea')
+    document.body.appendChild(textarea)
+
+    keydown(textarea, { key: 'Enter', ctrlKey: true })
+    expect(ctx.handlers.onSubmit).not.toHaveBeenCalled()
+
+    textarea.remove()
+  })
+
+  it('按钮上的 Enter 交给原生点击，不提交本题', () => {
+    const ctx = setup()
+    wrapper = ctx.wrapper
+    const button = document.createElement('button')
+    document.body.appendChild(button)
+
+    keydown(button, { key: 'Enter' })
+    expect(ctx.handlers.onSubmit).not.toHaveBeenCalled()
+
+    button.remove()
   })
 })

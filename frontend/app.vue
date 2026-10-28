@@ -46,4 +46,5 @@ onUnmounted(() => auth.unbindAuthExpired())
   </NuxtLayout>
   <UiConfirmHost />
   <UiToastHost />
+  <AnnouncementModal />
 </template>

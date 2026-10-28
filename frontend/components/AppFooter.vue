@@ -1,6 +1,7 @@
 <script setup lang="ts">
-// 全站页脚：备案信息、隐私政策、用户协议
+// 全站页脚：备案信息、隐私政策、用户协议、站内公告
 const year = useState('footer-year', () => new Date().getFullYear())
+const { show: showAnnouncement } = useAnnouncement()
 </script>
 
 <template>
@@ -12,6 +13,7 @@ const year = useState('footer-year', () => new Date().getFullYear())
       </a>
       <NuxtLink to="/privacy" class="hover:text-brand">隐私政策</NuxtLink>
       <NuxtLink to="/terms" class="hover:text-brand">用户协议</NuxtLink>
+      <button type="button" class="hover:text-brand" @click="showAnnouncement">站内公告</button>
     </p>
   </footer>
 </template>

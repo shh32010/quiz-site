@@ -25,7 +25,7 @@ const links = [
 </script>
 
 <template>
-  <section class="space-y-5">
+  <section class="space-y-5 pb-16">
     <UiCard padded="lg">
       <template v-if="user">
         <p class="text-xl font-bold text-fg-primary">{{ user.nickname || user.username }}</p>
@@ -51,9 +51,9 @@ const links = [
 
     <div class="grid gap-3 sm:grid-cols-2">
       <NuxtLink v-for="l in links" :key="l.to" :to="l.to"
-                class="rounded-xl border border-slate-200 bg-white p-4 transition hover:border-blue-400 hover:shadow-sm">
-        <p class="font-medium text-slate-900">{{ l.title }}</p>
-        <p class="mt-1 text-sm text-slate-500">{{ l.desc }}</p>
+                class="rounded-xl border border-line-subtle bg-surface-card p-4 transition hover:border-brand hover:shadow-sm">
+        <p class="font-medium text-fg-primary">{{ l.title }}</p>
+        <p class="mt-1 text-sm text-fg-secondary">{{ l.desc }}</p>
       </NuxtLink>
       <NuxtLink v-if="user?.role === 'admin'" to="/admin"
                 class="rounded-xl border border-amber-200 bg-amber-50 p-4 transition hover:border-amber-400">
@@ -62,7 +62,17 @@ const links = [
       </NuxtLink>
     </div>
 
-    <button type="button" class="w-full rounded-xl border border-red-200 bg-white py-3 text-sm text-red-600 hover:bg-red-50"
+    <div class="flex items-center gap-3 rounded-2xl border border-line-subtle bg-surface-card py-3.5 pl-4 pr-16 sm:pr-4">
+      <span class="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-brand-soft text-lg text-brand">💬</span>
+      <div class="min-w-0 flex-1">
+        <p class="text-sm font-medium text-fg-primary">有话想对作者说？</p>
+        <p class="mt-0.5 text-xs leading-5 text-fg-muted">点右下角「联系作者」，纠错、建议和使用问题都可以直接提。</p>
+      </div>
+    </div>
+
+    <button type="button" class="w-full rounded-xl border border-danger-border bg-surface-card py-3 text-sm text-danger-fg hover:bg-danger-bg"
             @click="auth.logout()">退出登录</button>
+
+    <FloatingFeedback />
   </section>
 </template>

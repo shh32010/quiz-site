@@ -36,7 +36,6 @@ const relatedKps = ref<any[]>([])
 const answerBox = ref<HTMLTextAreaElement | null>(null)
 const ai = ref<{ loading: boolean; content: string; err: string }>({ loading: false, content: '', err: '' })
 const variant = ref<{ loading: boolean; content: string; err: string }>({ loading: false, content: '', err: '' })
-const fb = ref({ type: 'other', content: '', msg: '' })
 
 const remain = ref(-1)
 let timer: ReturnType<typeof setInterval> | null = null
@@ -152,7 +151,6 @@ function resetAnswer() {
   clearAdvance()
   ai.value = { loading: false, content: '', err: '' }
   variant.value = { loading: false, content: '', err: '' }
-  fb.value = { type: 'other', content: '', msg: '' }
 }
 
 function applyQuestion(q: any, forceUnanswered = false) {
@@ -567,15 +565,6 @@ async function askVariant() {
   }
 }
 
-async function sendFeedback() {
-  if (guest.value) { fb.value.msg = '登录后可提交反馈'; return }
-  if (!fb.value.content.trim()) { fb.value.msg = '请填写问题描述'; return }
-  try {
-    await api.post('/api/feedback', { questionId: question.value.id, type: fb.value.type, content: fb.value.content })
-    fb.value = { type: 'other', content: '', msg: '✓ 已提交，谢谢反馈' }
-  } catch (e: any) { fb.value.msg = e.message }
-}
-
 async function loadRelated(id: number) {
   try {
     const kps = await api.get<any[]>(`/api/questions/${id}/knowledge`)
@@ -666,6 +655,8 @@ onUnmounted(() => {
             <p class="text-xs text-fg-muted">点击图片放大</p>
           </div>
 
+          <QuestionFeedback class="mt-3" :question-id="question.id" :guest="guest" />
+
           <div v-if="relatedKps.length" class="mt-3 flex flex-wrap items-center gap-1.5">
             <span class="text-xs text-slate-400">相关知识点：</span>
             <NuxtLink v-for="k in relatedKps" :key="k.id" :to="`/knowledge?kp=${k.id}`"
@@ -698,6 +689,7 @@ onUnmounted(() => {
 
           <div v-else class="mt-5">
             <textarea ref="answerBox" v-model="fill" :disabled="Boolean(feedback)"
+                      data-practice-answer="true"
                       :rows="question.questionType === 5 ? 5 : 3"
                       placeholder="多空用中文分号「；」分隔；程序题可直接按行输入"
                       class="w-full rounded-xl border border-line-strong bg-surface-card px-3 py-2.5 text-base outline-none focus:border-brand sm:text-sm" />
@@ -707,60 +699,10 @@ onUnmounted(() => {
             单选/判断点击选项即判分；多选、填空、综合按 Enter 或 Ctrl+Enter 提交；← → 可切题
           </p>
 
-          <div v-if="feedback" class="mt-5 rounded-xl border border-l-4 border-line-subtle bg-surface-muted p-4 text-sm"
-               :style="{ borderLeftColor: feedback.is_correct ? 'rgb(var(--success-fg))' : 'rgb(var(--danger-fg))' }">
-            <div class="flex flex-wrap items-center justify-between gap-2">
-              <p class="font-semibold" :class="feedback.is_correct ? 'text-green-700' : 'text-red-700'">
-                {{ feedback.is_correct ? '✓ 回答正确' : '✗ 回答错误' }}
-                <span class="ml-1 font-normal">得分 {{ feedback.score_got }} / {{ feedback.max_score }}</span>
-              </p>
-              <span v-if="advancePending" class="text-xs text-green-600">即将进入下一题…</span>
-            </div>
-            <p v-if="review" class="mt-2 whitespace-pre-wrap text-slate-700"><b>正确答案：</b>{{ formatText(review.correct) }}</p>
-            <p v-if="review?.qcGrade === 'error'"
-               class="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-              本题解析可能不准确，建议结合 AI 讲解或提交报错。
-            </p>
-            <p v-if="review?.analysis" class="mt-1 whitespace-pre-wrap leading-6 text-slate-600">
-              <b>解析：</b>{{ formatText(review.analysis) }}
-            </p>
-            <div class="mt-3 flex flex-wrap items-center gap-2">
-              <button type="button" class="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs text-slate-600"
-                      @click="askAi(false)">AI 讲解</button>
-              <button type="button" class="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs text-slate-600"
-                      @click="askAi(true)">引导思考</button>
-              <button type="button" class="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs text-slate-600"
-                      @click="askVariant">举一反三</button>
-              <button type="button" class="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs text-slate-600"
-                      @click="toggleFav">{{ favorited ? '★ 已收藏' : '☆ 收藏' }}</button>
-            </div>
-
-            <div v-if="variant.loading" class="mt-3 text-xs text-slate-500">正在生成变式题…</div>
-            <div v-if="variant.err" class="mt-3 text-xs text-red-600">{{ variant.err }}</div>
-            <div v-if="variant.content" class="mt-3 whitespace-pre-wrap rounded-lg bg-white/80 p-3 text-sm text-slate-700">
-              <b>同考点变式题：</b>{{ variant.content }}
-            </div>
-            <div v-if="ai.loading" class="mt-3 text-xs text-slate-500">AI 思考中…</div>
-            <div v-if="ai.err" class="mt-3 text-xs text-red-600">{{ ai.err }}</div>
-            <div v-if="ai.content" class="mt-3 whitespace-pre-wrap rounded-lg bg-white/80 p-3 text-sm text-slate-700">{{ ai.content }}</div>
-
-            <details class="mt-3 text-xs">
-              <summary class="cursor-pointer text-slate-500">题目有误？点此反馈</summary>
-              <div class="mt-2 space-y-2">
-                <select v-model="fb.type" class="rounded border border-slate-300 px-2 py-1">
-                  <option value="answer">答案错误</option>
-                  <option value="stem">题干错误</option>
-                  <option value="option">选项错误</option>
-                  <option value="image">图片问题</option>
-                  <option value="other">其他</option>
-                </select>
-                <textarea v-model="fb.content" rows="2" placeholder="请描述问题"
-                          class="w-full rounded border border-slate-300 px-2 py-1" />
-                <button type="button" class="rounded bg-slate-700 px-3 py-1 text-white" @click="sendFeedback">提交反馈</button>
-                <span v-if="fb.msg" class="ml-2 text-slate-600">{{ fb.msg }}</span>
-              </div>
-            </details>
-          </div>
+          <PracticeFeedbackCard v-if="feedback" :feedback="feedback" :review="review"
+                                :advance-pending="advancePending" :ai="ai" :variant="variant"
+                                :favorited="favorited"
+                                @ask-ai="askAi" @ask-variant="askVariant" @toggle-fav="toggleFav" />
         </article>
       </template>
 
