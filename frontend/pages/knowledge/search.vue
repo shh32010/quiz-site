@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // 知识点搜索：标题/内容关键词，结果跳到所在节锚点
-import { plainSnippet } from '~/utils/markdown'
+import { highlightText, plainSnippet } from '~/utils/markdown'
 
 useHead({ title: '搜索知识点' })
 
@@ -18,6 +18,23 @@ const { data, pending, error } = await useFetch<any>('/api/knowledge/search', {
 })
 
 const totalPages = computed(() => Math.max(1, Math.ceil((data.value?.total ?? 0) / size)))
+
+/** 结果按节分组，长结果更容易扫读 */
+const groups = computed(() => {
+  const map = new Map<string, { key: string; label: string; rows: any[] }>()
+  for (const row of data.value?.rows ?? []) {
+    const key = row.nodeCode ?? 'other'
+    if (!map.has(key)) {
+      map.set(key, {
+        key,
+        label: [row.nodeCode, row.nodeName].filter(Boolean).join(' ') || '其他知识点',
+        rows: [],
+      })
+    }
+    map.get(key)!.rows.push(row)
+  }
+  return [...map.values()]
+})
 
 function search() {
   router.push({ path: '/knowledge/search', query: input.value.trim() ? { q: input.value.trim() } : {} })
@@ -54,22 +71,29 @@ function search() {
 
     <template v-else-if="data">
       <p class="text-xs text-fg-muted">共 {{ data.total }} 条结果</p>
-      <ul v-if="data.rows.length" class="divide-y divide-line-subtle overflow-hidden rounded-xl border border-line-subtle bg-surface-card">
-        <li v-for="row in data.rows" :key="row.id">
-          <NuxtLink :to="`/knowledge/kp/${row.id}`"
-                    class="block px-4 py-3 hover:bg-surface-muted">
-            <div class="flex flex-wrap items-center gap-2">
-              <span v-if="row.nodeCode" class="rounded bg-surface-muted px-1.5 py-0.5 font-mono text-xs text-fg-muted">{{ row.nodeCode }}</span>
-              <span class="text-sm font-medium text-fg-primary">{{ row.title }}</span>
-              <span v-if="row.nodeName" class="truncate text-xs text-fg-muted">{{ row.nodeName }}</span>
-            </div>
-            <p class="mt-1 line-clamp-2 text-xs leading-5 text-fg-secondary">{{ plainSnippet(row.content) }}</p>
-            <p class="mt-1 text-xs text-fg-muted">
-              {{ row.section || '知识点' }} · {{ row.questionCount ?? 0 }} 道关联题
-            </p>
-          </NuxtLink>
-        </li>
-      </ul>
+      <div v-if="data.rows.length" class="space-y-4">
+        <section v-for="group in groups" :key="group.key" class="overflow-hidden rounded-xl border border-line-subtle bg-surface-card">
+          <div class="flex items-center justify-between border-b border-line-subtle bg-surface-muted/60 px-4 py-2">
+            <span class="truncate text-xs font-medium text-fg-secondary">{{ group.label }}</span>
+            <span class="text-xs text-fg-muted">{{ group.rows.length }} 条</span>
+          </div>
+          <ul class="divide-y divide-line-subtle">
+            <li v-for="row in group.rows" :key="row.id">
+              <NuxtLink :to="`/knowledge/kp/${row.id}`" class="block px-4 py-3 hover:bg-surface-muted">
+                <div class="flex flex-wrap items-center gap-2">
+                  <span v-if="row.nodeCode" class="rounded bg-surface-muted px-1.5 py-0.5 font-mono text-xs text-fg-muted">{{ row.nodeCode }}</span>
+                  <span class="text-sm font-medium text-fg-primary" v-html="highlightText(row.title, q)"></span>
+                  <span v-if="row.nodeName" class="truncate text-xs text-fg-muted">{{ row.nodeName }}</span>
+                </div>
+                <p class="mt-1 line-clamp-2 text-xs leading-5 text-fg-secondary" v-html="highlightText(plainSnippet(row.content), q)"></p>
+                <p class="mt-1 text-xs text-fg-muted">
+                  {{ row.section || '知识点' }} · {{ row.questionCount ?? 0 }} 道关联题
+                </p>
+              </NuxtLink>
+            </li>
+          </ul>
+        </section>
+      </div>
       <p v-else class="rounded-xl border border-line-subtle bg-surface-card px-5 py-8 text-center text-sm text-fg-secondary">
         没有找到相关知识点。试试更短的关键词，或
         <NuxtLink :to="{ path: '/search', query: { q } }" class="text-brand hover:underline">搜索题目</NuxtLink>。

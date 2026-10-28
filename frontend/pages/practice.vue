@@ -510,6 +510,12 @@ function jumpTo(order: number) {
 }
 
 function exit() {
+  // 从知识点阅读器进入时，练完回到原节/原知识点锚点
+  const returnTo = String(route.query.return || '')
+  if (returnTo.startsWith('/knowledge/section/')) {
+    router.push(returnTo)
+    return
+  }
   const from = String(route.query.from || '')
   router.push(from.startsWith('/') && !from.startsWith('//') ? from : '/')
 }

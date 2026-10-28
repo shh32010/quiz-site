@@ -21,6 +21,26 @@ const chapters = computed(() => roots.value.map(root => {
   }
 }))
 const total = computed(() => roots.value.reduce((sum, node) => sum + node.kpCount, 0))
+
+const learned = ref<number[]>([])
+const progressMap = ref<Record<string, number>>({})
+
+onMounted(() => {
+  try {
+    const rawLearned = JSON.parse(localStorage.getItem('quiz_learned') ?? '[]')
+    if (Array.isArray(rawLearned)) learned.value = rawLearned.map(Number).filter(Number.isFinite)
+    const rawProgress = JSON.parse(localStorage.getItem('quiz_reader_progress') ?? '{}')
+    if (rawProgress && typeof rawProgress === 'object') progressMap.value = rawProgress
+  } catch { /* 忽略 */ }
+})
+
+function isLearned(sectionId: number) {
+  return learned.value.includes(sectionId)
+}
+
+function progressOf(sectionId: number) {
+  return Number(progressMap.value[String(sectionId)] ?? 0)
+}
 </script>
 
 <template>
@@ -64,7 +84,11 @@ const total = computed(() => roots.value.reduce((sum, node) => sum + node.kpCoun
                 <span class="w-16 shrink-0 font-mono text-xs text-fg-muted">{{ section.code?.split('-').pop() ?? section.code }}</span>
                 <span class="truncate text-sm text-fg-secondary">{{ section.name }}</span>
               </span>
-              <span class="shrink-0 text-xs text-fg-muted">{{ section.kpCount }} 条 ›</span>
+              <span class="flex shrink-0 items-center gap-2 text-xs">
+                <span v-if="isLearned(section.id)" class="text-success-fg">已学</span>
+                <span v-else-if="progressOf(section.id) > 0" class="text-fg-muted">已读 {{ progressOf(section.id) }}%</span>
+                <span class="text-fg-muted">{{ section.kpCount }} 条 ›</span>
+              </span>
             </NuxtLink>
           </li>
         </ul>

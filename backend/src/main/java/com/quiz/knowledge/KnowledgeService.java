@@ -179,7 +179,36 @@ public class KnowledgeService {
                  limit ? offset ?
                 """, id, safeSize, offset);
 
-        return Map.of("section", sectionRows.get(0), "kps", kps,
+        // 当前分片每个知识点最多 2 道自测题，供阅读页内嵌预览
+        List<Map<String, Object>> questions = jdbc.queryForList("""
+                with recursive sub as (
+                  select id from t_chapter where id = ?
+                  union all
+                  select ch.id from t_chapter ch join sub s on ch.parent_id = s.id
+                )
+                select k.id as "kpId",
+                       q.id, q.question_type as "questionType", q.stem, q.score
+                  from t_knowledge_point k
+                  join lateral (
+                    select q.id, q.question_type, q.stem, q.score
+                      from t_question_kp x
+                      join t_question q on q.id = x.question_id
+                     where x.kp_id = k.id and not q.deleted and q.review_status = 'ok'
+                     order by case x.confidence when '高' then 0 when '中' then 1 else 2 end, q.id
+                     limit 2
+                  ) q on true
+                 where not k.deleted
+                   and k.node_id in (select id from sub)
+                   and k.id in (
+                     select k2.id from t_knowledge_point k2
+                      where not k2.deleted and k2.node_id in (select id from sub)
+                      order by k2.item_order nulls last, k2.id
+                      limit ? offset ?
+                   )
+                 order by k.id, q.id
+                """, id, safeSize, offset);
+
+        return Map.of("section", sectionRows.get(0), "kps", kps, "questions", questions,
                 "total", total == null ? 0 : total, "page", safePage, "size", safeSize);
     }
 

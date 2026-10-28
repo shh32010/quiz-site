@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // 节阅读器：一节内连续阅读全部知识点，支持锚点、上一节/下一节
-import { ALL_COURSES } from '~/utils/constants'
-import { renderMarkdown } from '~/utils/markdown'
+import { ALL_COURSES, TYPE_LABEL } from '~/utils/constants'
+import { plainSnippet, renderMarkdown } from '~/utils/markdown'
 import { courseOf, flattenSections, type KNode, type SectionRef } from '~/utils/knowledge'
 
 definePageMeta({ layout: 'immersive' })
@@ -12,6 +12,13 @@ const part = computed(() => Math.max(1, Number(route.query.part) || 1))
 const size = 60
 const tocOpen = ref(false)
 const progress = ref(0)
+const readerFont = ref(17)
+const fontOptions = [15, 17, 19]
+const learnedSections = ref<number[]>([])
+const activeKp = ref<number | null>(null)
+const learned = computed(() => learnedSections.value.includes(id.value))
+let spy: IntersectionObserver | null = null
+let lastProgressSave = 0
 
 const { data: tree } = await useFetch<KNode[]>('/api/knowledge/tree')
 const { data: payload, error: loadError } = await useFetch<any>(() => `/api/knowledge/section/${id.value}`, {
@@ -20,6 +27,15 @@ const { data: payload, error: loadError } = await useFetch<any>(() => `/api/know
 
 const section = computed<any>(() => payload.value?.section ?? null)
 const kps = computed<any[]>(() => payload.value?.kps ?? [])
+const questionsByKp = computed(() => {
+  const map = new Map<number, any[]>()
+  for (const question of payload.value?.questions ?? []) {
+    const kpId = Number(question.kpId)
+    if (!map.has(kpId)) map.set(kpId, [])
+    map.get(kpId)!.push(question)
+  }
+  return map
+})
 const total = computed(() => payload.value?.total ?? 0)
 const totalPages = computed(() => Math.max(1, Math.ceil(total.value / size)))
 const flat = computed(() => flattenSections(tree.value ?? []))
@@ -58,22 +74,97 @@ function partLink(target: number) {
   }
 }
 
+function readerPath(kpId?: number) {
+  return `/knowledge/section/${id.value}${part.value > 1 ? `?part=${part.value}` : ''}${kpId ? `#kp-${kpId}` : ''}`
+}
+
+function practiceReturn(kpId?: number) {
+  return `/practice?mode=${kpId ? 'kp' : 'chapter'}&target=${kpId ?? id.value}&return=${encodeURIComponent(readerPath(kpId))}`
+}
+
+function questionReturn(questionId: number, kpId: number) {
+  return `/practice?mode=single&target=${questionId}&return=${encodeURIComponent(readerPath(kpId))}`
+}
+
+function setFont(size: number) {
+  readerFont.value = size
+  try { localStorage.setItem('quiz_reader_font', String(size)) } catch { /* 忽略 */ }
+}
+
+function cycleFont() {
+  const index = fontOptions.indexOf(readerFont.value)
+  setFont(fontOptions[(index + 1) % fontOptions.length] ?? fontOptions[0]!)
+}
+
+function isLearned(sectionId: number) {
+  return learnedSections.value.includes(sectionId)
+}
+
+function toggleLearned() {
+  const set = new Set(learnedSections.value)
+  if (set.has(id.value)) set.delete(id.value)
+  else set.add(id.value)
+  learnedSections.value = [...set]
+  try { localStorage.setItem('quiz_learned', JSON.stringify(learnedSections.value)) } catch { /* 忽略 */ }
+}
+
+function loadPreferences() {
+  try {
+    const font = Number(localStorage.getItem('quiz_reader_font'))
+    if (fontOptions.includes(font)) readerFont.value = font
+    const raw = JSON.parse(localStorage.getItem('quiz_learned') ?? '[]')
+    if (Array.isArray(raw)) learnedSections.value = raw.map(Number).filter(Number.isFinite)
+  } catch { /* 忽略 */ }
+}
+
+function setupSpy() {
+  if (typeof window === 'undefined') return
+  spy?.disconnect()
+  const elements = [...document.querySelectorAll<HTMLElement>('section[id^="kp-"]')]
+  if (!elements.length) return
+  activeKp.value = Number(elements[0]!.id.slice(3)) || null
+  spy = new IntersectionObserver((entries) => {
+    const visible = entries
+      .filter(entry => entry.isIntersecting)
+      .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)
+    if (visible[0]) activeKp.value = Number(visible[0].target.id.slice(3)) || null
+  }, { rootMargin: '-100px 0px -60% 0px', threshold: [0, 1] })
+  elements.forEach(element => spy!.observe(element))
+}
+
 watch(part, async () => {
   await nextTick()
   if (typeof window !== 'undefined') window.scrollTo({ top: 0 })
 })
+watch(kps, async () => {
+  await nextTick()
+  setupSpy()
+}, { immediate: true })
 
 function onScroll() {
   const el = document.documentElement
   const max = el.scrollHeight - el.clientHeight
   progress.value = max > 0 ? Math.min(100, Math.round((window.scrollY / max) * 100)) : 0
+  if (Date.now() - lastProgressSave > 800) {
+    lastProgressSave = Date.now()
+    try {
+      const raw = JSON.parse(localStorage.getItem('quiz_reader_progress') ?? '{}')
+      const map = raw && typeof raw === 'object' ? raw : {}
+      map[id.value] = progress.value
+      localStorage.setItem('quiz_reader_progress', JSON.stringify(map))
+    } catch { /* 忽略 */ }
+  }
 }
 
 onMounted(() => {
   window.addEventListener('scroll', onScroll, { passive: true })
+  loadPreferences()
   onScroll()
 })
-onUnmounted(() => window.removeEventListener('scroll', onScroll))
+onUnmounted(() => {
+  window.removeEventListener('scroll', onScroll)
+  spy?.disconnect()
+})
 
 watch(section, (value) => {
   if (!value) return
@@ -99,14 +190,19 @@ watch(section, (value) => {
                   aria-label="返回目录">←</NuxtLink>
         <div class="min-w-0 flex-1">
           <p class="truncate text-xs text-fg-muted">{{ courseInfo?.name }} · {{ section?.chapterName }}</p>
-          <p class="truncate text-sm font-semibold text-fg-primary">{{ section?.name ?? '知识点阅读' }}</p>
+          <p class="truncate text-sm font-semibold text-fg-primary">
+            {{ section?.name ?? '知识点阅读' }}
+            <span v-if="learned" class="text-success-fg">· 已学</span>
+          </p>
         </div>
+        <button type="button" class="min-h-11 rounded-lg border border-line-strong px-2 text-xs text-fg-secondary"
+                aria-label="调整字号" @click="cycleFont">Aa {{ readerFont }}</button>
         <button type="button" class="min-h-11 rounded-lg border border-line-strong px-3 text-xs text-fg-secondary"
                 @click="tocOpen = true">目录</button>
       </div>
     </header>
 
-    <div class="mx-auto max-w-6xl px-3 py-5 sm:px-4 lg:grid lg:grid-cols-[240px_minmax(0,1fr)] lg:gap-8">
+    <div class="mx-auto max-w-6xl px-3 pb-24 pt-5 sm:px-4 lg:grid lg:grid-cols-[220px_minmax(0,1fr)] lg:gap-8 lg:pb-5 xl:max-w-7xl xl:grid-cols-[220px_minmax(0,1fr)_180px]">
       <!-- 桌面左侧目录 -->
       <aside class="hidden lg:block">
         <div class="sticky top-20 max-h-[calc(100vh-6rem)] overflow-auto pr-2">
@@ -120,7 +216,7 @@ watch(section, (value) => {
             <NuxtLink v-for="item in chapter.items" :key="item.id" :to="`/knowledge/section/${item.id}`"
                       class="block rounded-lg px-2 py-1.5 text-xs leading-5"
                       :class="item.id === id ? 'bg-brand-soft font-medium text-brand-on-soft' : 'text-fg-secondary hover:bg-surface-muted'">
-              {{ item.name }}
+              <span v-if="isLearned(item.id)" class="mr-1 text-success-fg">●</span>{{ item.name }}
             </NuxtLink>
           </div>
         </div>
@@ -146,9 +242,29 @@ watch(section, (value) => {
               {{ section.code }} · 共 {{ total }} 条知识点
               <span v-if="totalPages > 1">· 第 {{ part }} / {{ totalPages }} 部分</span>
             </p>
+            <div class="mt-3 flex flex-wrap items-center gap-2 text-xs">
+              <button type="button"
+                      class="inline-flex min-h-11 items-center rounded-lg border px-3"
+                      :class="learned ? 'border-success-border bg-success-bg text-success-fg' : 'border-line-strong text-fg-secondary hover:border-brand hover:text-brand'"
+                      @click="toggleLearned">
+                {{ learned ? '✓ 已学' : '标记本节已学' }}
+              </button>
+              <NuxtLink :to="practiceReturn()"
+                        class="inline-flex min-h-11 items-center rounded-lg border border-brand/30 px-3 text-brand hover:bg-brand-soft">
+                练本节题目
+              </NuxtLink>
+              <span class="hidden items-center gap-2 lg:inline-flex">
+                <button v-for="size in fontOptions" :key="size" type="button"
+                        class="inline-flex h-11 w-11 items-center justify-center rounded-lg border"
+                        :class="readerFont === size ? 'border-brand bg-brand-soft text-brand-on-soft' : 'border-line-strong text-fg-secondary'"
+                        :aria-label="`字号 ${size}px`" @click="setFont(size)">
+                  {{ size }}
+                </button>
+              </span>
+            </div>
           </header>
 
-          <article v-if="kps.length" class="mt-2">
+          <article v-if="kps.length" class="mt-2" :style="{ '--reader-fs': `${readerFont}px` }">
             <section v-for="(kp, kpIndex) in kps" :id="`kp-${kp.id}`" :key="kp.id" class="scroll-mt-28 border-b border-line-subtle py-6 last:border-b-0">
               <div class="flex flex-wrap items-start justify-between gap-2">
                 <h2 class="min-w-0 text-lg font-semibold leading-7 text-fg-primary">
@@ -162,8 +278,24 @@ watch(section, (value) => {
               </div>
               <p v-if="kp.section" class="mt-1 text-xs text-fg-muted">{{ kp.section }}</p>
               <div class="reader-content mt-3" v-html="renderMarkdown(kp.content)" />
+
+              <div v-if="questionsByKp.get(kp.id)?.length"
+                   class="mt-3 rounded-lg border border-line-subtle bg-surface-card p-3">
+                <p class="text-xs font-medium text-fg-muted">自测</p>
+                <ul class="mt-1 space-y-1">
+                  <li v-for="q in questionsByKp.get(kp.id)" :key="q.id">
+                    <NuxtLink :to="questionReturn(q.id, kp.id)"
+                              class="flex min-h-9 items-center gap-2 text-xs text-fg-secondary hover:text-brand">
+                      <UiBadge class="shrink-0">{{ TYPE_LABEL[q.questionType] ?? '题目' }}</UiBadge>
+                      <span class="min-w-0 truncate">{{ plainSnippet(q.stem, 70) }}</span>
+                      <span class="shrink-0 text-brand">练 →</span>
+                    </NuxtLink>
+                  </li>
+                </ul>
+              </div>
+
               <div class="mt-3 flex flex-wrap items-center gap-3 text-xs">
-                <NuxtLink v-if="kp.questionCount" :to="`/practice?mode=kp&target=${kp.id}`"
+                <NuxtLink v-if="kp.questionCount" :to="practiceReturn(kp.id)"
                           class="inline-flex min-h-11 items-center rounded-lg border border-brand/30 px-3 text-brand hover:bg-brand-soft">
                   练相关题（{{ kp.questionCount }}）
                 </NuxtLink>
@@ -206,7 +338,39 @@ watch(section, (value) => {
           </nav>
         </template>
       </main>
+
+      <!-- 桌面右侧本部分目录 -->
+      <aside class="hidden xl:block">
+        <div class="sticky top-8 max-h-[calc(100vh-4rem)] overflow-auto pl-2">
+          <p class="mb-2 text-xs font-medium text-fg-muted">本部分目录</p>
+          <a v-for="kp in kps" :key="kp.id" :href="`#kp-${kp.id}`"
+             class="block border-l-2 py-1 pl-2 text-xs leading-5"
+             :class="activeKp === kp.id
+               ? 'border-brand font-medium text-brand'
+               : 'border-line-subtle text-fg-muted hover:text-fg-secondary'">
+            {{ kp.title }}
+          </a>
+          <p v-if="!kps.length" class="text-xs text-fg-muted">暂无知识点</p>
+        </div>
+      </aside>
     </div>
+
+    <!-- 移动端上一节/下一节 -->
+    <nav class="fixed inset-x-0 bottom-0 z-30 border-t border-line-subtle bg-surface-glass backdrop-blur lg:hidden">
+      <div class="mx-auto flex max-w-3xl items-center gap-2 px-3 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
+        <NuxtLink v-if="prev" :to="`/knowledge/section/${prev.id}`"
+                  class="flex min-h-11 items-center rounded-lg border border-line-strong px-3 text-xs text-fg-secondary">
+          ← 上一节
+        </NuxtLink>
+        <span v-else class="w-20" />
+        <span class="flex-1 text-center text-xs tabular-nums text-fg-muted">阅读 {{ progress }}%</span>
+        <NuxtLink v-if="next" :to="`/knowledge/section/${next.id}`"
+                  class="flex min-h-11 items-center rounded-lg border border-line-strong px-3 text-xs text-fg-secondary">
+          下一节 →
+        </NuxtLink>
+        <span v-else class="w-20" />
+      </div>
+    </nav>
 
     <!-- 移动端目录 -->
     <UiModal v-model="tocOpen" title="本节目录" size="lg">
@@ -219,7 +383,7 @@ watch(section, (value) => {
                   class="flex min-h-11 items-center rounded-lg px-2 text-sm"
                   :class="item.id === id ? 'bg-brand-soft font-medium text-brand-on-soft' : 'text-fg-secondary hover:bg-surface-muted'"
                   @click="tocOpen = false">
-          {{ item.name }}
+          <span v-if="isLearned(item.id)" class="mr-1 text-success-fg">●</span>{{ item.name }}
         </NuxtLink>
       </div>
     </UiModal>
@@ -228,13 +392,10 @@ watch(section, (value) => {
 
 <style scoped>
 .reader-content {
-  font-size: 1rem;
+  font-size: var(--reader-fs, 1rem);
   line-height: 1.75;
   color: rgb(var(--fg-secondary));
   overflow-wrap: anywhere;
-}
-@media (min-width: 1024px) {
-  .reader-content { font-size: 1.0625rem; }
 }
 .reader-content :deep(h1),
 .reader-content :deep(h2),
