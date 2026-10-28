@@ -405,7 +405,7 @@ async function primaryAction() {
   await goNext()
 }
 
-function selectOption(rawKey: string) {
+async function selectOption(rawKey: string) {
   if (!question.value || feedback.value || submitting.value) return
   // 数字键 1-9 映射为 A-I，字母键统一大写
   const key = /^[1-9]$/.test(rawKey) ? String.fromCharCode(64 + Number(rawKey)) : rawKey.toUpperCase()
@@ -415,9 +415,11 @@ function selectOption(rawKey: string) {
     multi.value = multi.value.includes(key)
       ? multi.value.filter(k => k !== key)
       : [...multi.value, key]
-  } else {
-    answer.value = key
+    return
   }
+  answer.value = key
+  // 单选/判断：点击选项即判分；答对后由 submit 自动进入下一题
+  await submit()
 }
 
 function optionSelected(key: string) {
@@ -476,7 +478,7 @@ async function submit() {
       advanceTimer = setTimeout(() => {
         advancePending.value = false
         if (question.value?.id === qid) goNext()
-      }, 800)
+      }, 1000)
     }
   } catch (e: any) {
     error.value = e.message ?? '提交失败，请重试'
@@ -627,7 +629,7 @@ onUnmounted(() => {
                     :guest="guest" :has-question="Boolean(question)"
                     @exit="exit" @open-sheet="openSheet" />
 
-    <main class="mx-auto max-w-3xl px-3 pb-28 pt-4 sm:px-4">
+    <main class="mx-auto max-w-3xl px-3 pb-28 pt-4 sm:max-w-4xl sm:px-4">
       <p v-if="error" class="mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{{ error }}</p>
       <p v-if="notice" class="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">{{ notice }}</p>
 
@@ -640,19 +642,20 @@ onUnmounted(() => {
       <PracticeResult v-if="finished" :finished="finished" @exit="exit" />
 
       <template v-else-if="question">
-        <article class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
+        <article class="min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
           <div class="flex flex-wrap items-center justify-between gap-2">
             <div class="flex flex-wrap items-center gap-2 text-xs text-slate-500">
               <span class="rounded-full bg-blue-50 px-2 py-0.5 text-blue-700">{{ TYPE_LABEL[question.questionType] ?? '题目' }}</span>
               <span>{{ question.score }} 分</span>
-              <span v-if="question.chapterPath || question.chapterName" class="min-w-0 truncate">
-                {{ question.chapterPath || ((question.chapterCode ? question.chapterCode + ' ' : '') + question.chapterName) }}
-              </span>
             </div>
             <span class="text-xs text-slate-400">第 {{ currentOrder }} 题</span>
           </div>
+          <p v-if="question.chapterPath || question.chapterName"
+             class="mt-1 max-w-full break-words text-xs leading-5 text-slate-500">
+            {{ question.chapterPath || ((question.chapterCode ? question.chapterCode + ' ' : '') + question.chapterName) }}
+          </p>
 
-          <p class="mt-4 whitespace-pre-wrap text-base leading-7 text-slate-900 md:text-[17px]">{{ formatText(question.stem) }}</p>
+          <p class="mt-4 whitespace-pre-wrap break-words text-base leading-7 text-slate-900 md:text-[17px]">{{ formatText(question.stem) }}</p>
           <div v-if="images.length" class="mt-3 space-y-2">
             <button v-for="(src, i) in images" :key="i" type="button"
                     class="block w-fit max-w-full cursor-zoom-in text-left"
@@ -674,7 +677,8 @@ onUnmounted(() => {
             <label v-for="[k, v] in choiceOptions" :key="k"
                    class="flex cursor-pointer items-start gap-2.5 rounded-xl border p-3 text-sm transition-colors"
                    :class="optionClass(k)">
-              <input v-model="answer" type="radio" :value="k" :disabled="Boolean(feedback)" class="mt-1" />
+              <input v-model="answer" type="radio" :value="k" :disabled="Boolean(feedback)"
+                     class="mt-1" @change="selectOption(k)" />
               <span class="min-w-0 flex-1"><b class="mr-1">{{ k }}.</b>{{ v }}</span>
               <span v-if="optionIsCorrect(k)" class="text-green-600">✓</span>
               <span v-else-if="feedback && optionSelected(k)" class="text-red-600">✗</span>
@@ -700,7 +704,7 @@ onUnmounted(() => {
           </div>
 
           <p v-if="!feedback" class="mt-3 text-xs text-slate-400">
-            选择题按 Enter 提交；填空/综合按 Ctrl+Enter 提交；← → 可切题
+            单选/判断点击选项即判分；多选、填空、综合按 Enter 或 Ctrl+Enter 提交；← → 可切题
           </p>
 
           <div v-if="feedback" class="mt-5 rounded-xl border border-l-4 border-line-subtle bg-surface-muted p-4 text-sm"
@@ -765,7 +769,7 @@ onUnmounted(() => {
     </main>
 
     <div v-if="!finished && question" class="fixed inset-x-0 bottom-0 z-30 border-t border-line-subtle bg-surface-glass backdrop-blur">
-      <div class="mx-auto flex max-w-3xl items-center gap-2 px-3 py-2.5 pb-[max(0.625rem,env(safe-area-inset-bottom))] sm:px-4">
+      <div class="mx-auto flex max-w-3xl items-center gap-2 px-3 py-2.5 pb-[max(0.625rem,env(safe-area-inset-bottom))] sm:max-w-4xl sm:px-4">
         <UiButton variant="secondary" size="md" :disabled="currentOrder <= 1 || submitting || navigating" @click="goPrev">
           上一题
         </UiButton>

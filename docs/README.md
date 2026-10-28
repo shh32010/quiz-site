@@ -1,6 +1,6 @@
 # quiz-v2 文档与脚本索引
 
-**最后整理**：2026-10-27
+**最后整理**：2026-10-28
 
 ## 数据库变更 SQL（按需手工执行）
 
@@ -38,6 +38,60 @@
 | `schema_email_verification_20261027.sql` | 邮箱归属验证：`profiles.email_verified`/`pending_email` 与 `email_verification_token`；历史邮箱标记已验证 |
 | `schema_email_claiming_20261027.sql` | 邮箱防抢占：未验证邮箱允许重复，唯一索引只约束已验证邮箱 |
 | `schema_page_view_20261027.sql` | 匿名访问统计：`page_view` 表（路径/匿名访客 ID/来源域名/是否移动端），不存 IP/UA |
+| `knowledge_audit_20261028.sql` | 知识点内容只读审计（重复标题/短正文/HTML/表格），不写库 |
+| `data_write_c_question_text_20261028.sql` | C 语言 S1 题目文本清洗：969 题题干/选项/解析；答案/题型/分值不动，金标题跳过；备份表 `t_question_backup_20261028_c_text` |
+| `data_write_code_question_text_20261028.sql` | 非 S1 代码类题目文本清洗：96 题；备份表 `t_question_backup_20261028_code_text` |
+| `data_write_c_question_spotfix_20261028.sql` | 抽检高置信度修正：8 处题干/选项/解析/题型；备份表 `t_question_backup_20261028_spotfix` |
+| `data_write_knowledge_remaining_20261028.sql` | 最后 326 条零散知识点清洗；备份表 `t_knowledge_point_backup_20261028_remaining` |
+| `data_write_chapter_empty_20261028.sql` | 软删除 15 个空重复根章（13/16/17/25–35/38 中的空节点）；备份表 `t_chapter_backup_20261028_empty` |
+| `data_write_knowledge_40_20261028.sql` | A1-1.1.1 清洗（75 条）；备份表 `t_knowledge_point_backup_20261028_40` |
+| `data_write_knowledge_48_20261028.sql` | A1-1.3.1 清洗（58 条）；备份表 `t_knowledge_point_backup_20261028_48` |
+| `data_write_knowledge_80_20261028.sql` | A2-2.4.1 清洗（67 条）；备份表 `t_knowledge_point_backup_20261028_80` |
+| `data_write_knowledge_98_20261028.sql` | A3-3.2.3 清洗（82 条）；备份表 `t_knowledge_point_backup_20261028_98` |
+| `data_write_knowledge_162_20261028.sql` | B1-1.5.3 清洗（83 条）；备份表 `t_knowledge_point_backup_20261028_162` |
+| `data_write_knowledge_270_20261028.sql` | S2-1 清洗（64 条）；备份表 `t_knowledge_point_backup_20261028_270` |
+| `data_write_knowledge_87_20261028.sql` | A2-2.5.1 清洗（39 条）；备份表 `t_knowledge_point_backup_20261028_87` |
+| `data_write_knowledge_103_20261028.sql` | A3-3.4.1 清洗（66 条）；备份表 `t_knowledge_point_backup_20261028_103` |
+| `data_write_knowledge_105_20261028.sql` | A3-3.4.3 清洗（39 条）；备份表 `t_knowledge_point_backup_20261028_105` |
+| `data_write_knowledge_111_20261028.sql` | A3-3.5.4 清洗（41 条）；备份表 `t_knowledge_point_backup_20261028_111` |
+| `data_write_knowledge_122_20261028.sql` | A4-4.2.2 清洗（30 条）；备份表 `t_knowledge_point_backup_20261028_122` |
+| `data_write_knowledge_125_20261028.sql` | A4-4.2.5 清洗（57 条）；备份表 `t_knowledge_point_backup_20261028_125` |
+| `data_write_knowledge_129_20261028.sql` | A4-4.3.2 清洗（60 条）；备份表 `t_knowledge_point_backup_20261028_129` |
+| `data_write_knowledge_139_20261028.sql` | B1-1.1.1 清洗（61 条）；备份表 `t_knowledge_point_backup_20261028_139` |
+| `data_write_knowledge_140_20261028.sql` | B1-1.1.2 清洗（68 条）；备份表 `t_knowledge_point_backup_20261028_140` |
+| `data_write_knowledge_146_20261028.sql` | B1-1.3 清洗（145 条）；备份表 `t_knowledge_point_backup_20261028_146` |
+| `data_write_knowledge_230_20261028.sql` | B7-7.1.2 清洗（53 条）；备份表 `t_knowledge_point_backup_20261028_230` |
+| `data_write_knowledge_283_20261028.sql` | S2-4 清洗（45 条）；备份表 `t_knowledge_point_backup_20261028_283` |
+| `data_write_knowledge_287_20261028.sql` | S3-1 清洗（44 条）；备份表 `t_knowledge_point_backup_20261028_287` |
+| `data_write_knowledge_311_20261028.sql` | S5-1 清洗（61 条）；备份表 `t_knowledge_point_backup_20261028_311` |
+| `data_write_knowledge_73_20261028.sql` | A2-2.3 清洗（140 条）；备份表 `t_knowledge_point_backup_20261028_73` |
+| `data_write_knowledge_42_20261028.sql` | A1-1.1.3 清洗（81 条）；备份表 `t_knowledge_point_backup_20261028_42` |
+| `data_write_knowledge_43_20261028.sql` | A1-1.1.4 清洗（117 条）；备份表 `t_knowledge_point_backup_20261028_43` |
+| `data_write_knowledge_44_20261028.sql` | A1-1.2 清洗（112 条）；备份表 `t_knowledge_point_backup_20261028_44` |
+| `data_write_knowledge_49_20261028.sql` | A1-1.3.2 清洗（79 条）；备份表 `t_knowledge_point_backup_20261028_49` |
+| `data_write_knowledge_56_20261028.sql` | A1-1.5.1 清洗（74 条）；备份表 `t_knowledge_point_backup_20261028_56` |
+| `data_write_knowledge_100_20261028.sql` | A3-3.3.1 清洗（115 条）；备份表 `t_knowledge_point_backup_20261028_100` |
+| `data_write_knowledge_124_20261028.sql` | A4-4.2.4 清洗（76 条）；备份表 `t_knowledge_point_backup_20261028_124` |
+| `data_write_knowledge_160_20261028.sql` | B1-1.5.1 清洗（77 条）；备份表 `t_knowledge_point_backup_20261028_160` |
+| `data_write_knowledge_272_20261028.sql` | S2-2 清洗（80 条）；备份表 `t_knowledge_point_backup_20261028_272` |
+| `data_write_knowledge_277_20261028.sql` | S2-3 清洗（88 条）；备份表 `t_knowledge_point_backup_20261028_277` |
+| `data_write_knowledge_51_20261028.sql` | A1-1.3.4 清洗（86 条）；备份表 `t_knowledge_point_backup_20261028_51` |
+| `data_write_knowledge_60_20261028.sql` | A1-1.6.2 清洗（53 条）；备份表 `t_knowledge_point_backup_20261028_60` |
+| `data_write_knowledge_61_20261028.sql` | A1-1.7 清洗（249 条，含子节）；备份表 `t_knowledge_point_backup_20261028_61` |
+| `data_write_knowledge_65_20261028.sql` | A2-2.1 清洗（836 条，含子节）；备份表 `t_knowledge_point_backup_20261028_65` |
+| `data_write_knowledge_68_20261028.sql` | A2-2.2 清洗（330 条，含子节）；备份表 `t_knowledge_point_backup_20261028_68` |
+| `data_write_knowledge_92_20261028.sql` | A3-3.1 清洗（260 条，含子节；93 由此覆盖）；备份表 `t_knowledge_point_backup_20261028_92` |
+| `data_write_knowledge_97_20261028.sql` | A3-3.2.2 清洗（102 条）；备份表 `t_knowledge_point_backup_20261028_97` |
+| `data_write_knowledge_104_20261028.sql` | A3-3.4.2 清洗（163 条）；备份表 `t_knowledge_point_backup_20261028_104` |
+| `data_write_knowledge_106_20261028.sql` | A3-3.4.4 清洗（186 条）；备份表 `t_knowledge_point_backup_20261028_106` |
+| `data_write_knowledge_117_20261028.sql` | A4-4.1.2 清洗（54 条）；备份表 `t_knowledge_point_backup_20261028_117` |
+| `data_write_knowledge_238_20261028.sql` | C 语言 S1-1 清洗（82 条，含子节）；备份表 `t_knowledge_point_backup_20261028_238` |
+| `data_write_knowledge_242_20261028.sql` | C 语言 S1-2 清洗（175 条，含子节）；备份表 `t_knowledge_point_backup_20261028_242` |
+| `data_write_knowledge_247_20261028.sql` | 知识点 247 节清洗：49 条标题/正文/段落 + 子节 31875；备份表 `t_knowledge_point_backup_20261028_247` |
+| `data_write_knowledge_250_20261028.sql` | C 语言 S1-4 清洗（38 条，含子节）；备份表 `t_knowledge_point_backup_20261028_250` |
+| `data_write_knowledge_254_20261028.sql` | C 语言 S1-5 清洗（37 条，含子节）；备份表 `t_knowledge_point_backup_20261028_254` |
+| `data_write_knowledge_259_20261028.sql` | C 语言 S1-6 清洗（100 条，含子节）；备份表 `t_knowledge_point_backup_20261028_259` |
+| `data_write_knowledge_264_20261028.sql` | C 语言 S1-7 清洗（96 条，含子节）；备份表 `t_knowledge_point_backup_20261028_264` |
 
 > 新环境按依赖顺序执行；已有库不要重复跑破坏性脚本，先备份 `/opt/quiz-backups/`。
 
@@ -83,4 +137,5 @@
 - `verify_data.py`：题数/知识点/章节一致性核对
 - `final_check.sh`、`test_practice.sh`：部署后冒烟
 - 当前项目结论见 `project/项目状态与待办_20261027.md` 与 `project/项目交接_20261027.md`；待办见 `project/待办_20261027.md`（本机保留，不进 Git）
+- 知识点内容质量见 `project/知识点内容审计_20261028.md`；AI 重建/改动较大的待复核清单见 `project/知识点清洗待复核_20261028.md`
 - 历史状态/交接见 `project/archive/`；过程评审见 `private/delivery-20261026/`（历史参考，不作为当前结论）

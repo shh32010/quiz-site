@@ -54,14 +54,14 @@ onMounted(() => load(1))
 
 <template>
   <section class="space-y-4">
-    <NuxtLink to="/history" class="text-sm text-blue-600 hover:underline">← 返回做题历史</NuxtLink>
+    <NuxtLink to="/history" class="inline-flex min-h-11 items-center text-sm text-blue-600 hover:underline">← 返回做题历史</NuxtLink>
 
     <p v-if="error" class="text-sm text-red-600">{{ error }}</p>
     <p v-if="loading" class="text-sm text-slate-500">加载中…</p>
 
     <template v-if="session">
-      <div class="rounded-xl border border-slate-200 p-5">
-        <h1 class="text-lg font-bold text-slate-900">
+      <div class="rounded-xl border border-slate-200 p-4 sm:p-5">
+        <h1 class="break-words text-lg font-bold text-slate-900">
           {{ MODE_LABEL[session.mode] ?? session.mode }}
           <span v-if="session.targetName" class="text-slate-500">· {{ session.targetName }}</span>
         </h1>
@@ -99,7 +99,7 @@ onMounted(() => load(1))
             <span class="text-slate-400">得分 {{ a.scoreGot }} / {{ a.score }}</span>
           </div>
 
-          <p class="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-800">{{ formatText(a.stem) }}</p>
+          <p class="mt-2 whitespace-pre-wrap break-words text-sm leading-6 text-slate-800">{{ formatText(a.stem) }}</p>
           <div v-if="a.images.length" class="mt-2 flex flex-wrap items-start gap-2">
             <button v-for="(src, i) in a.images" :key="i" type="button"
                     class="cursor-zoom-in" :aria-label="`放大第 ${i + 1} 张题目配图`"
@@ -110,13 +110,13 @@ onMounted(() => load(1))
           </div>
 
           <div class="mt-3 grid gap-2 text-sm sm:grid-cols-2">
-            <p class="rounded-lg bg-slate-50 px-3 py-2 text-slate-600">
+            <p class="rounded-lg bg-slate-50 px-3 py-2 break-words text-slate-600">
               <span class="text-xs text-slate-400">你的答案：</span>
               <span :class="a.isCorrect ? 'text-green-700' : 'text-red-600'">
                 {{ formatText(a.userAnswer || '未作答') }}
               </span>
             </p>
-            <p class="rounded-lg bg-green-50 px-3 py-2 text-slate-600">
+            <p class="rounded-lg bg-green-50 px-3 py-2 break-words text-slate-600">
               <span class="text-xs text-slate-400">正确答案：</span>
               {{ formatText(a.correct) }}
             </p>
@@ -138,9 +138,9 @@ onMounted(() => load(1))
       </p>
 
       <div v-if="totalPages > 1" class="flex items-center justify-center gap-2 text-sm">
-        <button v-if="page > 1" class="rounded border px-3 py-1" @click="load(page - 1)">上一页</button>
+        <button v-if="page > 1" class="min-h-11 rounded border px-4 py-1" @click="load(page - 1)">上一页</button>
         <span class="text-slate-500">{{ page }} / {{ totalPages }}</span>
-        <button v-if="page < totalPages" class="rounded border px-3 py-1" @click="load(page + 1)">下一页</button>
+        <button v-if="page < totalPages" class="min-h-11 rounded border px-4 py-1" @click="load(page + 1)">下一页</button>
       </div>
     </template>
 

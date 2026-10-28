@@ -6,6 +6,7 @@ export function formatText(text?: string | null): string {
   if (!text) return ''
   return text
     .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/&nbsp;/g, ' ')
     .replace(/&quot;/g, '"')
     .replace(/&#x27;/g, "'")
     .replace(/&lt;/g, '<')

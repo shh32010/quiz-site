@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { courseOf, flattenSections, type KNode } from '../utils/knowledge'
+import { courseOf, flattenSections, rootsFor, type KNode } from '../utils/knowledge'
 
 function node(partial: Partial<KNode> & Pick<KNode, 'id' | 'code' | 'name' | 'level'>): KNode {
   return { subjectId: 4, kpCount: 0, children: [], ...partial }
@@ -29,5 +29,14 @@ describe('knowledge tree utils', () => {
       id: 39, course: 'A', chapterCode: 'A1', chapterName: '计算机硬件',
     })
     expect(sections[1].id).toBe(40)
+  })
+
+  it('B 课程根章按 B1…B7 排序，不按 item_order', () => {
+    const tree: KNode[] = [
+      node({ id: 2, code: 'B3', name: '移动互联网技术', level: 1 }),
+      node({ id: 3, code: 'B4', name: '云计算技术', level: 1 }),
+      node({ id: 4, code: 'B1', name: '信息和信息系统', level: 1 }),
+    ]
+    expect(rootsFor(tree, 'B').map(n => n.code)).toEqual(['B1', 'B3', 'B4'])
   })
 })

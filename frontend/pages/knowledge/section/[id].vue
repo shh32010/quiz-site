@@ -1,15 +1,18 @@
 <script setup lang="ts">
 // 节阅读器：一节内连续阅读全部知识点，支持锚点、上一节/下一节
-import { ALL_COURSES, TYPE_LABEL } from '~/utils/constants'
-import { plainSnippet, renderMarkdown } from '~/utils/markdown'
-import { courseOf, flattenSections, type KNode, type SectionRef } from '~/utils/knowledge'
+import { ALL_COURSES } from '~/utils/constants'
+import { formatText } from '~/composables/format'
+import { normalizeKnowledgeContent, renderMarkdown } from '~/utils/markdown'
+import { courseOf, flattenSections, hasOwnNumbering, kpOrdinal, type KNode, type SectionRef } from '~/utils/knowledge'
 
 definePageMeta({ layout: 'immersive' })
 
 const route = useRoute()
+const router = useRouter()
 const id = computed(() => Number(route.params.id))
 const part = computed(() => Math.max(1, Number(route.query.part) || 1))
-const size = 60
+// 后端单次上限 100；100 条以内整节一次读完，不再分“第 1/2 部分”
+const size = 100
 const tocOpen = ref(false)
 const progress = ref(0)
 const readerFont = ref(17)
@@ -27,6 +30,16 @@ const { data: payload, error: loadError } = await useFetch<any>(() => `/api/know
 
 const section = computed<any>(() => payload.value?.section ?? null)
 const kps = computed<any[]>(() => payload.value?.kps ?? [])
+const contentByKp = computed(() => {
+  const map = new Map<number, string>()
+  for (const kp of kps.value) {
+    map.set(Number(kp.id), normalizeKnowledgeContent(kp.content ?? '', kp.title ?? '').trim())
+  }
+  return map
+})
+function contentOf(kp: any): string {
+  return contentByKp.value.get(Number(kp.id)) ?? ''
+}
 const questionsByKp = computed(() => {
   const map = new Map<number, any[]>()
   for (const question of payload.value?.questions ?? []) {
@@ -67,6 +80,23 @@ function importanceLabel(value: any): string {
   return label
 }
 
+/** 历史标题里可能有 &lt; 等实体，展示前还原 */
+function displayTitle(kp: any): string {
+  return formatText(String(kp.title ?? ''))
+}
+
+/** 标题已有“3.3”“10.4.1”等编号时不再加阅读器序号 */
+function kpPrefix(kp: any, index: number): string {
+  return hasOwnNumbering(displayTitle(kp)) ? '' : `${kpOrdinal(part.value, index, size)}. `
+}
+
+/** 来源里的 section 常与标题完全相同，重复时不再显示 */
+function sectionLabel(kp: any): string {
+  const label = formatText(String(kp.section ?? '')).trim()
+  const title = displayTitle(kp).trim()
+  return label && label !== title ? label : ''
+}
+
 function partLink(target: number) {
   return {
     path: `/knowledge/section/${id.value}`,
@@ -80,10 +110,6 @@ function readerPath(kpId?: number) {
 
 function practiceReturn(kpId?: number) {
   return `/practice?mode=${kpId ? 'kp' : 'chapter'}&target=${kpId ?? id.value}&return=${encodeURIComponent(readerPath(kpId))}`
-}
-
-function questionReturn(questionId: number, kpId: number) {
-  return `/practice?mode=single&target=${questionId}&return=${encodeURIComponent(readerPath(kpId))}`
 }
 
 function setFont(size: number) {
@@ -166,6 +192,13 @@ onUnmounted(() => {
   spy?.disconnect()
 })
 
+// 旧链接可能是 ?part=2，但整节已一页加载；自动回第 1 部分
+watch([payload, part], () => {
+  if (import.meta.client && payload.value && total.value > 0 && part.value > totalPages.value) {
+    router.replace(partLink(1))
+  }
+}, { immediate: true })
+
 watch(section, (value) => {
   if (!value) return
   try {
@@ -202,7 +235,7 @@ watch(section, (value) => {
       </div>
     </header>
 
-    <div class="mx-auto max-w-6xl px-3 pb-24 pt-5 sm:px-4 lg:grid lg:grid-cols-[220px_minmax(0,1fr)] lg:gap-8 lg:pb-5 xl:max-w-7xl xl:grid-cols-[220px_minmax(0,1fr)_180px]">
+    <div class="mx-auto max-w-6xl px-3 pb-24 pt-5 sm:px-4 lg:grid lg:grid-cols-[220px_minmax(0,1fr)] lg:gap-8 lg:pb-5 min-[1200px]:max-w-7xl min-[1200px]:grid-cols-[220px_minmax(0,1fr)_180px] xl:max-w-7xl xl:grid-cols-[220px_minmax(0,1fr)_180px] 2xl:max-w-[1760px] 2xl:grid-cols-[240px_minmax(0,1fr)_220px] 2xl:gap-10">
       <!-- 桌面左侧目录 -->
       <aside class="hidden lg:block">
         <div class="sticky top-20 max-h-[calc(100vh-6rem)] overflow-auto pr-2">
@@ -222,7 +255,7 @@ watch(section, (value) => {
         </div>
       </aside>
 
-      <main class="min-w-0 lg:max-w-3xl">
+      <main class="min-w-0 lg:max-w-3xl 2xl:max-w-4xl 2xl:justify-self-center">
         <div v-if="loadError || !section" class="rounded-xl border border-line-subtle bg-surface-card px-5 py-8 text-sm text-fg-secondary">
           没有找到这一节。<NuxtLink :to="`/knowledge/course/${courseCode}`" class="text-brand hover:underline">返回目录</NuxtLink>
         </div>
@@ -253,11 +286,14 @@ watch(section, (value) => {
                         class="inline-flex min-h-11 items-center rounded-lg border border-brand/30 px-3 text-brand hover:bg-brand-soft">
                 练本节题目
               </NuxtLink>
-              <span class="hidden items-center gap-2 lg:inline-flex">
+              <span class="hidden items-center gap-0.5 rounded-lg border border-line-subtle bg-surface-card p-0.5 lg:inline-flex"
+                    role="group" aria-label="正文字号">
+                <span class="px-1.5 text-[11px] text-fg-muted">Aa</span>
                 <button v-for="size in fontOptions" :key="size" type="button"
-                        class="inline-flex h-11 w-11 items-center justify-center rounded-lg border"
-                        :class="readerFont === size ? 'border-brand bg-brand-soft text-brand-on-soft' : 'border-line-strong text-fg-secondary'"
-                        :aria-label="`字号 ${size}px`" @click="setFont(size)">
+                        class="inline-flex h-8 min-w-8 items-center justify-center rounded-md px-1 text-xs"
+                        :class="readerFont === size ? 'bg-brand text-white' : 'text-fg-muted hover:bg-surface-muted hover:text-fg-primary'"
+                        :aria-label="`字号 ${size}px`" :aria-pressed="readerFont === size"
+                        :title="`字号 ${size}px`" @click="setFont(size)">
                   {{ size }}
                 </button>
               </span>
@@ -268,31 +304,37 @@ watch(section, (value) => {
             <section v-for="(kp, kpIndex) in kps" :id="`kp-${kp.id}`" :key="kp.id" class="scroll-mt-28 border-b border-line-subtle py-6 last:border-b-0">
               <div class="flex flex-wrap items-start justify-between gap-2">
                 <h2 class="min-w-0 text-lg font-semibold leading-7 text-fg-primary">
-                  {{ kpIndex + 1 }}. {{ kp.title }}
+                  {{ kpPrefix(kp, kpIndex) }}{{ displayTitle(kp) }}
                 </h2>
                 <div class="flex shrink-0 items-center gap-1.5">
                   <UiBadge v-if="importanceLabel(kp.importance)" tone="amber">{{ importanceLabel(kp.importance) }}</UiBadge>
                   <a :href="`#kp-${kp.id}`" class="flex h-9 w-9 items-center justify-center rounded-lg text-fg-muted hover:bg-surface-muted hover:text-brand"
-                     :aria-label="`跳转到该知识点：${kp.title}`">#</a>
+                     :aria-label="`跳转到该知识点：${displayTitle(kp)}`">#</a>
                 </div>
               </div>
-              <p v-if="kp.section" class="mt-1 text-xs text-fg-muted">{{ kp.section }}</p>
-              <div class="reader-content mt-3" v-html="renderMarkdown(kp.content)" />
+              <p v-if="sectionLabel(kp)" class="mt-1 text-xs text-fg-muted">{{ sectionLabel(kp) }}</p>
+              <div v-if="contentOf(kp)" class="reader-content mt-3" v-html="renderMarkdown(contentOf(kp))" />
+              <p v-else class="mt-3 rounded-lg border border-dashed border-line-strong px-3 py-2 text-sm leading-6 text-fg-muted">
+                本知识点暂无展开讲解，建议直接练习相关题目或结合教材阅读。
+              </p>
+              <p v-if="contentOf(kp) && contentOf(kp).length < 20" class="mt-2 text-xs text-warn-fg">
+                内容较短，建议结合教材核对。
+              </p>
 
-              <div v-if="questionsByKp.get(kp.id)?.length"
-                   class="mt-3 rounded-lg border border-line-subtle bg-surface-card p-3">
-                <p class="text-xs font-medium text-fg-muted">自测</p>
-                <ul class="mt-1 space-y-1">
-                  <li v-for="q in questionsByKp.get(kp.id)" :key="q.id">
-                    <NuxtLink :to="questionReturn(q.id, kp.id)"
-                              class="flex min-h-9 items-center gap-2 text-xs text-fg-secondary hover:text-brand">
-                      <UiBadge class="shrink-0">{{ TYPE_LABEL[q.questionType] ?? '题目' }}</UiBadge>
-                      <span class="min-w-0 truncate">{{ plainSnippet(q.stem, 70) }}</span>
-                      <span class="shrink-0 text-brand">练 →</span>
-                    </NuxtLink>
-                  </li>
-                </ul>
-              </div>
+              <details v-if="questionsByKp.get(kp.id)?.length"
+                       class="mt-3 overflow-hidden rounded-lg border border-line-subtle bg-surface-card">
+                <summary class="flex min-h-11 cursor-pointer items-center justify-between gap-2 px-3 text-xs text-fg-secondary">
+                  <span>自测（{{ questionsByKp.get(kp.id)?.length }}）</span>
+                  <span class="text-fg-muted">展开作答</span>
+                </summary>
+                <div class="space-y-2 border-t border-line-subtle p-3">
+                  <KnowledgeQuestion v-for="q in questionsByKp.get(kp.id)" :key="q.id" :question="q" />
+                  <p class="text-xs text-fg-muted">
+                    想记录进度？
+                    <NuxtLink :to="practiceReturn(kp.id)" class="text-brand hover:underline">进入完整练习</NuxtLink>
+                  </p>
+                </div>
+              </details>
 
               <div class="mt-3 flex flex-wrap items-center gap-3 text-xs">
                 <NuxtLink v-if="kp.questionCount" :to="practiceReturn(kp.id)"
@@ -340,7 +382,7 @@ watch(section, (value) => {
       </main>
 
       <!-- 桌面右侧本部分目录 -->
-      <aside class="hidden xl:block">
+      <aside class="hidden min-[1200px]:block">
         <div class="sticky top-8 max-h-[calc(100vh-4rem)] overflow-auto pl-2">
           <p class="mb-2 text-xs font-medium text-fg-muted">本部分目录</p>
           <a v-for="kp in kps" :key="kp.id" :href="`#kp-${kp.id}`"
@@ -348,7 +390,7 @@ watch(section, (value) => {
              :class="activeKp === kp.id
                ? 'border-brand font-medium text-brand'
                : 'border-line-subtle text-fg-muted hover:text-fg-secondary'">
-            {{ kp.title }}
+            {{ displayTitle(kp) }}
           </a>
           <p v-if="!kps.length" class="text-xs text-fg-muted">暂无知识点</p>
         </div>

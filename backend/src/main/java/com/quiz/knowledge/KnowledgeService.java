@@ -187,10 +187,11 @@ public class KnowledgeService {
                   select ch.id from t_chapter ch join sub s on ch.parent_id = s.id
                 )
                 select k.id as "kpId",
-                       q.id, q.question_type as "questionType", q.stem, q.score
+                       q.id, q.question_type as "questionType", q.stem, q.score,
+                       q.option_json as "optionJson", q.blank_count as "blankCount"
                   from t_knowledge_point k
                   join lateral (
-                    select q.id, q.question_type, q.stem, q.score
+                    select q.id, q.question_type, q.stem, q.score, q.option_json, q.blank_count
                       from t_question_kp x
                       join t_question q on q.id = x.question_id
                      where x.kp_id = k.id and not q.deleted and q.review_status = 'ok'

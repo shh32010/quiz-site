@@ -1,5 +1,6 @@
 <script setup lang="ts">
 // 知识点搜索：标题/内容关键词，结果跳到所在节锚点
+import { formatText } from '~/composables/format'
 import { highlightText, plainSnippet } from '~/utils/markdown'
 
 useHead({ title: '搜索知识点' })
@@ -82,12 +83,12 @@ function search() {
               <NuxtLink :to="`/knowledge/kp/${row.id}`" class="block px-4 py-3 hover:bg-surface-muted">
                 <div class="flex flex-wrap items-center gap-2">
                   <span v-if="row.nodeCode" class="rounded bg-surface-muted px-1.5 py-0.5 font-mono text-xs text-fg-muted">{{ row.nodeCode }}</span>
-                  <span class="text-sm font-medium text-fg-primary" v-html="highlightText(row.title, q)"></span>
-                  <span v-if="row.nodeName" class="truncate text-xs text-fg-muted">{{ row.nodeName }}</span>
+                  <span class="text-sm font-medium text-fg-primary" v-html="highlightText(formatText(row.title), q)"></span>
+                  <span v-if="row.nodeName" class="truncate text-xs text-fg-muted">{{ formatText(row.nodeName) }}</span>
                 </div>
-                <p class="mt-1 line-clamp-2 text-xs leading-5 text-fg-secondary" v-html="highlightText(plainSnippet(row.content), q)"></p>
+                <p class="mt-1 line-clamp-2 text-xs leading-5 text-fg-secondary" v-html="highlightText(plainSnippet(formatText(row.content)), q)"></p>
                 <p class="mt-1 text-xs text-fg-muted">
-                  {{ row.section || '知识点' }} · {{ row.questionCount ?? 0 }} 道关联题
+                  {{ formatText(row.section) || '知识点' }} · {{ row.questionCount ?? 0 }} 道关联题
                 </p>
               </NuxtLink>
             </li>

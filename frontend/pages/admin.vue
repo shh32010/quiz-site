@@ -103,7 +103,7 @@ onMounted(load)
     <h1 class="text-2xl font-bold text-slate-900">管理后台</h1>
     <p v-if="error" class="text-sm text-red-600">{{ error }}</p>
 
-    <div v-if="stats" class="grid gap-3 sm:grid-cols-5">
+    <div v-if="stats" class="grid grid-cols-2 gap-3 sm:grid-cols-5">
       <div v-for="(v, k) in stats" :key="k" class="rounded-xl border border-slate-200 p-4">
         <p class="text-xs text-slate-500">{{ k }}</p>
         <p class="mt-1 text-xl font-bold text-slate-800">{{ v }}</p>
@@ -146,12 +146,16 @@ onMounted(load)
         <div class="mt-4 grid gap-4 lg:grid-cols-2">
           <div>
             <p class="text-xs text-slate-400">每日 PV / UV</p>
-            <div class="mt-2 flex h-32 items-end gap-1">
-              <div v-for="d in visits.daily" :key="d.day" class="flex min-w-0 flex-1 flex-col items-center gap-1">
-                <div class="w-full rounded-t bg-blue-500/70"
-                     :style="{ height: `${Number(d.pv) ? Math.max(2, Math.round(Number(d.pv) / maxDailyPv * 100)) : 0}%` }"
-                     :title="`${d.day}：PV ${d.pv} / UV ${d.uv}`" />
-                <span class="text-[10px] text-slate-400">{{ d.day }}</span>
+            <div class="mt-2 overflow-x-auto">
+              <div class="flex h-32 min-w-[520px] items-end gap-1">
+                <div v-for="d in visits.daily" :key="d.day" class="flex h-full min-w-0 flex-1 flex-col items-center gap-1">
+                  <div class="flex w-full flex-1 items-end">
+                    <div class="w-full rounded-t bg-blue-500/70"
+                         :style="{ height: `${Number(d.pv) ? Math.max(2, Math.round(Number(d.pv) / maxDailyPv * 100)) : 0}%` }"
+                         :title="`${d.day}：PV ${d.pv} / UV ${d.uv}`" />
+                  </div>
+                  <span class="text-[10px] text-slate-400">{{ d.day }}</span>
+                </div>
               </div>
             </div>
           </div>
@@ -171,7 +175,21 @@ onMounted(load)
 
     <div class="rounded-xl border border-slate-200 p-4">
       <h2 class="text-sm font-semibold text-slate-700">用户（{{ users.length }}）</h2>
-      <div class="mt-2 overflow-x-auto">
+
+      <!-- 移动端用户卡片 -->
+      <div class="mt-2 space-y-2 sm:hidden">
+        <div v-for="u in users" :key="u.id" class="rounded-lg border border-slate-200 p-3 text-xs">
+          <div class="flex items-center justify-between gap-2">
+            <b class="truncate text-slate-800">{{ u.username }}</b>
+            <span class="shrink-0 rounded bg-slate-100 px-1.5 py-0.5 text-slate-600">{{ u.role }}</span>
+          </div>
+          <p class="mt-1 truncate text-slate-500">{{ u.email || '未绑定邮箱' }}</p>
+          <p class="mt-1 text-slate-400">注册 {{ fmtTime(u.createdAt) }} · 最近 {{ fmtTime(u.lastLoginAt) }}</p>
+          <p class="mt-1 text-slate-400">练习 {{ u.sessions }} / 作答 {{ u.answers }}</p>
+        </div>
+      </div>
+
+      <div class="mt-2 hidden overflow-x-auto sm:block">
         <table class="min-w-full whitespace-nowrap text-left text-xs">
           <thead class="text-slate-400">
             <tr>

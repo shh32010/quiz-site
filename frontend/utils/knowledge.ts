@@ -22,6 +22,16 @@ export interface SectionRef {
   chapterName: string
 }
 
+/** 知识点在整节中的连续序号（分片后也不从 1 重置） */
+export function kpOrdinal(part: number, index: number, size: number): number {
+  return (Math.max(part, 1) - 1) * size + index + 1
+}
+
+/** 标题是否已自带编号；避免阅读器再叠加“1.” */
+export function hasOwnNumbering(title: string): boolean {
+  return /^\s*(?:\d+(?:[.．、]|\.\d+)|[一二三四五六七八九十]+[、.．]|第\s*[一二三四五六七八九十百0-9]+\s*[章节部分])/.test(title)
+}
+
 /** A1 -> A，B3 -> B，S1 -> S1 */
 export function courseOf(code: string | null): string | null {
   if (!code) return null
@@ -31,11 +41,20 @@ export function courseOf(code: string | null): string | null {
   return null
 }
 
+/** 课程代码自然排序：A1、A2、B1…B7、S1…S6 */
+export function codeOrder(code: string | null): string {
+  return (code ?? '').replace(/\d+/g, n => n.padStart(3, '0'))
+}
+
+function sortByCode<T extends { code: string | null }>(items: T[]): T[] {
+  return [...items].sort((a, b) => codeOrder(a.code).localeCompare(codeOrder(b.code)))
+}
+
 /** 某课程/技能下的根节点（A/B 为章，S 为技能节点） */
 export function rootsFor(tree: KNode[], course: string): KNode[] {
-  if (course === 'A') return tree.filter(n => n.subjectId === 4 && /^A\d/.test(n.code ?? ''))
-  if (course === 'B') return tree.filter(n => n.subjectId === 4 && /^B\d/.test(n.code ?? ''))
-  return tree.filter(n => n.subjectId === 5 && n.code === course)
+  if (course === 'A') return sortByCode(tree.filter(n => n.subjectId === 4 && /^A\d/.test(n.code ?? '')))
+  if (course === 'B') return sortByCode(tree.filter(n => n.subjectId === 4 && /^B\d/.test(n.code ?? '')))
+  return sortByCode(tree.filter(n => n.subjectId === 5 && n.code === course))
 }
 
 /**
@@ -44,7 +63,7 @@ export function rootsFor(tree: KNode[], course: string): KNode[] {
  */
 export function flattenSections(tree: KNode[]): SectionRef[] {
   const out: SectionRef[] = []
-  for (const root of tree) {
+  for (const root of sortByCode(tree)) {
     const course = courseOf(root.code)
     if (!course) continue
     const children = (root.children ?? []).filter(child => child.level === 2)

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { highlightText, plainSnippet, renderMarkdown } from '../utils/markdown'
+import { highlightText, normalizeKnowledgeContent, plainSnippet, renderMarkdown } from '../utils/markdown'
 
 describe('markdown utils', () => {
   it('搜索高亮会先转义 HTML', () => {
@@ -16,9 +16,37 @@ describe('markdown utils', () => {
     expect(text).toContain('内存')
   })
 
+  it('搜索片段保留代码尖括号', () => {
+    expect(plainSnippet('#include <stdio.h>')).toContain('<stdio.h>')
+  })
+
   it('Markdown 渲染会转义原始 HTML', () => {
     const html = renderMarkdown('<script>alert(1)</script>')
     expect(html).not.toContain('<script>')
     expect(html).toContain('&lt;script&gt;')
+  })
+
+  it('代码块里的尖括号只转义一次', () => {
+    const html = renderMarkdown('```c\n#include <stdio.h>\n```')
+    expect(html).toContain('#include &lt;stdio.h&gt;')
+    expect(html).not.toContain('&amp;lt;')
+  })
+
+  it('知识点清洗去除重复标题和 HTML 片段', () => {
+    const content = normalizeKnowledgeContent(
+      '<p>计算机基本原理</p><br/>内存储器&nbsp;是主存。',
+      '计算机基本原理',
+    )
+    expect(content).not.toContain('<p>')
+    expect(content).not.toContain('<br')
+    expect(content).not.toContain('&nbsp;')
+    expect(content).not.toContain('计算机基本原理')
+    expect(content).toContain('内存储器 是主存')
+  })
+
+  it('清洗不会误删代码里的尖括号', () => {
+    const content = normalizeKnowledgeContent('#include <stdio.h>\nint main() { }')
+    expect(content).toContain('#include <stdio.h>')
+    expect(content).toContain('int main()')
   })
 })

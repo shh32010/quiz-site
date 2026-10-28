@@ -23,7 +23,7 @@ function active(paths: string[]) {
 }
 const practiceActive = computed(() => active(['/chapters', '/papers', '/compose', '/practice']))
 const knowledgeActive = computed(() => active(['/knowledge']))
-const mobilePracticeActive = computed(() => practiceActive.value || knowledgeActive.value)
+const mobilePracticeActive = computed(() => practiceActive.value)
 const reviewActive = computed(() => active(['/wrong', '/favorites', '/history']))
 const reportActive = computed(() => active(['/report']))
 const homeActive = computed(() => route.path === '/')
@@ -91,13 +91,13 @@ const reviewItems = [
       </div>
     </header>
 
-    <main class="mx-auto max-w-6xl px-3 py-5 pb-24 sm:px-4 lg:pb-8">
+    <main class="mx-auto max-w-6xl overflow-x-clip px-3 py-5 pb-24 sm:px-4 lg:pb-8">
       <slot />
       <AppFooter />
     </main>
 
     <nav class="fixed inset-x-0 bottom-0 z-40 border-t border-line-subtle bg-surface-glass backdrop-blur print:hidden lg:hidden">
-      <div class="grid grid-cols-4 pb-[env(safe-area-inset-bottom)]">
+      <div class="grid grid-cols-5 pb-[env(safe-area-inset-bottom)]">
         <NuxtLink to="/" class="flex flex-col items-center gap-0.5 py-2 text-xs"
                   :class="homeActive ? 'text-brand' : 'text-fg-muted'">
           <span class="text-lg leading-none">⌂</span>首页
@@ -105,6 +105,10 @@ const reviewItems = [
         <NuxtLink to="/chapters" class="flex flex-col items-center gap-0.5 py-2 text-xs"
                   :class="mobilePracticeActive ? 'text-brand' : 'text-fg-muted'">
           <span class="text-lg leading-none">✎</span>练习
+        </NuxtLink>
+        <NuxtLink to="/knowledge" class="flex flex-col items-center gap-0.5 py-2 text-xs"
+                  :class="knowledgeActive ? 'text-brand' : 'text-fg-muted'">
+          <span class="text-lg leading-none">▤</span>知识点
         </NuxtLink>
         <NuxtLink to="/wrong" class="flex flex-col items-center gap-0.5 py-2 text-xs"
                   :class="reviewActive ? 'text-brand' : 'text-fg-muted'">

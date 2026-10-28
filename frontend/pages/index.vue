@@ -59,11 +59,12 @@ const courseCards = computed(() => COURSE_META.map(m => {
 }))
 
 const entries = [
-  { to: '/chapters', title: '按章节刷题', desc: '理论 A/B、实操技能一~六，逐章推进', tone: 'blue' },
-  { to: '/papers',   title: '历年真题',   desc: '27 套真题，按卷面分节练习',      tone: 'indigo' },
-  { to: '/compose',  title: '随机组卷',   desc: '按大纲配比与难度生成一套卷',    tone: 'violet' },
-  { to: '/wrong',    title: '错题本',     desc: '自动收录，按间隔复习',          tone: 'amber' },
-  { to: '/report',   title: '学习报告',   desc: '正确率、章节掌握度、错题周报',  tone: 'emerald' },
+  { to: '/chapters',  title: '按章节刷题', desc: '理论 A/B、实操技能一~六，逐章推进', tone: 'blue' },
+  { to: '/knowledge', title: '知识点阅读', desc: '按课程连续阅读，支持目录、搜索和自测', tone: 'cyan' },
+  { to: '/papers',    title: '历年真题',   desc: '27 套真题，按卷面分节练习',      tone: 'indigo' },
+  { to: '/compose',   title: '随机组卷',   desc: '按大纲配比与难度生成一套卷',    tone: 'violet' },
+  { to: '/wrong',     title: '错题本',     desc: '自动收录，按间隔复习',          tone: 'amber' },
+  { to: '/report',    title: '学习报告',   desc: '正确率、章节掌握度、错题周报',  tone: 'emerald' },
 ]
 </script>
 

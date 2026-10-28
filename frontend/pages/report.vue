@@ -160,8 +160,9 @@ async function loadWeekly() {
           </div>
           <ul class="divide-y divide-line-subtle border-t border-line-subtle">
             <li v-for="s in data.recent" :key="s.id">
-              <NuxtLink :to="`/history/${s.id}`" class="flex min-h-12 items-center justify-between gap-2 px-4 py-3 hover:bg-surface-muted">
-                <span class="min-w-0 truncate text-sm text-fg-secondary">
+              <NuxtLink :to="`/history/${s.id}`"
+                        class="flex min-h-12 flex-col items-start justify-between gap-1 px-4 py-3 hover:bg-surface-muted sm:flex-row sm:items-center sm:gap-2">
+                <span class="min-w-0 max-w-full truncate text-sm text-fg-secondary">
                   {{ MODE_LABEL[s.mode] ?? s.mode }}
                   <span class="ml-2 text-xs text-fg-muted">{{ (s.startedAt || '').slice(0, 16).replace('T', ' ') }}</span>
                 </span>
