@@ -54,7 +54,7 @@ async function clearHistory() {
   if (clearing.value) return
   if (!(await ask({
     title: '清空做题历史与进度',
-    message: '将永久删除全部做题会话、答题记录和错题本进度，总进度、章节进度会归零。收藏不受影响。此操作不可恢复。',
+    message: '会从你的历史、进度和错题本中移除全部做题会话、答题记录与错题进度，总进度、章节进度会归零。底层记录会保留归档，不再展示；收藏不受影响。',
     confirmText: '确认清空',
     cancelText: '保留',
     danger: true,
@@ -69,7 +69,7 @@ async function clearHistory() {
     typeCounts.value = {}
     selectedType.value = 0
     resume.value = null
-    toast.show('做题历史和进度已清空', 'success')
+    toast.show('做题历史和进度已清空（已归档）', 'success')
   } catch (e: any) {
     error.value = e.message ?? '清空失败，请重试'
   } finally {

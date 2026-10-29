@@ -30,7 +30,7 @@ async function create(subject: number) {
               :disabled="loading !== 0" @click="create(4)">
         <UiBadge tone="blue">理论</UiBadge>
         <p class="mt-3 text-lg font-semibold text-fg-primary">理论卷 · 150 分</p>
-        <p class="mt-1 text-sm text-fg-secondary">共 80 题 · 建议 100 分钟</p>
+        <p class="mt-1 text-sm text-fg-secondary">共 80 题 · 计时 100 分钟</p>
         <p class="mt-3 text-xs text-fg-muted">判断 10 · 单选 50 · 多选 10 · 填空 10</p>
         <p class="mt-1 text-xs text-fg-muted">课程 A 60% / B 40% · 只抽大纲标准分值题</p>
         <p class="mt-1 text-xs text-fg-muted">优先未做过的题，不足时用做过的题补齐</p>
@@ -41,7 +41,7 @@ async function create(subject: number) {
               :disabled="loading !== 0" @click="create(5)">
         <UiBadge tone="green">实操</UiBadge>
         <p class="mt-3 text-lg font-semibold text-fg-primary">实操卷 · 80 分</p>
-        <p class="mt-1 text-sm text-fg-secondary">共 40 题 · 建议 50 分钟</p>
+        <p class="mt-1 text-sm text-fg-secondary">共 40 题 · 计时 50 分钟</p>
         <p class="mt-3 text-xs text-fg-muted">单选 20 · 判断 8 · 填空 10 · 综合 2</p>
         <p class="mt-1 text-xs text-fg-muted">技能占比 S1 40% / S2 20% / S3–S6 各 10%</p>
         <p class="mt-1 text-xs text-fg-muted">优先未做过的题，不足时用做过的题补齐</p>

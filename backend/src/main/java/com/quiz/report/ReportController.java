@@ -31,7 +31,7 @@ public class ReportController {
                        count(distinct q.id) filter (where pa.id is not null) as "answered"
                   from t_question q
                   left join practice_answer pa
-                         on pa.question_id = q.id and pa.user_id = ?
+                         on pa.question_id = q.id and pa.user_id = ? and pa.deleted_at is null
                  where not q.deleted and q.review_status = 'ok'
                 """, uid);
         int total = ((Number) row.get("total")).intValue();
@@ -63,7 +63,7 @@ public class ReportController {
                   join anc on anc.id = q.chapter_id
                   join t_chapter l on l.id = anc.root
                   left join practice_answer pa
-                         on pa.question_id = q.id and pa.user_id = ?
+                         on pa.question_id = q.id and pa.user_id = ? and pa.deleted_at is null
                  where not q.deleted and q.review_status = 'ok'
                  group by l.id, l.code, l.name
                  order by l.code
@@ -78,7 +78,7 @@ public class ReportController {
                        count(distinct date(answered_at))                   as "activeDays",
                        coalesce(sum(score_got), 0)                         as "score"
                   from practice_answer
-                 where user_id = ?
+                 where user_id = ? and deleted_at is null
                 """, uid);
 
         List<Map<String, Object>> recent = jdbc.queryForList("""
@@ -86,7 +86,7 @@ public class ReportController {
                        finished_at as "finishedAt", score, total_score as "totalScore",
                        correct_count as "correctCount", question_count as "questionCount"
                   from practice_session
-                 where user_id = ?
+                 where user_id = ? and deleted_at is null
                  order by started_at desc
                  limit 10
                 """, uid);
@@ -94,7 +94,7 @@ public class ReportController {
         Map<String, Object> wrong = jdbc.queryForMap("""
                 select count(*) as "total",
                        count(*) filter (where not resolved) as "pending"
-                  from wrong_question where user_id = ?
+                  from wrong_question where user_id = ? and deleted_at is null
                 """, uid);
 
         // 章节掌握度（按 L1 章/技能汇总，已答题目正确率）
@@ -113,7 +113,7 @@ public class ReportController {
                   join t_question q on q.id = pa.question_id
                   join anc on anc.id = q.chapter_id
                   join t_chapter l on l.id = anc.root
-                 where pa.user_id = ? and not q.deleted and q.review_status = 'ok'
+                 where pa.user_id = ? and pa.deleted_at is null and not q.deleted and q.review_status = 'ok'
                  group by l.code, l.name
                  order by l.code
                 """, uid);
@@ -140,7 +140,7 @@ public class ReportController {
                   join anc on anc.id = q.chapter_id
                   join t_chapter l on l.id = anc.root
                   join t_chapter s on s.id = anc.section
-                 where pa.user_id = ? and not q.deleted and q.review_status = 'ok'
+                 where pa.user_id = ? and pa.deleted_at is null and not q.deleted and q.review_status = 'ok'
                  group by l.code, l.name, s.code, s.name
                  order by l.code, s.code
                 """, uid);
@@ -154,7 +154,7 @@ public class ReportController {
                   from practice_answer pa
                   join t_question_kp x on x.question_id = pa.question_id
                   join t_knowledge_point k on k.id = x.kp_id and not k.deleted
-                 where pa.user_id = ?
+                 where pa.user_id = ? and pa.deleted_at is null
                  group by k.id, k.title
                 having count(*) >= 2
                  order by count(*) desc, k.id

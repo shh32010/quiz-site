@@ -261,7 +261,7 @@ public class ComposeService {
                 """ + typeFilter + scoreFilter + excludeFilter + """
                  order by exists (
                      select 1 from practice_answer pa
-                      where pa.user_id = ? and pa.question_id = q.id
+                      where pa.user_id = ? and pa.question_id = q.id and pa.deleted_at is null
                    ) asc,
                    random()
                  limit ?

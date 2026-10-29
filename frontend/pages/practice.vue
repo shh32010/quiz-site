@@ -43,6 +43,8 @@ let advanceTimer: ReturnType<typeof setTimeout> | null = null
 let disposed = false
 
 const sheetOpen = ref(false)
+const guestSaveOpen = ref(false)
+const guestSavePrompted = ref(false)
 const finishOpen = ref(false)
 const helpOpen = ref(false)
 const lightboxOpen = ref(false)
@@ -86,11 +88,10 @@ const sheetWrong = computed(() =>
   (sheet.value.rows ?? []).filter(r => r.answered && !r.isCorrect).length)
 
 const modeLabel = computed(() => MODE_LABEL[mode.value] ?? '刷题')
-const isPaper = computed(() => mode.value === 'paper')
 const isSingle = computed(() => mode.value === 'single')
 const canAutoNext = computed(() =>
-  ['chapter', 'course', 'kp', 'wrong'].includes(mode.value)
-  && !isPaper.value && !isSingle.value && total.value > 1)
+  ['chapter', 'course', 'kp', 'wrong', 'paper', 'random'].includes(mode.value)
+  && !isSingle.value && total.value > 1)
 const currentOrder = computed(() => Number(question.value?.itemOrder ?? 1))
 const isLast = computed(() => Boolean(question.value) && currentOrder.value >= total.value)
 const progressPercent = computed(() => total.value ? Math.min(100, Math.round(currentOrder.value / total.value * 100)) : 0)
@@ -132,7 +133,6 @@ const correctKeys = computed<string[]>(() => {
 const primaryLabel = computed(() => {
   if (submitting.value) return '处理中…'
   if (!feedback.value) {
-    if (isPaper.value && !hasAnswer.value) return '跳过'
     return hasAnswer.value ? '提交' : '不会，看答案'
   }
   if (isSingle.value) return '返回'
@@ -394,7 +394,6 @@ function goFirstUnanswered() {
 async function primaryAction() {
   if (!question.value || submitting.value || navigating.value) return
   if (!feedback.value) {
-    if (isPaper.value && !hasAnswer.value) { await goNext(); return }
     await submit()
     return
   }
@@ -509,7 +508,18 @@ function jumpTo(order: number) {
   if (order !== currentOrder.value) navigate(order)
 }
 
-function exit() {
+function markGuestSavePrompted() {
+  guestSavePrompted.value = true
+  try { sessionStorage.setItem('quiz_guest_save_prompted', '1') } catch { /* 忽略 */ }
+}
+
+function showGuestSavePrompt() {
+  if (!guest.value) return
+  guestSaveOpen.value = true
+  markGuestSavePrompted()
+}
+
+function leavePractice() {
   // 从知识点阅读器进入时，练完回到原节/原知识点锚点
   const returnTo = String(route.query.return || '')
   if (returnTo.startsWith('/knowledge/section/')) {
@@ -518,6 +528,20 @@ function exit() {
   }
   const from = String(route.query.from || '')
   router.push(from.startsWith('/') && !from.startsWith('//') ? from : '/')
+}
+
+function exit() {
+  // 游客做过题、还没被提示过时，退出前再给一次轻量保存提示
+  if (guest.value && !finished.value && Object.keys(guestState.value).length > 0 && !guestSavePrompted.value) {
+    showGuestSavePrompt()
+    return
+  }
+  leavePractice()
+}
+
+function exitWithoutSaving() {
+  guestSaveOpen.value = false
+  leavePractice()
 }
 
 async function askAi(guide = false) {
@@ -590,7 +614,7 @@ watch(() => question.value?.id, async (id) => {
 
 usePracticeKeys({
   isEnabled: () => Boolean(question.value) && !finished.value && !sheetOpen.value && !finishOpen.value
-    && !helpOpen.value && !lightboxOpen.value,
+    && !guestSaveOpen.value && !helpOpen.value && !lightboxOpen.value,
   onSelect: selectOption,
   onSubmit: () => { primaryAction() },
   onNext: () => { goNext() },
@@ -600,6 +624,7 @@ usePracticeKeys({
 })
 
 onMounted(() => {
+  try { guestSavePrompted.value = sessionStorage.getItem('quiz_guest_save_prompted') === '1' } catch { /* 忽略 */ }
   window.addEventListener('pointerdown', clearAdvance)
   start()
 })
@@ -624,7 +649,7 @@ onUnmounted(() => {
 
       <div v-if="guest" class="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
         游客模式：可以试做，但进度不会保存。
-        <NuxtLink :to="{ path: '/login', query: { redirect: route.fullPath } }" class="underline">登录/注册</NuxtLink>
+        <button type="button" class="font-medium underline" @click="showGuestSavePrompt">登录保存进度</button>
         后可记录错题与学习报告。
       </div>
 
@@ -730,6 +755,22 @@ onUnmounted(() => {
 
     <PracticeFinishModal v-model="finishOpen" :info="finishInfo" :submitting="submitting"
                          @go-first="goFirstUnanswered" @finish="finishSession" />
+
+    <UiModal v-model="guestSaveOpen" title="保存这次进度？" size="sm">
+      <div class="space-y-3">
+        <p class="text-sm leading-6 text-fg-secondary">
+          登录后会自动保存本次答题、错题和学习报告。游客记录在关闭页面后不会保留。
+        </p>
+        <NuxtLink :to="{ path: '/login', query: { redirect: route.fullPath } }"
+                  class="block min-h-11 rounded-lg bg-brand px-4 py-2.5 text-center text-sm font-medium text-white hover:bg-brand-hover"
+                  @click="guestSaveOpen = false">登录 / 注册并保存</NuxtLink>
+        <button type="button"
+                class="min-h-11 w-full rounded-lg border border-line-strong text-sm text-fg-secondary hover:border-brand hover:text-brand"
+                @click="guestSaveOpen = false">先不登录，继续试做</button>
+        <button type="button" class="w-full py-1 text-xs text-fg-muted hover:text-fg-primary"
+                @click="exitWithoutSaving">不保存，直接退出</button>
+      </div>
+    </UiModal>
 
     <UiModal v-model="helpOpen" title="键盘快捷键" size="sm">
       <dl class="space-y-2 text-sm text-slate-600">

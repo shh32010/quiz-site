@@ -54,8 +54,8 @@ public class AdminController {
                 select p.id, p.username, coalesce(p.email, '') as email, p.role,
                        p.created_at as "createdAt",
                        p.last_ip as "lastIp", p.last_login_at as "lastLoginAt",
-                       (select count(*) from practice_session s where s.user_id = p.id) as "sessions",
-                       (select count(*) from practice_answer a where a.user_id = p.id) as "answers"
+                       (select count(*) from practice_session s where s.user_id = p.id and s.deleted_at is null) as "sessions",
+                       (select count(*) from practice_answer a where a.user_id = p.id and a.deleted_at is null) as "answers"
                   from profiles p
                  order by p.created_at desc
                 """);
@@ -67,9 +67,9 @@ public class AdminController {
     public Map<String, Object> stats() {
         return jdbc.queryForMap("""
                 select (select count(*) from profiles)                                     as "users",
-                       (select count(*) from practice_session)                             as "sessions",
-                       (select count(*) from practice_answer)                              as "answers",
-                       (select count(*) from wrong_question where not resolved)            as "wrongPending",
+                       (select count(*) from practice_session where deleted_at is null)   as "sessions",
+                       (select count(*) from practice_answer where deleted_at is null)    as "answers",
+                       (select count(*) from wrong_question where not resolved and deleted_at is null) as "wrongPending",
                        (select count(*) from feedback where status = 'open')               as "feedbackPending"
                 """);
     }

@@ -43,7 +43,7 @@ public class WrongController {
                       join t_knowledge_point k on k.id = x.kp_id and not k.deleted
                      where x.question_id = q.id
                   ) kp on true
-                 where w.user_id = ? and not q.deleted
+                 where w.user_id = ? and w.deleted_at is null and not q.deleted
                  order by w.resolved asc, w.next_review_at nulls last
                  limit 300
                 """, uid);
@@ -70,7 +70,7 @@ public class WrongController {
                        q.analysis
                   from wrong_question w
                   join t_question q on q.id = w.question_id
-                 where w.user_id = ? and not q.deleted and q.review_status = 'ok'
+                 where w.user_id = ? and w.deleted_at is null and not q.deleted and q.review_status = 'ok'
                  order by w.resolved asc, w.next_review_at nulls last, w.question_id
                  limit 300
                 """, uid);

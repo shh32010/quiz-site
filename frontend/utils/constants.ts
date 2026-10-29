@@ -17,8 +17,8 @@ export const SKILLS: CourseMeta[] = [
   { code: 'S2', name: '数据库（MySQL）', label: '技能二' },
   { code: 'S3', name: 'UML 建模', label: '技能三' },
   { code: 'S4', name: '局域网组建', label: '技能四' },
-  { code: 'S5', name: 'Windows 10 管理', label: '技能五' },
-  { code: 'S6', name: 'CentOS 7 管理', label: '技能六' },
+  { code: 'S5', name: '操作系统配置与管理（Windows 10）', label: '技能五' },
+  { code: 'S6', name: 'Linux 配置与管理（CentOS7）', label: '技能六' },
 ]
 
 /** 理论 A/B + 实操 S1~S6，共 8 个课程/技能 */

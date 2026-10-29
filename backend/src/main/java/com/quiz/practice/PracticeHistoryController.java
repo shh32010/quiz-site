@@ -43,9 +43,18 @@ public class PracticeHistoryController {
     @DeleteMapping
     @Transactional
     public Map<String, Object> clear(@AuthenticationPrincipal UUID uid) {
-        int wrong = jdbc.update("delete from wrong_question where user_id = ?", uid);
-        int answers = jdbc.update("delete from practice_answer where user_id = ?", uid);
-        int sessions = jdbc.update("delete from practice_session where user_id = ?", uid);
+        int wrong = jdbc.update("""
+                update wrong_question set deleted_at = now(), resolved = true
+                 where user_id = ? and deleted_at is null
+                """, uid);
+        int answers = jdbc.update("""
+                update practice_answer set deleted_at = now()
+                 where user_id = ? and deleted_at is null
+                """, uid);
+        int sessions = jdbc.update("""
+                update practice_session set deleted_at = now()
+                 where user_id = ? and deleted_at is null
+                """, uid);
         return Map.of("ok", true, "sessions", sessions, "answers", answers, "wrong", wrong);
     }
 
@@ -65,7 +74,7 @@ public class PracticeHistoryController {
         countArgs.add(uid);
         if (byType) countArgs.add(type);
         Integer total = jdbc.queryForObject(
-                "select count(*) from practice_session s where s.user_id = ?" + typeFilter,
+                "select count(*) from practice_session s where s.user_id = ? and s.deleted_at is null" + typeFilter,
                 Integer.class, countArgs.toArray());
         List<Object> rowArgs = new java.util.ArrayList<>(countArgs);
         rowArgs.add(s);
@@ -81,7 +90,7 @@ public class PracticeHistoryController {
                        (select count(*) from practice_answer a where a.session_id = s.id and a.is_correct) as "correctCount",
                        %s as "targetName"
                   from practice_session s
-                 where s.user_id = ?%s
+                 where s.user_id = ? and s.deleted_at is null%s
                  order by s.started_at desc
                  limit ? offset ?
                 """.formatted(TARGET_NAME, typeFilter), rowArgs.toArray());
@@ -90,12 +99,12 @@ public class PracticeHistoryController {
                   from practice_session s
                   join session_question sq on sq.session_id = s.id
                   join t_question q on q.id = sq.question_id
-                 where s.user_id = ?
+                 where s.user_id = ? and s.deleted_at is null
                  group by q.question_type
                  order by q.question_type
                 """, uid);
         Integer totalAll = jdbc.queryForObject(
-                "select count(*) from practice_session where user_id = ?", Integer.class, uid);
+                "select count(*) from practice_session where user_id = ? and deleted_at is null", Integer.class, uid);
         return Map.of("total", total == null ? 0 : total, "totalAll", totalAll == null ? 0 : totalAll,
                 "page", p, "size", s, "rows", rows, "typeCounts", typeCounts);
     }
@@ -116,7 +125,7 @@ public class PracticeHistoryController {
                        p.question_count as "paperQuestionCount", p.score as "paperScore"
                   from practice_session s
                   left join t_exam_paper p on p.id = s.target_id and s.mode = 'paper'
-                 where s.id = ? and s.user_id = ?
+                 where s.id = ? and s.user_id = ? and s.deleted_at is null
                 """.formatted(TARGET_NAME), sessionId, uid);
         if (sessions.isEmpty()) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "记录不存在"));
@@ -125,7 +134,7 @@ public class PracticeHistoryController {
         int p = Math.max(page, 1);
         int s = Math.min(Math.max(size, 1), 200);
         Integer total = jdbc.queryForObject(
-                "select count(*) from practice_answer where session_id = ? and user_id = ?",
+                "select count(*) from practice_answer where session_id = ? and user_id = ? and deleted_at is null",
                 Integer.class, sessionId, uid);
         List<Map<String, Object>> rows = jdbc.queryForList("""
                 select a.question_id as "questionId", a.user_answer as "userAnswer",
@@ -141,7 +150,7 @@ public class PracticeHistoryController {
                          where tc.id = q.info_text_content_id) as "imageUrls"
                   from practice_answer a
                   join t_question q on q.id = a.question_id
-                 where a.session_id = ? and a.user_id = ?
+                 where a.session_id = ? and a.user_id = ? and a.deleted_at is null
                  order by a.answered_at, a.id
                  limit ? offset ?
                 """, sessionId, uid, s, (p - 1) * s);

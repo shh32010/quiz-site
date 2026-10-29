@@ -1,6 +1,6 @@
 # quiz-v2 文档与脚本索引
 
-**最后整理**：2026-10-28
+**最后整理**：2026-10-29
 
 ## 数据库变更 SQL（按需手工执行）
 
@@ -94,6 +94,14 @@
 | `data_write_knowledge_264_20261028.sql` | C 语言 S1-7 清洗（96 条，含子节）；备份表 `t_knowledge_point_backup_20261028_264` |
 
 > 新环境按依赖顺序执行；已有库不要重复跑破坏性脚本，先备份 `/opt/quiz-backups/`。
+
+
+### 2026-10-29 批次（已执行于生产）
+
+| 文件 | 用途 |
+|---|---|
+| `schema_soft_delete_20261029.sql` | `practice_session` / `practice_answer` / `wrong_question` 增加 `deleted_at`；清空历史改为软删除；错题再次答错时触发器恢复错题行 |
+| `data_write_chapter_names_20261029.sql` | S5/S6 根章名称改为「操作系统配置与管理（Windows 10）」「Linux 配置与管理（CentOS7）」；备份表 `t_chapter_backup_20261029_s5s6` |
 
 ## SQL 命名与登记约定（自 2026-10-26 起）
 

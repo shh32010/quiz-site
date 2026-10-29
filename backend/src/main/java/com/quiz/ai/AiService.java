@@ -143,7 +143,7 @@ public class AiService {
                 select w.wrong_count as "wrongCount", left(q.stem, 60) as "stem",
                        coalesce(q.cat_l1, '') as "catL1", coalesce(q.cat_l3, '') as "catL3"
                   from wrong_question w join t_question q on q.id = w.question_id
-                 where w.user_id = ? and w.last_wrong_at > now() - interval '7 days'
+                 where w.user_id = ? and w.deleted_at is null and w.last_wrong_at > now() - interval '7 days'
                  order by w.wrong_count desc limit 40
                 """, uid);
         if (wrongs.isEmpty()) {

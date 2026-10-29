@@ -19,6 +19,7 @@ const sendingFor = ref<number | null>(null)
 const sending = computed(() => sendingFor.value === props.questionId)
 const error = ref('')
 const done = ref(false)
+const similarCount = ref(0)
 const textarea = ref<HTMLTextAreaElement | null>(null)
 
 const types = [
@@ -30,6 +31,7 @@ const types = [
 ]
 
 const loginTo = computed(() => ({ path: '/login', query: { redirect: route.fullPath } }))
+const activeTypeLabel = computed(() => types.find(item => item.key === type.value)?.label ?? '其他')
 
 function toggle() {
   open.value = !open.value
@@ -45,28 +47,30 @@ function reset() {
   content.value = ''
   error.value = ''
   done.value = false
+  similarCount.value = 0
 }
 
 function again() {
   done.value = false
   content.value = ''
   error.value = ''
+  similarCount.value = 0
   nextTick(() => textarea.value?.focus())
 }
 
 async function send() {
   if (sending.value) return
-  const text = content.value.trim()
-  if (!text) {
-    error.value = '请描述一下遇到的问题'
-    return
-  }
+  // 内容选填：没写具体描述时，用类型作为默认内容，后台仍能定位
+  const text = content.value.trim() || `未填写具体描述（${activeTypeLabel.value}）`
   const qid = props.questionId
   sendingFor.value = qid
   error.value = ''
   try {
-    await api.post('/api/feedback', { questionId: qid, type: type.value, content: text })
-    if (props.questionId === qid) done.value = true
+    const result = await api.post<any>('/api/feedback', { questionId: qid, type: type.value, content: text })
+    if (props.questionId === qid) {
+      done.value = true
+      similarCount.value = Number(result?.similarCount ?? 0)
+    }
   } catch (e: any) {
     if (props.questionId === qid) error.value = e.message ?? '提交失败，请稍后重试'
   } finally {
@@ -108,7 +112,10 @@ watch(content, () => {
         <!-- 成功态 -->
         <div v-else-if="done" class="flex flex-wrap items-center gap-2" role="status" aria-live="polite">
           <span class="grid h-6 w-6 place-items-center rounded-full bg-success-bg text-xs text-success-fg">✓</span>
-          <p class="flex-1 text-xs leading-5 text-fg-secondary">已收到，作者会核实处理，感谢你的反馈。</p>
+          <p class="flex-1 text-xs leading-5 text-fg-secondary">
+            已收到，作者会核实处理，感谢你的反馈。
+            <span v-if="similarCount > 0">同类题还有 {{ similarCount }} 道，会一并检查。</span>
+          </p>
           <button type="button" class="rounded-lg border border-line-strong px-2.5 py-1 text-xs text-fg-secondary hover:border-brand hover:text-brand"
                   @click="again">再反馈一条</button>
           <button type="button" class="rounded-lg px-2.5 py-1 text-xs text-fg-muted hover:text-fg-primary" @click="reset">收起</button>
@@ -135,7 +142,7 @@ watch(content, () => {
 
           <textarea ref="textarea" v-model="content" :maxlength="MAX_CONTENT" rows="3"
                     aria-label="题目反馈内容"
-                    placeholder="例如：正确答案应该是 B / 题干里的公式显示不完整 / 配图和题目对不上…"
+                    placeholder="选填：正确答案应该是 B / 题干公式显示不完整 / 配图和题目对不上…"
                     class="mt-2 w-full resize-none rounded-xl border border-line-strong bg-surface-card px-3 py-2 text-sm leading-6 text-fg-primary outline-none transition placeholder:text-fg-muted focus:border-brand focus:ring-2 focus:ring-brand/15"
                     @keydown.ctrl.enter.prevent="send" @keydown.meta.enter.prevent="send" />
 
@@ -145,7 +152,7 @@ watch(content, () => {
               <button type="button" class="rounded-lg px-2.5 py-1 text-xs text-fg-muted hover:text-fg-primary" @click="reset">取消</button>
               <button type="button"
                       class="min-h-9 rounded-lg bg-brand px-3 text-xs font-medium text-white transition hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-50"
-                      :disabled="sending || !content.trim()" @click="send">
+                      :disabled="sending" @click="send">
                 {{ sending ? '提交中…' : '提交反馈' }}
               </button>
             </div>

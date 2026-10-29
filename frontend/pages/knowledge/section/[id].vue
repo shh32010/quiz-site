@@ -106,6 +106,55 @@ function jumpToKp(kpId: number) {
   })
 }
 
+interface TocRow {
+  kind: 'group' | 'item'
+  key: string
+  code?: string | null
+  name?: string
+  kp?: any
+  index?: number
+}
+
+function findNode(nodes: KNode[], target: number): KNode | null {
+  for (const node of nodes) {
+    if (node.id === target) return node
+    const hit = findNode(node.children ?? [], target)
+    if (hit) return hit
+  }
+  return null
+}
+
+/** 有小节大纲时按三级小节分组，否则保持平铺 */
+const tocRows = computed<TocRow[]>(() => {
+  const sectionNode = findNode(tree.value ?? [], id.value)
+  const childMap = new Map<number, KNode>()
+  for (const child of sectionNode?.children ?? []) childMap.set(child.id, child)
+  const counts = new Map<number, number>()
+  for (const kp of kps.value) {
+    const nodeId = Number(kp.nodeId ?? id.value)
+    counts.set(nodeId, (counts.get(nodeId) ?? 0) + 1)
+  }
+  // 只有每个大纲小节都有足够条目时才分组，避免一两条子节把目录切碎
+  const grouped = counts.size > 1 && [...counts.values()].every(count => count >= 3)
+  const rows: TocRow[] = []
+  let lastNode: number | null = null
+  kps.value.forEach((kp, index) => {
+    const nodeId = Number(kp.nodeId ?? id.value)
+    if (grouped && nodeId !== lastNode) {
+      const child = childMap.get(nodeId)
+      rows.push({
+        kind: 'group',
+        key: `group-${nodeId}-${index}`,
+        code: child?.code ?? section.value?.code ?? '',
+        name: child?.name ?? section.value?.name ?? '本节',
+      })
+      lastNode = nodeId
+    }
+    rows.push({ kind: 'item', key: `kp-${kp.id}`, kp, index })
+  })
+  return rows
+})
+
 /** 来源里的 section 常与标题完全相同，重复时不再显示 */
 function sectionLabel(kp: any): string {
   const label = formatText(String(kp.section ?? '')).trim()
@@ -401,14 +450,19 @@ watch(section, (value) => {
       <aside class="hidden min-[1200px]:block">
         <div class="sticky top-8 max-h-[calc(100vh-4rem)] overflow-auto pl-2">
           <p class="mb-2 text-xs font-medium text-fg-muted">本节目录</p>
-          <a v-for="(kp, index) in kps" :key="kp.id" :href="`#kp-${kp.id}`"
-             class="flex gap-1.5 border-l-2 py-1 pl-2 text-xs leading-5"
-             :class="activeKp === kp.id
-               ? 'border-brand font-medium text-brand'
-               : 'border-line-subtle text-fg-muted hover:text-fg-secondary'">
-            <span class="shrink-0 font-mono text-[10px] tabular-nums">{{ tocNumber(index) }}</span>
-            <span class="min-w-0">{{ tocTitle(kp) }}</span>
-          </a>
+          <template v-for="row in tocRows" :key="row.key">
+            <p v-if="row.kind === 'group'" class="mt-2 mb-1 truncate text-[10px] font-medium text-fg-muted">
+              <span v-if="row.code" class="mr-1 font-mono">{{ row.code }}</span>{{ row.name }}
+            </p>
+            <a v-else :href="`#kp-${row.kp?.id}`"
+               class="flex gap-1.5 border-l-2 py-1 pl-2 text-xs leading-5"
+               :class="activeKp === row.kp?.id
+                 ? 'border-brand font-medium text-brand'
+                 : 'border-line-subtle text-fg-muted hover:text-fg-secondary'">
+              <span class="shrink-0 font-mono text-[10px] tabular-nums">{{ tocNumber(row.index ?? 0) }}</span>
+              <span class="min-w-0">{{ tocTitle(row.kp) }}</span>
+            </a>
+          </template>
           <p v-if="!kps.length" class="text-xs text-fg-muted">暂无知识点</p>
         </div>
       </aside>
@@ -434,13 +488,18 @@ watch(section, (value) => {
     <!-- 移动端目录：当前节的知识点，编号与桌面右侧一致 -->
     <UiModal v-model="tocOpen" title="本节目录" size="lg">
       <div class="space-y-0.5">
-        <a v-for="(kp, index) in kps" :key="kp.id" :href="`#kp-${kp.id}`"
-           class="flex min-h-11 items-start gap-2 rounded-lg px-2 py-2 text-sm"
-           :class="activeKp === kp.id ? 'bg-brand-soft font-medium text-brand-on-soft' : 'text-fg-secondary hover:bg-surface-muted'"
-           @click.prevent="jumpToKp(kp.id)">
-          <span class="mt-0.5 w-8 shrink-0 font-mono text-[11px] tabular-nums text-fg-muted">{{ tocNumber(index) }}</span>
-          <span class="min-w-0">{{ tocTitle(kp) }}</span>
-        </a>
+        <template v-for="row in tocRows" :key="row.key">
+          <p v-if="row.kind === 'group'" class="px-2 pb-0.5 pt-2 text-[11px] font-medium text-fg-muted">
+            <span v-if="row.code" class="mr-1 font-mono">{{ row.code }}</span>{{ row.name }}
+          </p>
+          <a v-else :href="`#kp-${row.kp?.id}`"
+             class="flex min-h-11 items-start gap-2 rounded-lg px-2 py-2 text-sm"
+             :class="activeKp === row.kp?.id ? 'bg-brand-soft font-medium text-brand-on-soft' : 'text-fg-secondary hover:bg-surface-muted'"
+             @click.prevent="jumpToKp(row.kp?.id)">
+            <span class="mt-0.5 w-8 shrink-0 font-mono text-[11px] tabular-nums text-fg-muted">{{ tocNumber(row.index ?? 0) }}</span>
+            <span class="min-w-0">{{ tocTitle(row.kp) }}</span>
+          </a>
+        </template>
       </div>
       <p v-if="!kps.length" class="py-6 text-center text-sm text-fg-muted">暂无知识点</p>
       <NuxtLink :to="`/knowledge/course/${courseCode}`"

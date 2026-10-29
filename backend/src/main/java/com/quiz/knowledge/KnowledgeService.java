@@ -168,7 +168,7 @@ public class KnowledgeService {
                   union all
                   select ch.id from t_chapter ch join sub s on ch.parent_id = s.id
                 )
-                select k.id, k.title, k.section, k.content, k.importance,
+                select k.id, k.node_id as "nodeId", k.title, k.section, k.content, k.importance,
                        (select count(*)
                           from t_question_kp x
                           join t_question q on q.id = x.question_id

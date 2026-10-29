@@ -99,7 +99,7 @@ public class PracticeService {
                         select w.question_id
                           from wrong_question w
                           join t_question q on q.id = w.question_id
-                         where w.user_id = ? and not q.deleted and q.review_status = 'ok'
+                         where w.user_id = ? and w.deleted_at is null and not q.deleted and q.review_status = 'ok'
                         """ + typeFilter + """
                          order by w.resolved asc, w.next_review_at nulls last, w.question_id
                          limit ?
@@ -127,7 +127,7 @@ public class PracticeService {
 
     private void requireOwn(long sessionId, UUID uid) {
         Integer n = jdbc.queryForObject(
-                "select count(*) from practice_session where id = ? and user_id = ?", Integer.class, sessionId, uid);
+                "select count(*) from practice_session where id = ? and user_id = ? and deleted_at is null", Integer.class, sessionId, uid);
         if (n == null || n == 0) {
             throw new IllegalStateException("会话无效");
         }
@@ -159,11 +159,11 @@ public class PracticeService {
                        (select count(*) from session_question x where x.session_id = sq.session_id) as "total",
                        (select count(*) from practice_answer a where a.session_id = sq.session_id) as "answered"
                   from session_question sq
-                  join practice_session ps on ps.id = sq.session_id and ps.finished_at is null
+                  join practice_session ps on ps.id = sq.session_id and ps.finished_at is null and ps.deleted_at is null
                   join t_question q on q.id = sq.question_id
                   left join t_chapter c on c.id = q.chapter_id
                   left join practice_answer a
-                         on a.session_id = sq.session_id and a.question_id = sq.question_id
+                         on a.session_id = sq.session_id and a.question_id = sq.question_id and a.deleted_at is null
                  where sq.session_id = ? and a.id is null
                  order by sq.item_order
                  limit 1
@@ -191,7 +191,7 @@ public class PracticeService {
                   from session_question sq
                   join t_question q on q.id = sq.question_id
                   left join practice_answer a
-                         on a.session_id = sq.session_id and a.question_id = sq.question_id
+                         on a.session_id = sq.session_id and a.question_id = sq.question_id and a.deleted_at is null
                  where sq.session_id = ?
                  order by sq.item_order
                 """, sessionId);
@@ -230,10 +230,11 @@ public class PracticeService {
                          else s.mode
                        end as "targetName",
                        (select count(*) from session_question x where x.session_id = s.id) as "questionCount",
-                       (select count(*) from practice_answer a where a.session_id = s.id) as "answeredCount",
+                       (select count(*) from practice_answer a where a.session_id = s.id and a.deleted_at is null) as "answeredCount",
                        (select count(*) from session_question x where x.session_id = s.id
                           and not exists (select 1 from practice_answer a
-                                           where a.session_id = s.id and a.question_id = x.question_id)) as "remainingCount",
+                                           where a.session_id = s.id and a.question_id = x.question_id
+                                             and a.deleted_at is null)) as "remainingCount",
                        coalesce(s.elapsed_sec,
                                 extract(epoch from (now() - s.started_at))::int) as "elapsedSec",
                        coalesce(p.suggest_time, 0) as "limitSec",
@@ -242,10 +243,10 @@ public class PracticeService {
                        end as "remainingSec"
                   from practice_session s
                   left join t_exam_paper p on p.id = s.target_id and s.mode = 'paper'
-                 where s.user_id = ? and s.finished_at is null
+                 where s.user_id = ? and s.finished_at is null and s.deleted_at is null
                    and s.mode <> 'single'
                    and (select count(*) from session_question x where x.session_id = s.id) > 1
-                   and (select count(*) from practice_answer a where a.session_id = s.id) > 0
+                   and (select count(*) from practice_answer a where a.session_id = s.id and a.deleted_at is null) > 0
                    and (s.mode <> 'paper' or p.suggest_time is null
                         or extract(epoch from (now() - s.started_at)) < p.suggest_time)
                  order by s.started_at desc
@@ -283,11 +284,11 @@ public class PracticeService {
                        (a.id is not null) as "answered", a.user_answer as "userAnswer",
                        a.is_correct as "isCorrect", a.score_got as "scoreGot"
                   from session_question sq
-                  join practice_session ps on ps.id = sq.session_id and ps.finished_at is null
+                  join practice_session ps on ps.id = sq.session_id and ps.finished_at is null and ps.deleted_at is null
                   join t_question q on q.id = sq.question_id
                   left join t_chapter c on c.id = q.chapter_id
                   left join practice_answer a
-                         on a.session_id = sq.session_id and a.question_id = sq.question_id
+                         on a.session_id = sq.session_id and a.question_id = sq.question_id and a.deleted_at is null
                  where sq.session_id = ? and sq.item_order = ?
                 """, sessionId, order);
         if (rows.isEmpty()) {
@@ -312,6 +313,7 @@ public class PracticeService {
         Integer inSession = jdbc.queryForObject("""
                 select count(*)
                   from session_question sq
+                  join practice_session ps on ps.id = sq.session_id and ps.deleted_at is null
                   join t_question q on q.id = sq.question_id
                  where sq.session_id = ? and sq.question_id = ?
                    and not q.deleted and q.review_status = 'ok'
@@ -334,7 +336,7 @@ public class PracticeService {
                        s.correct_count as "correctCount",
                        (select count(*) from session_question x where x.session_id = s.id) as "questionCount"
                   from practice_session s
-                 where s.id = ? and s.user_id = ?
+                 where s.id = ? and s.user_id = ? and s.deleted_at is null
                 """, sessionId, uid);
         if (sessions.isEmpty()) {
             throw new IllegalStateException("会话无效");
@@ -388,7 +390,10 @@ public class PracticeService {
                 select s.started_at as "startedAt",
                        s.finished_at as "finishedAt",
                        s.mode,
-                       p.suggest_time as "limitSec",
+                       coalesce(p.suggest_time,
+                                case when s.mode = 'random' then
+                                  case s.target_id when 4 then 6000 when 5 then 3000 end
+                                end) as "limitSec",
                        extract(epoch from (now() - s.started_at))::int as "elapsedSec"
                   from practice_session s
                   left join t_exam_paper p on p.id = s.target_id and s.mode = 'paper'
@@ -410,6 +415,7 @@ public class PracticeService {
     /** 受控复盘：仅本会话已作答的题 */
     @Transactional
     public Map<String, Object> review(long sessionId, int questionId, UUID uid) {
+        requireOwn(sessionId, uid);
         bindUser(uid);
         String json = jdbc.queryForObject("select get_answer(?, ?)::text", String.class, sessionId, questionId);
         Map<String, Object> result = readJson(json);
