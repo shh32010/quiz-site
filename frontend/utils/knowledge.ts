@@ -28,6 +28,11 @@ export function kpOrdinal(part: number, index: number, size: number): number {
 }
 
 /** 标题是否已自带编号；避免阅读器再叠加“1.” */
+/** 去掉标题开头自带的 3.3 / 10.4.1 一类编号，用于目录显示 */
+export function stripLeadingNumber(title: string): string {
+  return title.replace(/^\s*\d+(?:\.\d+)+[.．、]?\s+/, '').trim()
+}
+
 export function hasOwnNumbering(title: string): boolean {
   return /^\s*(?:\d+(?:[.．、]|\.\d+)|[一二三四五六七八九十]+[、.．]|第\s*[一二三四五六七八九十百0-9]+\s*[章节部分])/.test(title)
 }

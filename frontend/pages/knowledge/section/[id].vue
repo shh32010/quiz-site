@@ -3,7 +3,7 @@
 import { ALL_COURSES } from '~/utils/constants'
 import { formatText } from '~/composables/format'
 import { normalizeKnowledgeContent, renderMarkdown } from '~/utils/markdown'
-import { courseOf, flattenSections, hasOwnNumbering, kpOrdinal, type KNode, type SectionRef } from '~/utils/knowledge'
+import { courseOf, flattenSections, hasOwnNumbering, kpOrdinal, stripLeadingNumber, type KNode, type SectionRef } from '~/utils/knowledge'
 
 definePageMeta({ layout: 'immersive' })
 
@@ -88,6 +88,22 @@ function displayTitle(kp: any): string {
 /** 标题已有“3.3”“10.4.1”等编号时不再加阅读器序号 */
 function kpPrefix(kp: any, index: number): string {
   return hasOwnNumbering(displayTitle(kp)) ? '' : `${kpOrdinal(part.value, index, size)}. `
+}
+
+/** 目录编号：1.1、1.2…；标题自带编号时在目录里去掉，避免重复 */
+function tocNumber(index: number): string {
+  return `1.${kpOrdinal(part.value, index, size)}`
+}
+
+function tocTitle(kp: any): string {
+  return stripLeadingNumber(displayTitle(kp))
+}
+
+function jumpToKp(kpId: number) {
+  tocOpen.value = false
+  nextTick(() => {
+    document.getElementById(`kp-${kpId}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  })
 }
 
 /** 来源里的 section 常与标题完全相同，重复时不再显示 */
@@ -384,13 +400,14 @@ watch(section, (value) => {
       <!-- 桌面右侧本部分目录 -->
       <aside class="hidden min-[1200px]:block">
         <div class="sticky top-8 max-h-[calc(100vh-4rem)] overflow-auto pl-2">
-          <p class="mb-2 text-xs font-medium text-fg-muted">本部分目录</p>
-          <a v-for="kp in kps" :key="kp.id" :href="`#kp-${kp.id}`"
-             class="block border-l-2 py-1 pl-2 text-xs leading-5"
+          <p class="mb-2 text-xs font-medium text-fg-muted">本节目录</p>
+          <a v-for="(kp, index) in kps" :key="kp.id" :href="`#kp-${kp.id}`"
+             class="flex gap-1.5 border-l-2 py-1 pl-2 text-xs leading-5"
              :class="activeKp === kp.id
                ? 'border-brand font-medium text-brand'
                : 'border-line-subtle text-fg-muted hover:text-fg-secondary'">
-            {{ displayTitle(kp) }}
+            <span class="shrink-0 font-mono text-[10px] tabular-nums">{{ tocNumber(index) }}</span>
+            <span class="min-w-0">{{ tocTitle(kp) }}</span>
           </a>
           <p v-if="!kps.length" class="text-xs text-fg-muted">暂无知识点</p>
         </div>
@@ -414,20 +431,21 @@ watch(section, (value) => {
       </div>
     </nav>
 
-    <!-- 移动端目录 -->
+    <!-- 移动端目录：当前节的知识点，编号与桌面右侧一致 -->
     <UiModal v-model="tocOpen" title="本节目录" size="lg">
-      <div v-for="chapter in chapters" :key="chapter.code ?? chapter.name" class="mb-4">
-        <p class="mb-1 flex items-center gap-1.5 text-xs font-medium text-fg-muted">
-          <span v-if="chapter.code" class="rounded bg-surface-muted px-1 py-0.5 font-mono">{{ chapter.code }}</span>
-          {{ chapter.name }}
-        </p>
-        <NuxtLink v-for="item in chapter.items" :key="item.id" :to="`/knowledge/section/${item.id}`"
-                  class="flex min-h-11 items-center rounded-lg px-2 text-sm"
-                  :class="item.id === id ? 'bg-brand-soft font-medium text-brand-on-soft' : 'text-fg-secondary hover:bg-surface-muted'"
-                  @click="tocOpen = false">
-          <span v-if="isLearned(item.id)" class="mr-1 text-success-fg">●</span>{{ item.name }}
-        </NuxtLink>
+      <div class="space-y-0.5">
+        <a v-for="(kp, index) in kps" :key="kp.id" :href="`#kp-${kp.id}`"
+           class="flex min-h-11 items-start gap-2 rounded-lg px-2 py-2 text-sm"
+           :class="activeKp === kp.id ? 'bg-brand-soft font-medium text-brand-on-soft' : 'text-fg-secondary hover:bg-surface-muted'"
+           @click.prevent="jumpToKp(kp.id)">
+          <span class="mt-0.5 w-8 shrink-0 font-mono text-[11px] tabular-nums text-fg-muted">{{ tocNumber(index) }}</span>
+          <span class="min-w-0">{{ tocTitle(kp) }}</span>
+        </a>
       </div>
+      <p v-if="!kps.length" class="py-6 text-center text-sm text-fg-muted">暂无知识点</p>
+      <NuxtLink :to="`/knowledge/course/${courseCode}`"
+                class="mt-3 inline-flex text-xs text-brand hover:underline"
+                @click="tocOpen = false">查看课程全部章节 →</NuxtLink>
     </UiModal>
   </div>
 </template>

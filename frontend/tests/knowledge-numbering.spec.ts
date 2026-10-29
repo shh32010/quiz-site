@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { hasOwnNumbering, kpOrdinal } from '../utils/knowledge'
+import { hasOwnNumbering, kpOrdinal, stripLeadingNumber } from '../utils/knowledge'
 
 describe('knowledge title numbering', () => {
   it('识别自带编号的标题', () => {
@@ -18,5 +18,11 @@ describe('knowledge title numbering', () => {
     expect(kpOrdinal(1, 0, 100)).toBe(1)
     expect(kpOrdinal(2, 0, 100)).toBe(101)
     expect(kpOrdinal(2, 5, 100)).toBe(106)
+  })
+
+  it('目录标题去掉自带编号，但不误伤年份', () => {
+    expect(stripLeadingNumber('3.3 数据的输入')).toBe('数据的输入')
+    expect(stripLeadingNumber('10.4.1 切换幻灯片')).toBe('切换幻灯片')
+    expect(stripLeadingNumber('2020 年真题')).toBe('2020 年真题')
   })
 })
