@@ -1,8 +1,21 @@
 /**
  * 站内公告配置。
- * 发布新公告时递增 version（如日期-序号），已读用户会再次看到弹窗。
+ * 公告每天最多提示一次；发布新公告时递增 version，当天也会重新提示。
  * 公告内容只影响前端展示，不需要改数据库。
  */
+
+/** 本地日期 YYYY-MM-DD，避免 UTC 跨天导致提前/延后弹出 */
+export function localDateKey(date: Date = new Date()): string {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+/** 已读标记：版本 + 本地日期；跨天或版本变化都会重新提示 */
+export function announcementMarker(version: string, date: Date = new Date()): string {
+  return `${version}|${localDateKey(date)}`
+}
 export interface AnnouncementItem {
   /** 小标签，如「新功能」 */
   tag: string
@@ -12,39 +25,56 @@ export interface AnnouncementItem {
   desc: string
 }
 
+export interface AnnouncementHistoryItem {
+  /** 展示用日期 */
+  date: string
+  /** 该次更新的一句话说明 */
+  text: string
+}
+
 export interface Announcement {
-  /** 版本号：变化后所有用户重新看到一次 */
+  /** 版本号：变化后当天也会重新提示一次 */
   version: string
   title: string
   subtitle: string
   /** 展示用日期 */
   date: string
   items: AnnouncementItem[]
+  /** 更新历史：只放对用户有感知的提交，不贴原始 commit message */
+  history?: AnnouncementHistoryItem[]
   /** 底部补充说明 */
   footnote?: string
 }
 
 export const ANNOUNCEMENT: Announcement = {
-  version: '2026-10-29-1',
-  title: '关于这个刷题站：题库、技术与部署',
-  subtitle: '把题库来源、开发方式和运行情况一次说清楚。',
+  version: '2026-10-29-3',
+  title: '关于这个刷题站的几句说明',
+  subtitle: '跟大家交个底，说说题库哪来的、怎么做的，还有平时怎么维护。',
   date: '2026 年 10 月 29 日',
+  history: [
+    { date: '2026-10-29', text: '在公告里把题库来源、三个模型协同开发和阿里云杭州节点部署的情况说清楚了' },
+    { date: '2026-10-28', text: '加上了站内公告、联系作者和题目报错入口，顺便重做了交卷后的判分结果卡' },
+    { date: '2026-10-28', text: '把知识点和 C 语言代码类题目又整理了一遍，修掉了之前的乱码和串行问题' },
+    { date: '2026-10-28', text: '知识点阅读器加上了目录、进度和自测，手机上也能一节节连续往下滑' },
+    { date: '2026-10-27', text: '新增邮箱验证和匿名访问统计，学习报告能看节级掌握度，错题也能按筛选打印' },
+    { date: '2026-10-27', text: '补齐备案页脚、隐私协议和用户协议，SEO 基础配置也弄好了' },
+  ],
   items: [
     {
       tag: '题库',
-      title: '公开资料，多轮清洗',
-      desc: '素材整理自公开网络流传的机构资料 PDF，经 MinerU 识别提取，再由 DeepSeek-V4.1-Flash（1017 版）多轮精读、清洗、去重、补全答案与解析。',
+      title: '公开资料整理，做过多轮清洗',
+      desc: '里面的题目来自公开网络流传的机构资料 PDF，先用 MinerU 识别提取出来，再由 DeepSeek-V4.1-Flash（1017 版）一轮轮精读、清洗、去重，顺手把缺的答案和解析也补全了。',
     },
     {
       tag: '协作',
-      title: '按江苏考纲整理，三个模型协作',
-      desc: '参照江苏省计算机专转本考试大纲设计题库结构与知识点目录；DeepSeek-V4.1-Flash、Claude Opus 5.5、Gemini 4 Argon 协同完成开发、清洗与审查。',
+      title: '按江苏考纲搭结构，三个模型一起写',
+      desc: '题库结构和知识点目录都是参照江苏省计算机专转本考试大纲排的。网站开发、内容清洗和代码检查，由 DeepSeek-V4.1-Flash、Claude Opus 5.5 和 Gemini 4 Argon 一起完成。',
     },
     {
       tag: '部署',
-      title: '阿里云杭州节点，域名已备案',
-      desc: '站点部署在阿里云杭州节点，域名已完成 ICP 备案，页面响应毫秒级；手机浏览器直接打开即可使用。',
+      title: '放在阿里云杭州节点，已经备案',
+      desc: '站点部署在阿里云杭州节点，域名已完成 ICP 备案，平时打开和切题基本是毫秒级响应。不用装软件，手机浏览器直接点开就能刷。',
     },
   ],
-  footnote: '题库仅用于学习交流，如涉及版权问题可在站内「我的 → 联系作者」联系删除。公告每次更新只提示一次，也可从页脚「站内公告」重新查看。',
+  footnote: '题库仅用于学习交流，如果哪部分涉及版权问题，在站内「我的 → 联系作者」跟我说一声，会尽快处理。这个公告每天只提示一次，关掉后想再看，从页面底部的「站内公告」随时能点开。',
 }

@@ -1,19 +1,19 @@
-import { ANNOUNCEMENT } from '~/utils/announcement'
+import { ANNOUNCEMENT, announcementMarker } from '~/utils/announcement'
 
-/** 已读标记按公告版本隔离：发新公告时无需清理旧 key */
-const SEEN_PREFIX = 'quiz_announcement_seen:'
+/** 每天最多提示一次；版本变化时当天也会重新提示 */
+const SEEN_KEY = 'quiz_announcement_daily'
 
 export function useAnnouncement() {
   const open = useState<boolean>('announcement_open', () => false)
 
-  function storageKey(): string {
-    return `${SEEN_PREFIX}${ANNOUNCEMENT.version}`
+  function marker(): string {
+    return announcementMarker(ANNOUNCEMENT.version)
   }
 
   function hasSeen(): boolean {
     if (!import.meta.client) return true
     try {
-      return localStorage.getItem(storageKey()) === '1'
+      return localStorage.getItem(SEEN_KEY) === marker()
     } catch {
       return false
     }
@@ -24,18 +24,18 @@ export function useAnnouncement() {
     open.value = true
   }
 
-  /** 关闭并记为当前版本已读 */
+  /** 关闭并记为当天已读 */
   function dismiss() {
     open.value = false
     if (!import.meta.client) return
     try {
-      localStorage.setItem(storageKey(), '1')
+      localStorage.setItem(SEEN_KEY, marker())
     } catch {
       /* 隐私模式下写入失败时，仅本次会话不再弹 */
     }
   }
 
-  /** 首次进入且当前版本未读时自动打开 */
+  /** 当天未读时自动打开 */
   function showIfNew() {
     if (!hasSeen()) open.value = true
   }

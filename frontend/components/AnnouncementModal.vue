@@ -89,6 +89,16 @@ function onKeydown(e: KeyboardEvent) {
     trapTab(e)
   }
 }
+
+/** 展开更新历史后滚到列表底部，避免点了箭头却看不到内容 */
+function onHistoryToggle(event: Event) {
+  const details = event.currentTarget as HTMLDetailsElement
+  if (!details.open) return
+  nextTick(() => {
+    const scroller = details.parentElement
+    if (scroller) scroller.scrollTop = scroller.scrollHeight
+  })
+}
 </script>
 
 <template>
@@ -132,7 +142,7 @@ function onKeydown(e: KeyboardEvent) {
           </div>
 
           <!-- 更新条目 -->
-          <div class="max-h-[46vh] space-y-2.5 overflow-y-auto px-4 py-4 sm:max-h-none sm:px-5">
+          <div class="max-h-[52vh] space-y-2.5 overflow-y-auto px-4 py-4 sm:max-h-[58vh] sm:px-5">
             <div v-for="(item, index) in ANNOUNCEMENT.items" :key="item.title"
                  class="flex gap-3 rounded-xl border border-line-subtle bg-surface-card p-3">
               <span class="mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-lg bg-brand-soft text-[11px] font-bold text-brand-on-soft">
@@ -146,6 +156,33 @@ function onKeydown(e: KeyboardEvent) {
                 <p class="mt-1 text-xs leading-5 text-fg-secondary">{{ item.desc }}</p>
               </div>
             </div>
+
+            <!-- 更新历史：默认收起，避免公告过长 -->
+            <details v-if="ANNOUNCEMENT.history?.length" class="group rounded-xl border border-line-subtle bg-surface-card"
+                     @toggle="onHistoryToggle">
+              <summary class="flex cursor-pointer list-none items-center justify-between gap-2 px-3 py-2.5 text-xs font-medium text-fg-secondary [&::-webkit-details-marker]:hidden">
+                <span class="flex items-center gap-1.5">
+                  <svg viewBox="0 0 24 24" class="h-3.5 w-3.5 text-fg-muted" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="8.5" />
+                    <path d="M12 7.5V12l3 1.8" />
+                  </svg>
+                  更新历史
+                  <span class="rounded-full bg-surface-muted px-1.5 py-0.5 text-[10px] font-normal text-fg-muted">
+                    {{ ANNOUNCEMENT.history.length }} 条
+                  </span>
+                </span>
+                <svg viewBox="0 0 24 24" class="h-3.5 w-3.5 text-fg-muted transition-transform group-open:rotate-180" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="m6 9 6 6 6-6" />
+                </svg>
+              </summary>
+              <ol class="space-y-2.5 border-t border-line-subtle px-3 py-3">
+                <li v-for="entry in ANNOUNCEMENT.history" :key="entry.date + entry.text" class="relative pl-3.5">
+                  <span aria-hidden="true" class="absolute left-0 top-[7px] h-1.5 w-1.5 rounded-full bg-brand/50" />
+                  <p class="text-[10px] tabular-nums text-fg-muted">{{ entry.date }}</p>
+                  <p class="mt-0.5 text-xs leading-5 text-fg-secondary">{{ entry.text }}</p>
+                </li>
+              </ol>
+            </details>
           </div>
 
           <!-- 底部操作 -->
