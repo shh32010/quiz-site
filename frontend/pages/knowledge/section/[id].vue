@@ -106,9 +106,20 @@ function jumpToKp(kpId: number) {
   })
 }
 
+function jumpToGroup(nodeId?: number) {
+  if (!nodeId) return
+  tocOpen.value = false
+  nextTick(() => {
+    document.getElementById(`group-${nodeId}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  })
+}
+
 interface TocRow {
   kind: 'group' | 'item'
   key: string
+  nodeId?: number
+  count?: number
+  number?: string
   code?: string | null
   name?: string
   kp?: any
@@ -124,7 +135,7 @@ function findNode(nodes: KNode[], target: number): KNode | null {
   return null
 }
 
-/** 有小节大纲时按三级小节分组，否则保持平铺 */
+/** 有大纲小节时，目录只列三级条目；否则保持原来的知识点平铺 */
 const tocRows = computed<TocRow[]>(() => {
   const sectionNode = findNode(tree.value ?? [], id.value)
   const childMap = new Map<number, KNode>()
@@ -134,27 +145,33 @@ const tocRows = computed<TocRow[]>(() => {
     const nodeId = Number(kp.nodeId ?? id.value)
     counts.set(nodeId, (counts.get(nodeId) ?? 0) + 1)
   }
-  // 只有每个大纲小节都有足够条目时才分组，避免一两条子节把目录切碎
   const grouped = counts.size > 1 && [...counts.values()].every(count => count >= 3)
-  const rows: TocRow[] = []
-  let lastNode: number | null = null
-  kps.value.forEach((kp, index) => {
-    const nodeId = Number(kp.nodeId ?? id.value)
-    if (grouped && nodeId !== lastNode) {
+  if (grouped) {
+    let groupNo = 0
+    return [...counts.entries()].map(([nodeId, count]) => {
       const child = childMap.get(nodeId)
-      rows.push({
+      groupNo += 1
+      return {
         kind: 'group',
-        key: `group-${nodeId}-${index}`,
+        key: `group-${nodeId}`,
+        nodeId,
+        count,
+        number: `1.${groupNo}`,
         code: child?.code ?? section.value?.code ?? '',
         name: child?.name ?? section.value?.name ?? '本节',
-      })
-      lastNode = nodeId
-    }
-    rows.push({ kind: 'item', key: `kp-${kp.id}`, kp, index })
-  })
-  return rows
+      }
+    })
+  }
+  return kps.value.map((kp, index) => ({
+    kind: 'item',
+    key: `kp-${kp.id}`,
+    kp,
+    index,
+  }))
 })
 
+const activeGroupId = computed(() =>
+  kps.value.find(kp => Number(kp.id) === activeKp.value)?.nodeId ?? null)
 
 interface ContentGroup {
   nodeId: number
@@ -366,7 +383,9 @@ watch(section, (value) => {
           <header class="mt-3 border-b border-line-subtle pb-4">
             <h1 class="text-2xl font-bold tracking-tight text-fg-primary">{{ section.name }}</h1>
             <p class="mt-1 text-sm text-fg-secondary">
-              {{ section.code }} · 共 {{ total }} 条知识点
+              {{ section.code }} ·
+              <template v-if="contentGroups.length > 1">{{ contentGroups.length }} 个大纲条目 · {{ total }} 条内容</template>
+              <template v-else>共 {{ total }} 条知识点</template>
               <span v-if="totalPages > 1">· 第 {{ part }} / {{ totalPages }} 部分</span>
             </p>
             <div class="mt-3 flex flex-wrap items-center gap-2 text-xs">
@@ -396,8 +415,8 @@ watch(section, (value) => {
 
           <article v-if="kps.length" class="mt-2" :style="{ '--reader-fs': `${readerFont}px` }">
             <template v-for="(group, groupIndex) in contentGroups" :key="group.nodeId">
-              <div v-if="contentGroups.length > 1"
-                   class="mt-8 rounded-xl border border-brand/15 bg-brand-soft/40 px-4 py-3"
+              <div v-if="contentGroups.length > 1" :id="`group-${group.nodeId}`"
+                   class="mt-8 scroll-mt-28 rounded-xl border border-brand/15 bg-brand-soft/40 px-4 py-3"
                    :class="groupIndex === 0 ? 'mt-4' : ''">
                 <p class="font-mono text-xs text-brand">{{ group.code }}</p>
                 <h2 class="mt-0.5 text-lg font-bold text-fg-primary">{{ group.name }}</h2>
@@ -490,9 +509,14 @@ watch(section, (value) => {
         <div class="sticky top-8 max-h-[calc(100vh-4rem)] overflow-auto pl-2">
           <p class="mb-2 text-xs font-medium text-fg-muted">本节目录</p>
           <template v-for="row in tocRows" :key="row.key">
-            <p v-if="row.kind === 'group'" class="mt-2 mb-1 truncate text-[10px] font-medium text-fg-muted">
-              <span v-if="row.code" class="mr-1 font-mono">{{ row.code }}</span>{{ row.name }}
-            </p>
+            <a v-if="row.kind === 'group'" :href="`#group-${row.nodeId}`"
+               class="block border-l-2 py-1.5 pl-2"
+               :class="activeGroupId === row.nodeId
+                 ? 'border-brand text-brand'
+                 : 'border-line-subtle text-fg-muted hover:text-fg-secondary'">
+              <span class="block font-mono text-[10px]">{{ row.number }} · {{ row.code }}</span>
+              <span class="block text-xs font-medium leading-5">{{ row.name }}</span>
+            </a>
             <a v-else :href="`#kp-${row.kp?.id}`"
                class="flex gap-1.5 border-l-2 py-1 pl-2 text-xs leading-5"
                :class="activeKp === row.kp?.id
@@ -528,9 +552,16 @@ watch(section, (value) => {
     <UiModal v-model="tocOpen" title="本节目录" size="lg">
       <div class="space-y-0.5">
         <template v-for="row in tocRows" :key="row.key">
-          <p v-if="row.kind === 'group'" class="px-2 pb-0.5 pt-2 text-[11px] font-medium text-fg-muted">
-            <span v-if="row.code" class="mr-1 font-mono">{{ row.code }}</span>{{ row.name }}
-          </p>
+          <a v-if="row.kind === 'group'" :href="`#group-${row.nodeId}`"
+             class="flex min-h-11 items-start gap-2 rounded-lg px-2 py-2"
+             :class="activeGroupId === row.nodeId ? 'bg-brand-soft text-brand-on-soft' : 'text-fg-secondary hover:bg-surface-muted'"
+             @click.prevent="jumpToGroup(row.nodeId)">
+            <span class="mt-0.5 w-8 shrink-0 font-mono text-[11px] tabular-nums">{{ row.number }}</span>
+            <span class="min-w-0">
+              <span class="block font-mono text-[10px] text-fg-muted">{{ row.code }}</span>
+              <span class="block text-sm font-medium">{{ row.name }}</span>
+            </span>
+          </a>
           <a v-else :href="`#kp-${row.kp?.id}`"
              class="flex min-h-11 items-start gap-2 rounded-lg px-2 py-2 text-sm"
              :class="activeKp === row.kp?.id ? 'bg-brand-soft font-medium text-brand-on-soft' : 'text-fg-secondary hover:bg-surface-muted'"
