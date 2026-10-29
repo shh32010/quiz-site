@@ -31,10 +31,17 @@ function findNode(nodes: KNode[], target: number): KNode | null {
 const items = computed<KNode[]>(() =>
   (findNode(tree.value ?? [], SECTION_ID)?.children ?? []).filter(node => node.level === 3))
 
-const OFF_TOPIC = /Windows|Word|UML|业务逻辑|机器语言|高级语言|考试范围|考试说明|快捷方式|资源管理器|域代码|实型常量|关系运算符|逻辑运算符|自由软件|程序设计语言的.*成分|程序设计语言基本成分|程序设计语言发展简史|高级程序设计语言|算法的/
-const HEADER_COMMENT = /注释|头文件|include|文件包含|库函数|预处理|宏|C99|数据说明|编译预处理|条件编译/
-const FORMAT = /书写|格式|缩进|程序暂停|源程序的组成|扩展名/
-const PROGRAM = /程序|main|函数|结构|执行|编译|运行|代码|语句|阅读|设计|C 语言|printf|scanf|计算|求|输出|输入/
+// 人工预归类：先按 S1-1 三个大纲条目重排，再移出明显不属于本节的内容
+const ITEM2_IDS = new Set([
+  30314, 30333, 30518, 30532, 30630, 31331, 31332, 31798, 31876,
+  31924, 32070, 32076, 32080, 32114, 32211, 32212, 32258, 32259,
+])
+const ITEM3_IDS = new Set([31335, 31881, 32111])
+const OUT_IDS = new Set([
+  30432, 30446, 30472, 30584, 30888, 31305, 31605, 31619, 31620,
+  31657, 31659, 31665, 31666, 31667, 31729, 31742, 31743, 31878,
+  31879, 31893, 31938, 32103, 32105, 32220, 32221, 32614, 27750,
+])
 
 interface PreviewGroup {
   key: string
@@ -43,39 +50,27 @@ interface PreviewGroup {
   kps: any[]
 }
 
-function classify(kp: any): 'item1' | 'item2' | 'item3' | 'other' {
-  const title = formatText(String(kp.title ?? ''))
-  if (OFF_TOPIC.test(title)) return 'other'
-  if (HEADER_COMMENT.test(title)) return 'item2'
-  if (FORMAT.test(title)) return 'item3'
-  if (PROGRAM.test(title)) return 'item1'
-  return 'other'
-}
+const outKps = computed(() => kps.value.filter(kp => OUT_IDS.has(Number(kp.id))))
 
 const groups = computed<PreviewGroup[]>(() => {
-  const buckets: Record<string, any[]> = { item1: [], item2: [], item3: [], other: [] }
-  for (const kp of kps.value) buckets[classify(kp)].push(kp)
-  const result: PreviewGroup[] = []
-  const ids = ['item1', 'item2', 'item3'] as const
-  ids.forEach((key, index) => {
-    const node = items.value[index]
-    if (!node) return
-    result.push({
-      key,
-      code: node.code,
-      name: node.name,
-      kps: buckets[key],
-    })
-  })
-  if (buckets.other.length) {
-    result.push({ key: 'other', code: '待迁移', name: '不属于本节三个大纲条目的内容', kps: buckets.other })
+  const buckets: Record<string, any[]> = { item1: [], item2: [], item3: [] }
+  for (const kp of kps.value) {
+    const id = Number(kp.id)
+    if (OUT_IDS.has(id)) continue
+    if (ITEM2_IDS.has(id)) buckets.item2.push(kp)
+    else if (ITEM3_IDS.has(id)) buckets.item3.push(kp)
+    else buckets.item1.push(kp)
   }
-  return result
+  const ids = ['item1', 'item2', 'item3'] as const
+  return ids.flatMap((key, index) => {
+    const node = items.value[index]
+    if (!node) return []
+    return [{ key, code: node.code, name: node.name, kps: buckets[key] }]
+  })
 })
 
-const mappedCount = computed(() =>
-  groups.value.filter(group => group.key !== 'other').reduce((sum, group) => sum + group.kps.length, 0))
-const otherCount = computed(() => groups.value.find(group => group.key === 'other')?.kps.length ?? 0)
+const mappedCount = computed(() => groups.value.reduce((sum, group) => sum + group.kps.length, 0))
+const outCount = computed(() => outKps.value.length)
 
 function contentOf(kp: any): string {
   return normalizeKnowledgeContent(kp.content ?? '', kp.title ?? '').trim()
@@ -115,16 +110,16 @@ function anchorOf(group: PreviewGroup): string {
     <main class="mx-auto max-w-5xl px-3 pb-20 pt-5 sm:px-5">
       <div class="rounded-2xl border border-brand/20 bg-gradient-to-br from-brand-soft via-surface-card to-amber-50 p-5 sm:p-6">
         <span class="inline-flex rounded-full border border-brand/20 bg-surface-card/80 px-2 py-0.5 text-[11px] font-medium text-brand">
-          试点预览 · 规则预归类
+          试点预览 · 人工预归类
         </span>
         <h1 class="mt-2 text-2xl font-bold tracking-tight text-fg-primary">S1-1 C 语言程序的结构</h1>
         <p class="mt-1 text-sm leading-6 text-fg-secondary">
-          把这一节的 {{ kps.length }} 条内容块，按大纲的 {{ items.length }} 个三级条目重新归组。
-          下面是预归类效果，正式版会经过人工/模型复核。
+          把这一节的 {{ kps.length }} 条内容按大纲的 {{ items.length }} 个三级条目重排，只保留本节相关内容；
+          明显超出本节范围的内容先移出，不进入阅读结构。
         </p>
         <div class="mt-3 flex flex-wrap gap-2 text-xs">
-          <span class="rounded-full bg-success-bg px-2.5 py-1 text-success-fg">已归入大纲 {{ mappedCount }} 条</span>
-          <span class="rounded-full bg-warn-bg px-2.5 py-1 text-warn-fg">待迁移 {{ otherCount }} 条</span>
+          <span class="rounded-full bg-success-bg px-2.5 py-1 text-success-fg">保留 {{ mappedCount }} 条</span>
+          <span class="rounded-full bg-warn-bg px-2.5 py-1 text-warn-fg">移出 {{ outCount }} 条</span>
           <span class="rounded-full bg-surface-muted px-2.5 py-1 text-fg-muted">共 {{ items.length }} 个三级条目</span>
         </div>
       </div>
@@ -133,17 +128,14 @@ function anchorOf(group: PreviewGroup): string {
         数据加载失败，请稍后重试。
       </p>
 
-      <nav class="mt-4 grid gap-2 sm:grid-cols-2">
+      <nav class="mt-4 grid gap-2 sm:grid-cols-3">
         <a v-for="(group, groupIndex) in groups" :key="group.key" :href="`#${anchorOf(group)}`"
            class="rounded-xl border border-line-subtle bg-surface-card p-3 transition hover:border-brand">
           <div class="flex items-center justify-between gap-2">
             <span class="font-mono text-[11px] text-fg-muted">{{ group.code }}</span>
             <span class="text-[11px] text-fg-muted">{{ group.kps.length }} 条</span>
           </div>
-          <p class="mt-1 text-sm font-medium text-fg-primary">
-            <template v-if="group.key === 'other'">待迁移 · {{ group.name }}</template>
-            <template v-else>{{ itemNumber(groupIndex) }} · {{ group.name }}</template>
-          </p>
+          <p class="mt-1 text-sm font-medium text-fg-primary">{{ itemNumber(groupIndex) }} · {{ group.name }}</p>
         </a>
       </nav>
 
@@ -155,11 +147,6 @@ function anchorOf(group: PreviewGroup): string {
             <h2 class="mt-0.5 text-xl font-bold text-fg-primary">{{ group.name }}</h2>
           </div>
           <span class="text-xs text-fg-muted">{{ group.kps.length }} 条内容</span>
-        </div>
-
-        <div v-if="group.key === 'other'"
-             class="mt-3 rounded-xl border border-warn-border bg-warn-bg px-3 py-2 text-xs leading-5 text-warn-fg">
-          这些内容暂未匹配到 S1-1 的三个大纲条目，正式版会迁移到其他章节或重新归类。
         </div>
 
         <div class="mt-3 space-y-2">
@@ -184,8 +171,17 @@ function anchorOf(group: PreviewGroup): string {
         </div>
       </section>
 
-      <p class="mt-8 text-center text-xs text-fg-muted">
-        这是只读预览，不修改知识点数据；正式上线前会完成映射复核和公告同步。
+      <details class="mt-8 rounded-xl border border-line-subtle bg-surface-card">
+        <summary class="cursor-pointer list-none px-3 py-2.5 text-xs text-fg-muted [&::-webkit-details-marker]:hidden">
+          审核用：查看已移出的 {{ outCount }} 条（不会出现在本节）
+        </summary>
+        <ul class="space-y-1.5 border-t border-line-subtle px-3 py-3 text-xs leading-5 text-fg-secondary">
+          <li v-for="kp in outKps" :key="kp.id">· {{ formatText(kp.title) }}</li>
+        </ul>
+      </details>
+
+      <p class="mt-4 text-center text-xs text-fg-muted">
+        移出只影响本节预览展示，暂不修改数据库；正式版会把这些内容迁移到对应章节或删除。
       </p>
     </main>
   </div>
