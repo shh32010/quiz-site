@@ -155,6 +155,35 @@ const tocRows = computed<TocRow[]>(() => {
   return rows
 })
 
+
+interface ContentGroup {
+  nodeId: number
+  code: string | null
+  name: string
+  items: { kp: any; index: number }[]
+}
+
+/** 正文按大纲节点分组；只有一个节点时保持原来的平铺结构 */
+const contentGroups = computed<ContentGroup[]>(() => {
+  const groups: ContentGroup[] = []
+  kps.value.forEach((kp, index) => {
+    const nodeId = Number(kp.nodeId ?? id.value)
+    let group = groups.find(item => item.nodeId === nodeId)
+    if (!group) {
+      const node = findNode(tree.value ?? [], nodeId)
+      group = {
+        nodeId,
+        code: node?.code ?? section.value?.code ?? null,
+        name: node?.name ?? section.value?.name ?? '本节',
+        items: [],
+      }
+      groups.push(group)
+    }
+    group.items.push({ kp, index })
+  })
+  return groups
+})
+
 /** 来源里的 section 常与标题完全相同，重复时不再显示 */
 function sectionLabel(kp: any): string {
   const label = formatText(String(kp.section ?? '')).trim()
@@ -366,49 +395,59 @@ watch(section, (value) => {
           </header>
 
           <article v-if="kps.length" class="mt-2" :style="{ '--reader-fs': `${readerFont}px` }">
-            <section v-for="(kp, kpIndex) in kps" :id="`kp-${kp.id}`" :key="kp.id" class="scroll-mt-28 border-b border-line-subtle py-6 last:border-b-0">
+            <template v-for="(group, groupIndex) in contentGroups" :key="group.nodeId">
+              <div v-if="contentGroups.length > 1"
+                   class="mt-8 rounded-xl border border-brand/15 bg-brand-soft/40 px-4 py-3"
+                   :class="groupIndex === 0 ? 'mt-4' : ''">
+                <p class="font-mono text-xs text-brand">{{ group.code }}</p>
+                <h2 class="mt-0.5 text-lg font-bold text-fg-primary">{{ group.name }}</h2>
+              </div>
+              <section v-for="entry in group.items" :id="`kp-${entry.kp.id}`" :key="entry.kp.id" class="scroll-mt-28 border-b border-line-subtle py-6 last:border-b-0">
               <div class="flex flex-wrap items-start justify-between gap-2">
-                <h2 class="min-w-0 text-lg font-semibold leading-7 text-fg-primary">
-                  {{ kpPrefix(kp, kpIndex) }}{{ displayTitle(kp) }}
-                </h2>
+                <component :is="contentGroups.length > 1 ? 'h3' : 'h2'"
+                           class="min-w-0 font-semibold leading-7 text-fg-primary"
+                           :class="contentGroups.length > 1 ? 'text-base' : 'text-lg'">
+                  {{ kpPrefix(entry.kp, entry.index) }}{{ displayTitle(entry.kp) }}
+                </component>
                 <div class="flex shrink-0 items-center gap-1.5">
-                  <UiBadge v-if="importanceLabel(kp.importance)" tone="amber">{{ importanceLabel(kp.importance) }}</UiBadge>
-                  <a :href="`#kp-${kp.id}`" class="flex h-9 w-9 items-center justify-center rounded-lg text-fg-muted hover:bg-surface-muted hover:text-brand"
-                     :aria-label="`跳转到该知识点：${displayTitle(kp)}`">#</a>
+                  <UiBadge v-if="importanceLabel(entry.kp.importance)" tone="amber">{{ importanceLabel(entry.kp.importance) }}</UiBadge>
+                  <a :href="`#kp-${entry.kp.id}`" class="flex h-9 w-9 items-center justify-center rounded-lg text-fg-muted hover:bg-surface-muted hover:text-brand"
+                     :aria-label="`跳转到该知识点：${displayTitle(entry.kp)}`">#</a>
                 </div>
               </div>
-              <p v-if="sectionLabel(kp)" class="mt-1 text-xs text-fg-muted">{{ sectionLabel(kp) }}</p>
-              <div v-if="contentOf(kp)" class="reader-content mt-3" v-html="renderMarkdown(contentOf(kp))" />
+              <p v-if="sectionLabel(entry.kp)" class="mt-1 text-xs text-fg-muted">{{ sectionLabel(entry.kp) }}</p>
+              <div v-if="contentOf(entry.kp)" class="reader-content mt-3" v-html="renderMarkdown(contentOf(entry.kp))" />
               <p v-else class="mt-3 rounded-lg border border-dashed border-line-strong px-3 py-2 text-sm leading-6 text-fg-muted">
                 本知识点暂无展开讲解，建议直接练习相关题目或结合教材阅读。
               </p>
-              <p v-if="contentOf(kp) && contentOf(kp).length < 20" class="mt-2 text-xs text-warn-fg">
+              <p v-if="contentOf(entry.kp) && contentOf(entry.kp).length < 20" class="mt-2 text-xs text-warn-fg">
                 内容较短，建议结合教材核对。
               </p>
 
-              <details v-if="questionsByKp.get(kp.id)?.length"
+              <details v-if="questionsByKp.get(entry.kp.id)?.length"
                        class="mt-3 overflow-hidden rounded-lg border border-line-subtle bg-surface-card">
                 <summary class="flex min-h-11 cursor-pointer items-center justify-between gap-2 px-3 text-xs text-fg-secondary">
-                  <span>自测（{{ questionsByKp.get(kp.id)?.length }}）</span>
+                  <span>自测（{{ questionsByKp.get(entry.kp.id)?.length }}）</span>
                   <span class="text-fg-muted">展开作答</span>
                 </summary>
                 <div class="space-y-2 border-t border-line-subtle p-3">
-                  <KnowledgeQuestion v-for="q in questionsByKp.get(kp.id)" :key="q.id" :question="q" />
+                  <KnowledgeQuestion v-for="q in questionsByKp.get(entry.kp.id)" :key="q.id" :question="q" />
                   <p class="text-xs text-fg-muted">
                     想记录进度？
-                    <NuxtLink :to="practiceReturn(kp.id)" class="text-brand hover:underline">进入完整练习</NuxtLink>
+                    <NuxtLink :to="practiceReturn(entry.kp.id)" class="text-brand hover:underline">进入完整练习</NuxtLink>
                   </p>
                 </div>
               </details>
 
               <div class="mt-3 flex flex-wrap items-center gap-3 text-xs">
-                <NuxtLink v-if="kp.questionCount" :to="practiceReturn(kp.id)"
+                <NuxtLink v-if="entry.kp.questionCount" :to="practiceReturn(entry.kp.id)"
                           class="inline-flex min-h-11 items-center rounded-lg border border-brand/30 px-3 text-brand hover:bg-brand-soft">
-                  练相关题（{{ kp.questionCount }}）
+                  练相关题（{{ entry.kp.questionCount }}）
                 </NuxtLink>
                 <span v-else class="text-fg-muted">暂无关联题</span>
               </div>
             </section>
+            </template>
           </article>
 
           <div v-else class="mt-6 rounded-xl border border-line-subtle bg-surface-card px-5 py-8 text-center text-sm text-fg-secondary">

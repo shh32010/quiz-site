@@ -103,6 +103,7 @@
 | `schema_soft_delete_20261029.sql` | `practice_session` / `practice_answer` / `wrong_question` 增加 `deleted_at`；清空历史改为软删除；错题再次答错时触发器恢复错题行 |
 | `data_write_chapter_names_20261029.sql` | S5/S6 根章名称改为「操作系统配置与管理（Windows 10）」「Linux 配置与管理（CentOS7）」；备份表 `t_chapter_backup_20261029_s5s6` |
 | `data_write_chapter_xa_empty_20261029.sql` | 软删除两个空的 XA「未分类」根节点（id 18、37）；备份表 `t_chapter_backup_20261029_xa_empty`；X9 两个节点有题/知识点，暂留 |
+| `data_write_knowledge_s1_1_outline_20261029.sql` | S1-1 按大纲三个三级条目重排：82 条保留 55（239:34 / 240:18 / 241:3），移出 23、软删 4；备份表 `t_knowledge_point_backup_20261029_s1_1` |
 
 ## SQL 命名与登记约定（自 2026-10-26 起）
 
