@@ -106,6 +106,14 @@
 | `data_write_knowledge_s1_1_outline_20261029.sql` | S1-1 按大纲三个三级条目重排：82 条保留 55（239:34 / 240:18 / 241:3），移出 23、软删 4；备份表 `t_knowledge_point_backup_20261029_s1_1` |
 | `data_write_feedback_resolve_20261029.sql` | 处理 19 条待处理反馈：修正 7 道题题干/选项/解析，合并 9 个重复题并迁移引用，扩展 8 条探测反馈；备份表 `t_question_backup_20261029_feedback` |
 
+
+### 2026-10-30 批次（已执行于生产）
+
+| 文件 | 用途 |
+|---|---|
+| `data_write_probe_cleanup_20261030.sql` | 清理 8 个探测账号（qz_probe/qz_idor/jwtma/rst/race/bfla/vpw/vd）及其 51 个会话、15 条答案、11 条错题、2 条收藏、8 条反馈；备份表 `t_probe_backup_20261030_*` |
+| `data_write_feedback_382823_20261030.sql` | 处理反馈 51：补全 382823 题干填空标记和解析；备份表 `t_question_backup_20261030_feedback` |
+
 ## SQL 命名与登记约定（自 2026-10-26 起）
 
 1. **命名**
