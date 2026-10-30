@@ -62,11 +62,8 @@ function viewAnnouncement() {
 
 async function send() {
   if (sending.value) return
-  const text = content.value.trim()
-  if (!text) {
-    error.value = '请先写点内容，方便作者了解情况'
-    return
-  }
+  // 内容选填：没写具体内容时用分类作为默认内容，后台仍能定位
+  const text = content.value.trim() || `未填写具体描述（${activeCategory.value.label}）`
   sending.value = true
   error.value = ''
   try {
@@ -210,11 +207,11 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
 
               <div class="mt-3">
                 <div class="flex items-center justify-between">
-                  <label for="contact-content" class="text-[11px] font-semibold uppercase tracking-wide text-fg-muted">想说的话</label>
+                  <label for="contact-content" class="text-[11px] font-semibold uppercase tracking-wide text-fg-muted">想说的话（选填）</label>
                   <span class="text-[11px] tabular-nums text-fg-muted">{{ content.length }}/{{ MAX_CONTENT }}</span>
                 </div>
                 <textarea id="contact-content" ref="textarea" v-model="content" :maxlength="MAX_CONTENT" rows="4"
-                          placeholder="例如：这道题的答案好像不对 / 希望增加错题导出 / 手机上字号有点小…"
+                          placeholder="选填：这道题的答案好像不对 / 希望增加错题导出 / 手机上字号有点小…"
                           class="mt-1.5 w-full resize-none rounded-xl border border-line-strong bg-surface-card px-3 py-2.5 text-sm leading-6 text-fg-primary outline-none transition placeholder:text-fg-muted focus:border-brand focus:ring-2 focus:ring-brand/15"
                           @keydown.ctrl.enter.prevent="send" @keydown.meta.enter.prevent="send" />
               </div>
@@ -232,7 +229,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
             <div class="mt-4 border-t border-line-subtle bg-surface-muted/40 px-5 py-3.5">
               <button type="button"
                       class="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-brand text-sm font-semibold text-white shadow-sm transition hover:bg-brand-hover active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
-                      :disabled="sending || !content.trim()" @click="send">
+                      :disabled="sending" @click="send">
                 <span v-if="sending" class="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white border-t-transparent" />
                 {{ sending ? '发送中…' : '发送给作者' }}
               </button>
