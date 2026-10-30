@@ -1,6 +1,8 @@
 <script setup lang="ts">
 // 登录 / 注册（同一个页面切换）
 // 登录支持用户名或邮箱；注册时邮箱选填，但会提醒绑定
+import { validateRegisterPassword } from '~/utils/auth'
+
 const api = useApi()
 const auth = useAuth()
 const router = useRouter()
@@ -10,6 +12,7 @@ const mode = ref<'login' | 'register'>('login')
 const username = ref('')
 const email = ref('')
 const password = ref('')
+const confirmPassword = ref('')
 const error = ref('')
 const loading = ref(false)
 const insecure = ref(false)
@@ -20,7 +23,11 @@ onMounted(() => {
   insecure.value = location.protocol === 'http:'
 })
 
-watch(mode, () => { warnNoEmail.value = false })
+watch(mode, () => {
+  warnNoEmail.value = false
+  confirmPassword.value = ''
+  error.value = ''
+})
 watch(email, () => { if (email.value.trim()) warnNoEmail.value = false })
 
 /** 只接受站内路径，防止 redirect 被用来跳外站 */
@@ -34,6 +41,13 @@ const redirect = computed(() => safeRedirect(route.query.redirect))
 
 async function submit() {
   error.value = ''
+  if (mode.value === 'register') {
+    const message = validateRegisterPassword(password.value, confirmPassword.value)
+    if (message) {
+      error.value = message
+      return
+    }
+  }
   // 注册没填邮箱：先提醒一次，再点一次才继续
   if (mode.value === 'register' && !email.value.trim() && !warnNoEmail.value) {
     warnNoEmail.value = true
@@ -86,6 +100,10 @@ async function submit() {
 
       <input v-model="password" type="password" placeholder="密码（至少 6 位）"
              :autocomplete="mode === 'login' ? 'current-password' : 'new-password'"
+             class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
+
+      <input v-if="mode === 'register'" v-model="confirmPassword" type="password" placeholder="确认密码"
+             autocomplete="new-password"
              class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
 
       <p v-if="warnNoEmail"
