@@ -113,6 +113,7 @@
 |---|---|
 | `data_write_probe_cleanup_20261030.sql` | 清理 8 个探测账号（qz_probe/qz_idor/jwtma/rst/race/bfla/vpw/vd）及其 51 个会话、15 条答案、11 条错题、2 条收藏、8 条反馈；备份表 `t_probe_backup_20261030_*` |
 | `data_write_feedback_382823_20261030.sql` | 处理反馈 51：补全 382823 题干填空标记和解析；备份表 `t_question_backup_20261030_feedback` |
+| `schema_feedback_question_nullable_20261030.sql` | `feedback.question_id` 允许为空，联系作者反馈不关联具体题目 |
 
 ## SQL 命名与登记约定（自 2026-10-26 起）
 
