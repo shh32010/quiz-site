@@ -1,6 +1,6 @@
 # quiz-v2 文档与脚本索引
 
-**最后整理**：2026-10-29
+**最后整理**：2026-10-30
 
 ## 数据库变更 SQL（按需手工执行）
 
@@ -93,7 +93,8 @@
 | `data_write_knowledge_259_20261028.sql` | C 语言 S1-6 清洗（100 条，含子节）；备份表 `t_knowledge_point_backup_20261028_259` |
 | `data_write_knowledge_264_20261028.sql` | C 语言 S1-7 清洗（96 条，含子节）；备份表 `t_knowledge_point_backup_20261028_264` |
 
-> 新环境按依赖顺序执行；已有库不要重复跑破坏性脚本，先备份 `/opt/quiz-backups/`。
+> 新环境按依赖顺序执行；已有库不要重复跑破坏性脚本，先备份到 `/opt/quiz-backups/`。
+> 2026-10-30 已清空 `/opt/quiz-backups/`，当前唯一恢复点是本机 `D:\Backups\quiz-aliyun\quiz-20261030-manual.dump`；下方历史 SQL 中提到的备份表均已删除，仅作执行记录。
 
 
 ### 2026-10-29 批次（已执行于生产）
@@ -115,6 +116,8 @@
 | `data_write_feedback_382823_20261030.sql` | 处理反馈 51：补全 382823 题干填空标记和解析；备份表 `t_question_backup_20261030_feedback` |
 | `schema_feedback_question_nullable_20261030.sql` | `feedback.question_id` 允许为空，联系作者反馈不关联具体题目 |
 | `data_write_feedback_57_60_20261030.sql` | 处理反馈 57–61：364975/364976 改为单选题并重排选项，365467 清理混入的答案/解析，366238 补解析，测试作者消息关闭；备份表 `t_question_backup_20261030_feedback_57_60` |
+
+> **2026-10-30 备份清理**：本页登记的所有 `*_backup_*` 表（143 张）已删除；服务器 `/opt/quiz-backups`、本地旧 dump/CSV/assets、`/tmp` 旧归档、`/opt/quiz-migrate/supabase.dump` 已清理。仅保留本机 `D:\Backups\quiz-aliyun\quiz-20261030-manual.dump`，并已通过临时库恢复演练。该 dump 是清理前快照，包含当时 143 张备份表；恢复它会回到清理前状态。历史 SQL 里的“备份表”只表示当时执行时创建的对象，现已不存在。
 
 ## SQL 命名与登记约定（自 2026-10-26 起）
 
@@ -138,7 +141,7 @@
 | `quiz-proxy.conf` | 反代头、超时、隐藏上游头 |
 | `quiz-security-headers.conf` | HSTS / nosniff / X-Frame-Options / Referrer-Policy / Permissions-Policy |
 | `nginx-quiz-rate.conf`、`nginx-quiz-rate-locations.conf` | 限流区与 location |
-| `backup-cron.sh` | 每日 DB + 每周图片备份（700/600 权限） |
+| `backup-cron.sh` | 每日 DB + 每周图片备份（700/600 权限）；2026-10-30 已清空备份目录，cron 保留 |
 | `ops_20261024.md` | 2026-10-24 索引/权限/pg_stat_statements/旧数据/依赖加固记录 |
 
 ## 数据工程 / 复核记录
@@ -157,6 +160,6 @@
 
 - `verify_data.py`：题数/知识点/章节一致性核对
 - `final_check.sh`、`test_practice.sh`：部署后冒烟
-- 当前项目结论见 `project/项目状态与待办_20261027.md` 与 `project/项目交接_20261027.md`；待办见 `project/待办_20261027.md`（本机保留，不进 Git）
+- 当前项目结论见 `project/项目状态与待办_20261030.md`；待办见 `project/待办_20261030.md`（本机保留，不进 Git）；`project/archive/20261027/项目交接_20261027.md` 为历史交接
 - 知识点内容质量见 `project/知识点内容审计_20261028.md`；AI 重建/改动较大的待复核清单见 `project/知识点清洗待复核_20261028.md`
 - 历史状态/交接见 `project/archive/`；过程评审见 `private/delivery-20261026/`（历史参考，不作为当前结论）
