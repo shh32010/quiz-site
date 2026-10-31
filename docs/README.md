@@ -162,5 +162,5 @@
 - `verify_data.py`：题数/知识点/章节一致性核对
 - `final_check.sh`、`test_practice.sh`：部署后冒烟
 - 当前项目结论见 `project/项目状态_20261030.md`；待办见 `project/待办_20261030.md`（本机保留，不进 Git）；`project/archive/20261027/项目交接_20261027.md` 为历史交接
-- 知识点内容质量见 `project/知识点内容审计_20261028.md`；AI 重建/改动较大的待复核清单见 `project/知识点清洗待复核_20261028.md`
+- 知识点内容质量见 `../private/reviews/20261028-knowledge-audit/知识点内容审计_20261028.md`；AI 重建/改动较大的待复核清单见 `../private/reviews/20261028-knowledge-audit/知识点清洗待复核_20261028.md`
 - 历史状态/交接见 `project/archive/`；过程评审见 `private/delivery-20261026/`（历史参考，不作为当前结论）
