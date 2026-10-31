@@ -33,6 +33,7 @@ const links = [
           {{ user.username }}
           <span v-if="user.email" class="ml-2">{{ user.email }}</span>
           <UiBadge v-if="user.role === 'admin'" tone="amber" class="ml-2">管理员</UiBadge>
+          <UiBadge v-else-if="user.role === 'unlimited'" tone="blue" class="ml-2">免限用户</UiBadge>
         </p>
       </template>
       <p v-else-if="error" class="text-sm text-danger-fg">{{ error }}</p>

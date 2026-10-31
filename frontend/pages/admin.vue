@@ -13,6 +13,12 @@ const resetError = ref('')
 const error = ref('')
 const note = ref<Record<number, string>>({})
 
+function roleLabel(role: string) {
+  if (role === 'admin') return '管理员'
+  if (role === 'unlimited') return '免限用户'
+  return '普通用户'
+}
+
 const visits = ref<any>(null)
 const visitDays = ref(7)
 const visitError = ref('')
@@ -181,7 +187,7 @@ onMounted(load)
         <div v-for="u in users" :key="u.id" class="rounded-lg border border-slate-200 p-3 text-xs">
           <div class="flex items-center justify-between gap-2">
             <b class="truncate text-slate-800">{{ u.username }}</b>
-            <span class="shrink-0 rounded bg-slate-100 px-1.5 py-0.5 text-slate-600">{{ u.role }}</span>
+            <span class="shrink-0 rounded bg-slate-100 px-1.5 py-0.5 text-slate-600">{{ roleLabel(u.role) }}</span>
           </div>
           <p class="mt-1 truncate text-slate-500">{{ u.email || '未绑定邮箱' }}</p>
           <p class="mt-1 text-slate-400">注册 {{ fmtTime(u.createdAt) }} · 最近 {{ fmtTime(u.lastLoginAt) }}</p>
@@ -205,7 +211,7 @@ onMounted(load)
           <tbody class="divide-y divide-slate-100 text-slate-600">
             <tr v-for="u in users" :key="u.id">
               <td class="py-1.5 pr-4 font-medium text-slate-800">{{ u.username }}</td>
-              <td class="pr-4">{{ u.role }}</td>
+              <td class="pr-4">{{ roleLabel(u.role) }}</td>
               <td class="pr-4">{{ u.email || '—' }}</td>
               <td class="pr-4">{{ fmtTime(u.createdAt) }}</td>
               <td class="pr-4">{{ fmtTime(u.lastLoginAt) }}</td>

@@ -28,6 +28,9 @@ const review = ref<any>(null)
 const finished = ref<any>(null)
 const loading = ref(true)
 const error = ref('')
+const quotaExceeded = ref(false)
+const quotaApplyOpen = ref(false)
+const quotaApplyText = '申请免限：今日做题已达 200 题上限，希望继续练习。'
 const notice = ref('')
 const submitting = ref(false)
 const navigating = ref(false)
@@ -444,6 +447,7 @@ async function submit() {
   const qid = q.id
   submitting.value = true
   error.value = ''
+  quotaExceeded.value = false
   try {
     let payload = ''
     if (q.questionType === 2) payload = multi.value.slice().sort().join(',')
@@ -478,7 +482,9 @@ async function submit() {
       }, 1000)
     }
   } catch (e: any) {
-    error.value = e.message ?? '提交失败，请重试'
+    const message = e.message ?? '提交失败，请重试'
+    error.value = message
+    quotaExceeded.value = message.includes('200 题上限')
   } finally {
     submitting.value = false
   }
@@ -644,7 +650,14 @@ onUnmounted(() => {
                     @exit="exit" @open-sheet="openSheet" />
 
     <main class="mx-auto max-w-3xl px-3 pb-28 pt-4 sm:max-w-4xl sm:px-4">
-      <p v-if="error" class="mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{{ error }}</p>
+      <div v-if="error" class="mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+        <p>{{ error }}</p>
+        <button v-if="quotaExceeded" type="button"
+                class="mt-2 min-h-10 rounded-lg bg-brand px-3 text-xs font-medium text-white hover:bg-brand-hover"
+                @click="quotaApplyOpen = true">
+          联系作者申请免限
+        </button>
+      </div>
       <p v-if="notice" class="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">{{ notice }}</p>
 
       <div v-if="guest" class="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
@@ -783,5 +796,9 @@ onUnmounted(() => {
     </UiModal>
 
     <UiImageLightbox v-model="lightboxOpen" :images="images" :start-index="lightboxIndex" />
+
+    <FloatingFeedback :show-trigger="false" :initial-open="quotaApplyOpen"
+                      preset-category="other" :preset-content="quotaApplyText"
+                      @close="quotaApplyOpen = false" />
   </div>
 </template>

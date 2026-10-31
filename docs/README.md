@@ -1,6 +1,6 @@
 # quiz-v2 文档与脚本索引
 
-**最后整理**：2026-10-30
+**最后整理**：2026-10-31
 
 ## 数据库变更 SQL（按需手工执行）
 
@@ -117,6 +117,12 @@
 | `data_write_feedback_382823_20261030.sql` | 处理反馈 51：补全 382823 题干填空标记和解析；备份表 `t_question_backup_20261030_feedback` |
 | `schema_feedback_question_nullable_20261030.sql` | `feedback.question_id` 允许为空，联系作者反馈不关联具体题目 |
 | `data_write_feedback_57_60_20261030.sql` | 处理反馈 57–61：364975/364976 改为单选题并重排选项，365467 清理混入的答案/解析，366238 补解析，测试作者消息关闭；备份表 `t_question_backup_20261030_feedback_57_60` |
+
+### 2026-10-31 批次（已执行于生产）
+
+| 文件 | 用途 |
+|---|---|
+| `schema_role_unlimited_20261031.sql` | `profiles.role` 增加 `unlimited`（免限用户）：跳过每日 200 题限制，不具备管理员权限；不提供申请入口，仅由管理员手动 SQL 授权 |
 
 > **2026-10-30 备份清理**：本页登记的所有 `*_backup_*` 表（143 张）已删除；服务器 `/opt/quiz-backups`、本地旧 dump/CSV/assets、`/tmp` 旧归档、`/opt/quiz-migrate/supabase.dump` 已清理。仅保留本机 `D:\Backups\quiz-aliyun\quiz-20261030-manual.dump`，并已通过临时库恢复演练。该 dump 是清理前快照，包含当时 143 张备份表；恢复它会回到清理前状态。历史 SQL 里的“备份表”只表示当时执行时创建的对象，现已不存在。
 

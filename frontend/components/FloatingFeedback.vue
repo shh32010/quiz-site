@@ -13,6 +13,18 @@ const categories = [
 
 type CategoryKey = typeof categories[number]['key']
 
+const props = withDefaults(defineProps<{
+  showTrigger?: boolean
+  initialOpen?: boolean
+  presetCategory?: CategoryKey
+  presetContent?: string
+}>(), {
+  showTrigger: true,
+  initialOpen: false,
+  presetContent: '',
+})
+const emit = defineEmits<{ (e: 'close'): void }>()
+
 // 等客户端挂载后再渲染 Teleport，避免 SSR 水合时 teleport 锚点错位
 const mounted = ref(false)
 const open = ref(false)
@@ -35,6 +47,8 @@ useOverlayScrollLock(open)
 function openPanel() {
   // 发送成功后再次打开时回到新表单，而不是停在“已送达”
   if (done.value) reset()
+  if (props.presetCategory) category.value = props.presetCategory
+  if (!content.value && props.presetContent) content.value = props.presetContent
   lastFocused = document.activeElement as HTMLElement | null
   open.value = true
   error.value = ''
@@ -42,9 +56,11 @@ function openPanel() {
 }
 
 function closePanel() {
+  if (!open.value) return
   open.value = false
   lastFocused?.focus?.()
   lastFocused = null
+  emit('close')
 }
 
 function reset() {
@@ -89,6 +105,10 @@ watch(content, () => {
 watch(done, (value) => {
   if (value) nextTick(() => againButton.value?.focus())
 })
+watch(() => props.initialOpen, (value) => {
+  if (value) openPanel()
+  else if (open.value) closePanel()
+})
 
 /** Tab 焦点限制在面板内，避免走到背后的页面 */
 function trapTab(e: KeyboardEvent) {
@@ -122,6 +142,7 @@ function onKeydown(e: KeyboardEvent) {
 onMounted(() => {
   mounted.value = true
   window.addEventListener('keydown', onKeydown)
+  if (props.initialOpen) nextTick(openPanel)
 })
 onUnmounted(() => window.removeEventListener('keydown', onKeydown))
 </script>
@@ -129,7 +150,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
 <template>
   <Teleport v-if="mounted" to="body">
     <!-- 悬浮按钮 -->
-    <div class="fixed bottom-[calc(4.25rem+env(safe-area-inset-bottom))] right-3 z-40 print:hidden sm:right-4 lg:bottom-8 lg:right-6">
+    <div v-if="props.showTrigger" class="fixed bottom-[calc(4.25rem+env(safe-area-inset-bottom))] right-3 z-40 print:hidden sm:right-4 lg:bottom-8 lg:right-6">
       <span aria-hidden="true" class="quiz-halo pointer-events-none absolute inset-0 rounded-full bg-brand/25" />
       <button type="button"
               class="relative flex h-11 w-11 items-center justify-center gap-2 rounded-full bg-gradient-to-br from-brand to-indigo-600 text-sm font-semibold text-white shadow-lg shadow-brand/30 transition duration-200 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-brand/35 active:translate-y-0 sm:h-12 sm:w-auto sm:px-4"
