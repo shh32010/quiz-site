@@ -3,16 +3,16 @@
 -- 执行日期：2026-11-02
 
 CREATE TABLE IF NOT EXISTS site_announcement (
-  id         int PRIMARY KEY DEFAULT 1 CHECK (id = 1),
-  version    varchar(40)  NOT NULL,
-  title      varchar(200) NOT NULL,
-  subtitle   varchar(300) NOT NULL DEFAULT '',
-  date_text  varchar(60)  NOT NULL DEFAULT '',
-  footnote   varchar(500) NOT NULL DEFAULT '',
-  items      jsonb        NOT NULL DEFAULT '[]'::jsonb,
-  history    jsonb        NOT NULL DEFAULT '[]'::jsonb,
-  updated_at timestamptz  NOT NULL DEFAULT now(),
-  updated_by bigint
+  id           int PRIMARY KEY DEFAULT 1 CHECK (id = 1),
+  version      varchar(40)  NOT NULL,
+  title        varchar(200) NOT NULL,
+  subtitle     varchar(300) NOT NULL DEFAULT '',
+  date_label   varchar(60)  NOT NULL DEFAULT '',
+  footnote     varchar(500) NOT NULL DEFAULT '',
+  items_json   jsonb        NOT NULL DEFAULT '[]'::jsonb,
+  history_json jsonb        NOT NULL DEFAULT '[]'::jsonb,
+  updated_at   timestamptz  NOT NULL DEFAULT now(),
+  updated_by   uuid
 );
 
 GRANT SELECT, INSERT, UPDATE ON site_announcement TO quiz_app;
