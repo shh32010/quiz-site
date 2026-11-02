@@ -36,6 +36,8 @@ export function useApi() {
     get: <T = any>(path: string) => request<T>(path),
     post: <T = any>(path: string, body: unknown) =>
       request<T>(path, { method: 'POST', body: JSON.stringify(body) }),
+    put: <T = any>(path: string, body: unknown) =>
+      request<T>(path, { method: 'PUT', body: JSON.stringify(body) }),
     del: <T = any>(path: string) => request<T>(path, { method: 'DELETE' }),
     hasToken: () => Boolean(token()),
     setToken: (t: string) => localStorage.setItem('quiz_token', t),

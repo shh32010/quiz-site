@@ -1,8 +1,6 @@
 <script setup lang="ts">
-// 站内公告：首次进入按版本弹一次，也可从页脚手动打开
-import { ANNOUNCEMENT } from '~/utils/announcement'
-
-const { open, dismiss, showIfNew } = useAnnouncement()
+// 站内公告：首次进入按版本弹一次，也可从页脚手动打开（优先拉取后台配置，回退内置配置）
+const { open, announcement, dismiss, showIfNew } = useAnnouncement()
 const route = useRoute()
 useOverlayScrollLock(open)
 
@@ -132,19 +130,19 @@ function onHistoryToggle(event: Event) {
               </span>
               <div class="min-w-0 pr-10">
                 <span class="inline-flex items-center gap-1 rounded-full border border-brand/20 bg-surface-card/70 px-2 py-0.5 text-[11px] font-medium text-brand">
-                  站内公告 · {{ ANNOUNCEMENT.date }}
+                  站内公告 · {{ announcement.date }}
                 </span>
                 <h2 id="announcement-title" class="mt-2 text-lg font-bold leading-6 text-fg-primary sm:text-xl">
-                  {{ ANNOUNCEMENT.title }}
+                  {{ announcement.title }}
                 </h2>
-                <p class="mt-1 text-xs leading-5 text-fg-secondary sm:text-sm">{{ ANNOUNCEMENT.subtitle }}</p>
+                <p class="mt-1 text-xs leading-5 text-fg-secondary sm:text-sm">{{ announcement.subtitle }}</p>
               </div>
             </div>
           </div>
 
           <!-- 更新条目 -->
           <div class="max-h-[52vh] space-y-2.5 overflow-y-auto px-4 py-4 sm:max-h-[58vh] sm:px-5">
-            <div v-for="(item, index) in ANNOUNCEMENT.items" :key="item.title"
+            <div v-for="(item, index) in announcement.items" :key="item.title"
                  class="flex gap-3 rounded-xl border border-line-subtle bg-surface-card p-3">
               <span class="mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-lg bg-brand-soft text-[11px] font-bold text-brand-on-soft">
                 {{ index + 1 }}
@@ -159,7 +157,7 @@ function onHistoryToggle(event: Event) {
             </div>
 
             <!-- 更新历史：默认收起，避免公告过长 -->
-            <details v-if="ANNOUNCEMENT.history?.length" class="group rounded-xl border border-line-subtle bg-surface-card"
+            <details v-if="announcement.history?.length" class="group rounded-xl border border-line-subtle bg-surface-card"
                      @toggle="onHistoryToggle">
               <summary class="flex cursor-pointer list-none items-center justify-between gap-2 px-3 py-2.5 text-xs font-medium text-fg-secondary [&::-webkit-details-marker]:hidden">
                 <span class="flex items-center gap-1.5">
@@ -169,7 +167,7 @@ function onHistoryToggle(event: Event) {
                   </svg>
                   更新历史
                   <span class="rounded-full bg-surface-muted px-1.5 py-0.5 text-[10px] font-normal text-fg-muted">
-                    {{ ANNOUNCEMENT.history.length }} 条
+                    {{ announcement.history.length }} 条
                   </span>
                 </span>
                 <svg viewBox="0 0 24 24" class="h-3.5 w-3.5 text-fg-muted transition-transform group-open:rotate-180" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -177,7 +175,7 @@ function onHistoryToggle(event: Event) {
                 </svg>
               </summary>
               <ol class="space-y-2.5 border-t border-line-subtle px-3 py-3">
-                <li v-for="entry in ANNOUNCEMENT.history" :key="entry.date + entry.text" class="relative pl-3.5">
+                <li v-for="entry in announcement.history" :key="entry.date + entry.text" class="relative pl-3.5">
                   <span aria-hidden="true" class="absolute left-0 top-[7px] h-1.5 w-1.5 rounded-full bg-brand/50" />
                   <p class="text-[10px] tabular-nums text-fg-muted">{{ entry.date }}</p>
                   <p class="mt-0.5 text-xs leading-5 text-fg-secondary">{{ entry.text }}</p>
@@ -193,7 +191,7 @@ function onHistoryToggle(event: Event) {
                     @click="dismiss">
               知道啦，开始学习
             </button>
-            <p class="mt-2 text-center text-[11px] leading-4 text-fg-muted">{{ ANNOUNCEMENT.footnote }}</p>
+            <p class="mt-2 text-center text-[11px] leading-4 text-fg-muted">{{ announcement.footnote }}</p>
           </div>
         </div>
       </div>

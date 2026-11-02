@@ -16,6 +16,19 @@ export function localDateKey(date: Date = new Date()): string {
 export function announcementMarker(version: string, date: Date = new Date()): string {
   return `${version}|${localDateKey(date)}`
 }
+
+/** 生成今日下一个公告版本号（如 2026-11-02-2 -> 2026-11-02-3，跨天则为 YYYY-MM-DD-1） */
+export function nextAnnouncementVersion(currentVersion: string, date: Date = new Date()): string {
+  const today = localDateKey(date)
+  const prefix = `${today}-`
+  if (currentVersion.startsWith(prefix)) {
+    const seq = Number.parseInt(currentVersion.slice(prefix.length), 10)
+    if (Number.isFinite(seq) && seq >= 1) {
+      return `${prefix}${seq + 1}`
+    }
+  }
+  return `${prefix}1`
+}
 export interface AnnouncementItem {
   /** 小标签，如「新功能」 */
   tag: string
@@ -47,11 +60,12 @@ export interface Announcement {
 }
 
 export const ANNOUNCEMENT: Announcement = {
-  version: '2026-11-02-2',
+  version: '2026-11-02-3',
   title: '关于这个刷题站的几句说明',
   subtitle: '跟大家交个底，说说题库哪来的、怎么做的，还有平时怎么维护。',
   date: '2026 年 11 月 2 日',
   history: [
+    { date: '2026-11-02', text: '完成 C 语言错题解析、229 道误标填空的选择题题型修正及 X9 未分类章节清零；支持后台免发版热更新公告' },
     { date: '2026-11-02', text: '「我的」新增反馈处理进度查看；错题本支持待复习/高频错题筛选，章节题表显示错题与收藏标记；复核清理 22 组重复题与冲突答案' },
     { date: '2026-11-02', text: '公安联网备案通过，页脚已展示苏公网安备32132402000835号' },
     { date: '2026-10-31', text: '普通账号每天最多做 200 道不同的题，免限用户和管理员不受限；达到上限可直接联系作者申请' },

@@ -1,8 +1,11 @@
 <script setup lang="ts">
 // 管理后台（仅 admin 可见数据）
+import { localDateKey, nextAnnouncementVersion, type Announcement } from '~/utils/announcement'
+
 definePageMeta({ middleware: 'auth' })
 const api = useApi()
 const ask = useConfirm()
+const { announcement, load: reloadAnnouncement } = useAnnouncement()
 const stats = ref<any>(null)
 const feedback = ref<any[]>([])
 const resets = ref<any[]>([])
@@ -13,6 +16,69 @@ const resetError = ref('')
 const error = ref('')
 const note = ref<Record<number, string>>({})
 const feedbackFilter = ref<'pending' | 'all'>('pending')
+
+// 站内公告在线编辑
+const annForm = ref<Announcement>({
+  version: '',
+  title: '',
+  subtitle: '',
+  date: '',
+  footnote: '',
+  items: [],
+  history: [],
+})
+const annSaving = ref(false)
+const annMessage = ref('')
+const annError = ref('')
+
+function syncAnnForm(src: Announcement) {
+  annForm.value = {
+    version: src.version,
+    title: src.title,
+    subtitle: src.subtitle,
+    date: src.date,
+    footnote: src.footnote ?? '',
+    items: (src.items ?? []).map(i => ({ ...i })),
+    history: (src.history ?? []).map(h => ({ ...h })),
+  }
+}
+
+function bumpAnnVersion() {
+  annForm.value.version = nextAnnouncementVersion(annForm.value.version)
+  const d = new Date()
+  annForm.value.date = `${d.getFullYear()} 年 ${d.getMonth() + 1} 月 ${d.getDate()} 日`
+}
+
+function addAnnHistory() {
+  annForm.value.history = [
+    { date: localDateKey(), text: '' },
+    ...(annForm.value.history ?? []),
+  ]
+}
+
+function removeAnnHistory(idx: number) {
+  annForm.value.history = (annForm.value.history ?? []).filter((_, i) => i !== idx)
+}
+
+async function saveAnnouncement() {
+  annError.value = ''
+  annMessage.value = ''
+  annSaving.value = true
+  try {
+    const cleaned = {
+      ...annForm.value,
+      history: (annForm.value.history ?? []).filter(h => h.text.trim().length > 0),
+    }
+    const saved = await api.put<Announcement>('/api/admin/announcement', cleaned)
+    syncAnnForm(saved)
+    await reloadAnnouncement(true)
+    annMessage.value = `已保存并生效（版本 ${saved.version}）`
+  } catch (e: any) {
+    annError.value = e.message || '保存公告失败'
+  } finally {
+    annSaving.value = false
+  }
+}
 
 function roleLabel(role: string) {
   if (role === 'admin') return '管理员'
@@ -56,6 +122,8 @@ async function load() {
     const u = await api.get<{ rows: any[] }>('/api/admin/users')
     users.value = u.rows
     await loadVisits()
+    const currentAnn = await reloadAnnouncement(true)
+    syncAnnForm(currentAnn)
   } catch (e: any) {
     error.value = e.message
   }
@@ -120,6 +188,76 @@ onMounted(load)
         <p class="mt-1 text-xl font-bold text-slate-800">{{ v }}</p>
       </div>
     </div>
+
+    <details class="group rounded-xl border border-slate-200 p-4">
+      <summary class="flex cursor-pointer list-none items-center justify-between gap-2 [&::-webkit-details-marker]:hidden">
+        <div>
+          <h2 class="text-sm font-semibold text-slate-700">站内公告配置（免发版热更新）</h2>
+          <p class="mt-0.5 text-xs text-slate-400">当前生效版本：{{ announcement.version }} · 修改版本号后用户当天会重新弹出一次</p>
+        </div>
+        <span class="rounded-lg border border-slate-200 px-2.5 py-1 text-xs text-slate-600 group-open:bg-slate-100">
+          展开编辑
+        </span>
+      </summary>
+
+      <div class="mt-4 space-y-3 border-t border-slate-100 pt-4 text-xs">
+        <div class="grid gap-3 sm:grid-cols-3">
+          <label class="block">
+            <span class="text-slate-500">版本号（version）</span>
+            <div class="mt-1 flex gap-1.5">
+              <input v-model="annForm.version" class="min-w-0 flex-1 rounded-lg border border-slate-300 px-2.5 py-1.5" />
+              <button type="button" class="shrink-0 rounded-lg border border-slate-300 px-2.5 py-1.5 text-slate-700 hover:border-blue-600 hover:text-blue-600"
+                      @click="bumpAnnVersion">递增今日号</button>
+            </div>
+          </label>
+          <label class="block">
+            <span class="text-slate-500">展示日期</span>
+            <input v-model="annForm.date" class="mt-1 w-full rounded-lg border border-slate-300 px-2.5 py-1.5" />
+          </label>
+          <label class="block">
+            <span class="text-slate-500">主标题</span>
+            <input v-model="annForm.title" class="mt-1 w-full rounded-lg border border-slate-300 px-2.5 py-1.5" />
+          </label>
+        </div>
+
+        <div class="grid gap-3 sm:grid-cols-2">
+          <label class="block">
+            <span class="text-slate-500">副标题</span>
+            <input v-model="annForm.subtitle" class="mt-1 w-full rounded-lg border border-slate-300 px-2.5 py-1.5" />
+          </label>
+          <label class="block">
+            <span class="text-slate-500">底部说明（footnote）</span>
+            <input v-model="annForm.footnote" class="mt-1 w-full rounded-lg border border-slate-300 px-2.5 py-1.5" />
+          </label>
+        </div>
+
+        <div>
+          <div class="flex items-center justify-between">
+            <span class="font-medium text-slate-600">更新历史（{{ annForm.history?.length ?? 0 }} 条）</span>
+            <button type="button" class="rounded border border-slate-300 px-2 py-1 text-slate-700 hover:border-blue-600 hover:text-blue-600"
+                    @click="addAnnHistory">+ 新增一条更新记录</button>
+          </div>
+          <div class="mt-2 max-h-56 space-y-1.5 overflow-y-auto pr-1">
+            <div v-for="(h, idx) in annForm.history" :key="idx" class="flex items-center gap-1.5">
+              <input v-model="h.date" placeholder="YYYY-MM-DD" class="w-28 shrink-0 rounded border border-slate-300 px-2 py-1 font-mono" />
+              <input v-model="h.text" placeholder="一句话说明本次对用户有感知的更新" class="min-w-0 flex-1 rounded border border-slate-300 px-2 py-1" />
+              <button type="button" class="shrink-0 rounded border border-slate-200 px-2 py-1 text-slate-400 hover:text-red-600"
+                      @click="removeAnnHistory(idx)">删除</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-3 pt-1">
+          <button type="button" :disabled="annSaving"
+                  class="rounded-lg bg-blue-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+                  @click="saveAnnouncement">
+            {{ annSaving ? '保存中…' : '保存并立即生效' }}
+          </button>
+          <span v-if="annMessage" class="text-green-700">{{ annMessage }}</span>
+          <span v-if="annError" class="text-red-600">{{ annError }}</span>
+        </div>
+      </div>
+    </details>
 
     <div class="rounded-xl border border-slate-200 p-4">
       <div class="flex flex-wrap items-center justify-between gap-2">

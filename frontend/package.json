@@ -10,6 +10,7 @@
     "generate": "nuxt generate",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:e2e": "playwright test",
     "postinstall": "nuxt prepare"
   },
   "dependencies": {
