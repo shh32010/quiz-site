@@ -6,6 +6,9 @@ const route = useRoute()
 const router = useRouter()
 const api = useApi()
 const toast = useToast()
+const { loggedIn } = useAuth()
+const { wrongMap, favMap, refreshMarks } = useUserMarks()
+const markFilter = ref<'all' | 'wrong' | 'fav'>('all')
 const composing = ref(false)
 const composeError = ref('')
 const page = computed(() => Number(route.query.page) || 1)
@@ -69,6 +72,19 @@ const chapterTitle = computed(() =>
 const chapterPath = computed(() =>
   data.value?.rows?.[0]?.chapterPath || '')
 
+const pageRows = computed<any[]>(() => data.value?.rows ?? [])
+const pageWrongCount = computed(() => pageRows.value.filter(q => Boolean(wrongMap.value[q.id])).length)
+const pageFavCount = computed(() => pageRows.value.filter(q => Boolean(favMap.value[q.id])).length)
+const displayRows = computed(() => {
+  if (markFilter.value === 'wrong') return pageRows.value.filter(q => Boolean(wrongMap.value[q.id]))
+  if (markFilter.value === 'fav') return pageRows.value.filter(q => Boolean(favMap.value[q.id]))
+  return pageRows.value
+})
+
+onMounted(() => {
+  refreshMarks()
+})
+
 function switchType(value: number | string) {
   const next = Number(value) || 0
   router.push({ query: { ...route.query, type: next || undefined, page: undefined } })
@@ -122,22 +138,37 @@ async function composeChapter() {
     <p v-if="composeWarning" class="text-xs text-warn-fg">{{ composeWarning }}</p>
     <p v-if="composeError" class="text-sm text-danger-fg">{{ composeError }}</p>
 
-    <div class="sticky top-14 z-20 -mx-3 border-y border-line-subtle bg-page/95 px-3 py-2 backdrop-blur sm:-mx-4 sm:px-4">
+    <div class="sticky top-14 z-20 -mx-3 space-y-2 border-y border-line-subtle bg-page/95 px-3 py-2 backdrop-blur sm:-mx-4 sm:px-4">
       <UiTabs :model-value="type" :items="typeTabs" @update:model-value="switchType" />
+      <div v-if="loggedIn && (pageWrongCount > 0 || pageFavCount > 0)" class="flex flex-wrap items-center gap-1.5 text-xs">
+        <button type="button" class="min-h-9 rounded-full border px-3 transition"
+                :class="markFilter === 'all' ? 'border-brand bg-brand-soft font-medium text-brand-on-soft' : 'border-line-subtle bg-surface-card text-fg-secondary'"
+                @click="markFilter = 'all'">本页全部</button>
+        <button v-if="pageWrongCount > 0" type="button" class="min-h-9 rounded-full border px-3 transition"
+                :class="markFilter === 'wrong' ? 'border-brand bg-brand-soft font-medium text-brand-on-soft' : 'border-line-subtle bg-surface-card text-fg-secondary'"
+                @click="markFilter = 'wrong'">本页错题 {{ pageWrongCount }}</button>
+        <button v-if="pageFavCount > 0" type="button" class="min-h-9 rounded-full border px-3 transition"
+                :class="markFilter === 'fav' ? 'border-brand bg-brand-soft font-medium text-brand-on-soft' : 'border-line-subtle bg-surface-card text-fg-secondary'"
+                @click="markFilter = 'fav'">本页收藏 {{ pageFavCount }}</button>
+      </div>
     </div>
 
     <ul class="divide-y divide-line-subtle overflow-hidden rounded-xl border border-line-subtle bg-surface-card">
-      <li v-for="q in data?.rows ?? []" :key="q.id">
-        <NuxtLink :to="`/practice?mode=single&target=${q.id}`" title="点击做这道题"
+      <li v-for="q in displayRows" :key="q.id">
+        <NuxtLink :to="`/practice?mode=single&target=${q.id}&from=${encodeURIComponent(route.fullPath)}`" title="点击做这道题"
                   class="flex min-h-14 items-start gap-3 px-4 py-3 hover:bg-surface-muted">
           <UiBadge class="mt-0.5 shrink-0">{{ TYPE_LABEL[q.questionType] ?? q.questionType }}</UiBadge>
           <span class="min-w-0 flex-1 text-sm leading-6 text-fg-primary">{{ formatText(q.stem) }}</span>
+          <UiBadge v-if="wrongMap[q.id]" :tone="wrongMap[q.id].resolved ? 'green' : 'red'" class="shrink-0">
+            {{ wrongMap[q.id].resolved ? '错题已掌握' : `错 ${wrongMap[q.id].wrongCount} 次` }}
+          </UiBadge>
+          <span v-if="favMap[q.id]" class="shrink-0 text-xs font-medium text-amber-500" title="已收藏">★</span>
           <span v-if="q.hasImage" class="shrink-0 text-xs text-fg-muted">含图</span>
           <span class="shrink-0 text-xs font-medium text-brand">做这题 →</span>
         </NuxtLink>
       </li>
-      <li v-if="!(data?.rows ?? []).length" class="px-5 py-8 text-center text-sm text-fg-muted">
-        {{ type ? '本章该题型暂无题目。' : '本章暂无题目。' }}
+      <li v-if="!displayRows.length" class="px-5 py-8 text-center text-sm text-fg-muted">
+        {{ markFilter !== 'all' ? '本页暂无符合该标记的题目。' : (type ? '本章该题型暂无题目。' : '本章暂无题目。') }}
       </li>
     </ul>
 

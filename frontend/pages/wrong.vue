@@ -1,6 +1,7 @@
 <script setup lang="ts">
 // 错题本
 import { TYPE_LABEL, TYPE_TABS } from '~/utils/constants'
+import { WRONG_STATUS_TABS, filterWrongRows, fmtReviewDue, type WrongStatusFilter } from '~/utils/wrong'
 
 definePageMeta({ middleware: 'auth' })
 const api = useApi()
@@ -22,6 +23,7 @@ async function load() {
 onMounted(load)
 
 const selectedType = ref(0)
+const statusFilter = ref<WrongStatusFilter>('all')
 const typeCounts = computed<Record<number, number>>(() => {
   const m: Record<number, number> = {}
   for (const q of data.value?.rows ?? []) {
@@ -30,9 +32,16 @@ const typeCounts = computed<Record<number, number>>(() => {
   }
   return m
 })
+const statusTabs = computed(() => {
+  const rows = data.value?.rows ?? []
+  return WRONG_STATUS_TABS.map(tab => ({
+    ...tab,
+    count: filterWrongRows(rows, selectedType.value, tab.value).length,
+  }))
+})
 const filteredRows = computed(() => {
   const rows = data.value?.rows ?? []
-  return selectedType.value ? rows.filter((q: any) => Number(q.questionType) === selectedType.value) : rows
+  return filterWrongRows(rows, selectedType.value, statusFilter.value)
 })
 const typeTabs = computed(() => TYPE_TABS.map(t => ({
   ...t,
@@ -41,9 +50,10 @@ const typeTabs = computed(() => TYPE_TABS.map(t => ({
 
 const printing = ref(false)
 const printRows = ref<any[]>([])
-const filteredPrintRows = computed(() => selectedType.value
-  ? printRows.value.filter(row => Number(row.questionType) === selectedType.value)
-  : printRows.value)
+const filteredPrintRows = computed(() => {
+  const allowedIds = new Set(filteredRows.value.map((r: any) => Number(r.questionId)))
+  return printRows.value.filter(row => allowedIds.has(Number(row.questionId)))
+})
 
 /** 解析选项 JSON，按 A/B/C/D 排序 */
 function options(row: any): [string, string][] {
@@ -122,12 +132,13 @@ async function printPage() {
           </div>
         </UiCard>
 
-        <div class="print:hidden">
+        <div class="space-y-2 print:hidden">
           <UiTabs v-model="selectedType" :items="typeTabs" />
+          <UiTabs v-model="statusFilter" :items="statusTabs" />
         </div>
 
         <p v-if="!filteredRows.length" class="rounded-xl border border-line-subtle bg-surface-card px-5 py-8 text-center text-sm text-fg-muted">
-          {{ selectedType ? '该题型暂无错题。' : '还没有错题。' }}
+          {{ selectedType || statusFilter !== 'all' ? '当前筛选条件下暂无错题。' : '还没有错题。' }}
         </p>
 
         <ul v-else class="divide-y divide-line-subtle overflow-hidden rounded-xl border border-line-subtle bg-surface-card print:hidden">
@@ -141,6 +152,7 @@ async function printPage() {
                 <span class="text-sm leading-6 text-fg-primary">{{ formatText(q.stem) }}</span>
                 <p class="mt-1 flex flex-wrap items-center gap-2 text-xs text-fg-muted">
                   <UiBadge tone="red">错 {{ q.wrongCount }} 次</UiBadge>
+                  <span>· {{ fmtReviewDue(q.nextReviewAt, q.resolved) }}</span>
                   <span v-if="q.kps">· {{ q.kps }}</span>
                 </p>
               </div>

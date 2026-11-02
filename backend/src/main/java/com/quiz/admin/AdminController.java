@@ -19,15 +19,18 @@ public class AdminController {
         this.jdbc = jdbc;
     }
 
-    /** 反馈列表 */
+    /** 反馈列表（支持 pending / all 切换，并附带同题反馈聚合数） */
     @GetMapping("/feedback")
     public Map<String, Object> feedback(@RequestParam(defaultValue = "pending") String status) {
         String where = "pending".equals(status) ? "and f.status = 'open'" : "";
         List<Map<String, Object>> rows = jdbc.queryForList("""
                 select f.id, f.question_id as "questionId", f.type, f.content,
                        f.status, f.admin_note as "adminNote",
-                       f.created_at as "createdAt", p.username,
-                       left(q.stem, 80) as "stemPreview"
+                       f.created_at as "createdAt", f.handled_at as "handledAt",
+                       p.username, left(q.stem, 80) as "stemPreview",
+                       case when f.question_id is not null then (
+                         select count(*) from feedback f2 where f2.question_id = f.question_id
+                       ) else 1 end as "questionFeedbackCount"
                   from feedback f
                   left join profiles p on p.id = f.user_id
                   left join t_question q on q.id = f.question_id

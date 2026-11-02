@@ -17,7 +17,7 @@ const emit = defineEmits<{ exit: []; openSheet: [] }>()
 <template>
   <header class="sticky top-0 z-30 border-b border-line-subtle bg-surface-glass backdrop-blur">
     <div class="mx-auto flex max-w-3xl items-center gap-2 px-3 py-2 sm:max-w-4xl sm:px-4">
-      <button type="button" class="shrink-0 rounded-lg px-2 py-1.5 text-sm text-slate-500 hover:bg-slate-100 hover:text-slate-800"
+      <button type="button" class="inline-flex min-h-11 shrink-0 items-center rounded-lg px-2.5 py-1.5 text-sm text-slate-500 hover:bg-slate-100 hover:text-slate-800"
               @click="emit('exit')">← 退出</button>
       <div class="min-w-0 flex-1">
         <div class="flex items-center justify-between gap-2 text-xs text-slate-500">

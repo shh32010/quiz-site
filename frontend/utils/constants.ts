@@ -54,6 +54,14 @@ export const MODE_LABEL: Record<string, string> = {
   random_exam: '随机模考',
 }
 
+export const FEEDBACK_TYPE_LABEL: Record<string, string> = {
+  answer: '答案错误',
+  stem: '题干错误',
+  option: '选项错误',
+  image: '图片问题',
+  other: '其他 / 留言',
+}
+
 /** 历史/报告的短时间格式：月-日 时:分 */
 export function fmtTime(v: string): string {
   if (!v) return ''

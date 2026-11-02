@@ -32,7 +32,7 @@ public class PracticeService {
      * 先取用户级事务锁，避免并发提交同时越过上限。
      * 不按 deleted_at 过滤，避免用户清空历史后重置额度。
      */
-    private void enforceDailyQuestionLimit(UUID uid) {
+    private void enforceDailyQuestionLimit(UUID uid, int questionId) {
         String role = jdbc.queryForObject("select role from profiles where id = ?", String.class, uid);
         // admin：后台权限；unlimited：仅免限，仍是普通用户权限
         if ("admin".equals(role) || "unlimited".equals(role)) return;
@@ -43,9 +43,10 @@ public class PracticeService {
                 select count(distinct question_id)
                   from practice_answer
                  where user_id = ?
+                   and question_id <> ?
                    and answered_at >= date_trunc('day', now() at time zone 'Asia/Shanghai') at time zone 'Asia/Shanghai'
                    and answered_at <  (date_trunc('day', now() at time zone 'Asia/Shanghai') + interval '1 day') at time zone 'Asia/Shanghai'
-                """, Integer.class, uid);
+                """, Integer.class, uid, questionId);
         if (used != null && used >= DAILY_QUESTION_LIMIT) {
             throw new IllegalStateException("今日做题已达 200 题上限，明天再来");
         }
@@ -348,7 +349,7 @@ public class PracticeService {
         if (inSession == null || inSession == 0) {
             throw new IllegalArgumentException("题目不属于当前会话");
         }
-        enforceDailyQuestionLimit(uid);
+        enforceDailyQuestionLimit(uid, questionId);
         bindUser(uid);
         String json = jdbc.queryForObject("select submit_answer(?, ?, ?)::text",
                 String.class, sessionId, questionId, answer);

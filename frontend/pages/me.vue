@@ -1,16 +1,24 @@
 <script setup lang="ts">
-// 我的：移动端第 4 个 Tab；账号、报告、复习入口和退出
+// 我的：移动端第 4 个 Tab；账号、报告、复习入口、我的反馈与退出
+import { FEEDBACK_TYPE_LABEL, fmtTime } from '~/utils/constants'
+
 definePageMeta({ middleware: 'auth' })
 useHead({ title: '我的' })
 
 const api = useApi()
 const auth = useAuth()
 const user = ref<any>(null)
+const myFeedback = ref<any[]>([])
 const error = ref('')
 
 onMounted(async () => {
   try {
-    user.value = await api.get('/api/auth/me')
+    const [u, fb] = await Promise.all([
+      api.get('/api/auth/me'),
+      api.get<{ rows?: any[] }>('/api/feedback/mine').catch(() => ({ rows: [] })),
+    ])
+    user.value = u
+    myFeedback.value = fb.rows ?? []
   } catch (e: any) {
     error.value = e.message
   }
@@ -62,6 +70,35 @@ const links = [
         <p class="mt-1 text-sm text-amber-700">用户、反馈、重置申请</p>
       </NuxtLink>
     </div>
+
+    <UiCard v-if="myFeedback.length" padded="md">
+      <div class="flex items-center justify-between">
+        <h2 class="text-sm font-semibold text-fg-primary">我的反馈（{{ myFeedback.length }}）</h2>
+        <span class="text-xs text-fg-muted">展示最近提交与作者处理结果</span>
+      </div>
+      <ul class="mt-3 divide-y divide-line-subtle">
+        <li v-for="f in myFeedback" :key="f.id" class="space-y-1.5 py-3 first:pt-0 last:pb-0 text-sm">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div class="flex flex-wrap items-center gap-1.5 text-xs">
+              <UiBadge :tone="f.status === 'handled' ? 'green' : 'amber'">
+                {{ f.status === 'handled' ? '已处理' : '待处理' }}
+              </UiBadge>
+              <span class="text-fg-secondary">{{ f.questionId ? (FEEDBACK_TYPE_LABEL[f.type] ?? f.type) : '联系作者' }}</span>
+              <NuxtLink v-if="f.questionId" :to="`/practice?mode=single&target=${f.questionId}&from=/me`"
+                        class="text-brand hover:underline">
+                题目 #{{ f.questionId }} →
+              </NuxtLink>
+            </div>
+            <span class="text-xs tabular-nums text-fg-muted">{{ fmtTime(f.createdAt) }}</span>
+          </div>
+          <p v-if="f.stemPreview" class="truncate text-xs text-fg-muted">题干：{{ formatText(f.stemPreview) }}</p>
+          <p class="whitespace-pre-wrap break-words text-xs leading-5 text-fg-secondary">{{ f.content }}</p>
+          <p v-if="f.adminNote" class="rounded-lg bg-surface-muted px-2.5 py-1.5 text-xs leading-5 text-fg-primary">
+            <b class="text-brand">处理结果：</b>{{ f.adminNote }}
+          </p>
+        </li>
+      </ul>
+    </UiCard>
 
     <div class="flex items-center gap-3 rounded-2xl border border-line-subtle bg-surface-card py-3.5 pl-4 pr-16 sm:pr-4">
       <span class="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-brand-soft text-lg text-brand">💬</span>

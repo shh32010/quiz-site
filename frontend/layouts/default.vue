@@ -7,11 +7,29 @@ const router = useRouter()
 
 const q = ref('')
 const user = ref<any>(null)
+let loadingMe = false
+
+async function loadMe() {
+  if (!loggedIn.value || loadingMe) return
+  loadingMe = true
+  try {
+    user.value = await api.get('/api/auth/me')
+  } catch {
+    user.value = null
+  } finally {
+    loadingMe = false
+  }
+}
 
 watch(loggedIn, async (v) => {
   if (!v) { user.value = null; return }
-  try { user.value = await api.get('/api/auth/me') } catch { user.value = null }
+  await loadMe()
 }, { immediate: true })
+
+// 首屏 /api/auth/me 若因瞬时超时/502 失败，路由切换时自动补拉，避免管理员入口永久消失
+watch(() => route.fullPath, () => {
+  if (loggedIn.value && !user.value) loadMe()
+})
 
 function search() {
   const text = q.value.trim()
@@ -81,6 +99,7 @@ const reviewItems = [
               {{ user?.username || '账号' }} <span class="text-xs text-fg-muted">▾</span>
             </button>
             <div class="invisible absolute right-0 top-full z-50 mt-1 w-40 translate-y-1 rounded-xl border border-line-subtle bg-surface-elevated p-1 opacity-0 shadow-lg transition group-hover:visible group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:visible group-focus-within:translate-y-0 group-focus-within:opacity-100">
+              <NuxtLink to="/me" class="block min-h-10 rounded-lg px-3 py-2 text-sm text-fg-secondary hover:bg-surface-muted hover:text-fg-primary">个人中心</NuxtLink>
               <NuxtLink to="/account" class="block min-h-10 rounded-lg px-3 py-2 text-sm text-fg-secondary hover:bg-surface-muted hover:text-fg-primary">账号设置</NuxtLink>
               <NuxtLink to="/report" class="block min-h-10 rounded-lg px-3 py-2 text-sm text-fg-secondary hover:bg-surface-muted hover:text-fg-primary">学习报告</NuxtLink>
               <NuxtLink v-if="user?.role === 'admin'" to="/admin" class="block min-h-10 rounded-lg px-3 py-2 text-sm text-fg-secondary hover:bg-surface-muted hover:text-fg-primary">管理后台</NuxtLink>

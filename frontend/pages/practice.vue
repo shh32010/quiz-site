@@ -3,6 +3,11 @@
 //          或 /practice?session=ID
 // 未登录 = 游客模式：可试做，判分不落库、不进错题本
 import { MODE_LABEL, TYPE_LABEL } from '~/utils/constants'
+import {
+  getPrimaryLabel,
+  shouldAutoNext,
+  shouldInstantSubmitChoice,
+} from '~/utils/practice'
 
 definePageMeta({ layout: 'immersive' })
 useHead({ title: '刷题' })
@@ -92,9 +97,8 @@ const sheetWrong = computed(() =>
 
 const modeLabel = computed(() => MODE_LABEL[mode.value] ?? '刷题')
 const isSingle = computed(() => mode.value === 'single')
-const canAutoNext = computed(() =>
-  ['chapter', 'course', 'kp', 'wrong', 'paper', 'random'].includes(mode.value)
-  && !isSingle.value && total.value > 1)
+const instantChoice = computed(() => shouldInstantSubmitChoice(mode.value))
+const canAutoNext = computed(() => shouldAutoNext(mode.value, total.value))
 const currentOrder = computed(() => Number(question.value?.itemOrder ?? 1))
 const isLast = computed(() => Boolean(question.value) && currentOrder.value >= total.value)
 const progressPercent = computed(() => total.value ? Math.min(100, Math.round(currentOrder.value / total.value * 100)) : 0)
@@ -133,14 +137,14 @@ const correctKeys = computed<string[]>(() => {
   const raw = String(review.value?.correct ?? '')
   return raw.toUpperCase().match(/[A-H]/g) ?? []
 })
-const primaryLabel = computed(() => {
-  if (submitting.value) return '处理中…'
-  if (!feedback.value) {
-    return hasAnswer.value ? '提交' : '不会，看答案'
-  }
-  if (isSingle.value) return '返回'
-  return isLast.value ? '交卷' : '下一题'
-})
+const primaryLabel = computed(() => getPrimaryLabel({
+  submitting: submitting.value,
+  hasFeedback: Boolean(feedback.value),
+  hasAnswer: hasAnswer.value,
+  mode: mode.value,
+  isSingle: isSingle.value,
+  isLast: isLast.value,
+}))
 
 function clearAdvance() {
   if (advanceTimer) { clearTimeout(advanceTimer); advanceTimer = null }
@@ -419,7 +423,9 @@ async function selectOption(rawKey: string) {
   }
   answer.value = key
   // 单选/判断：点击选项即判分；答对后由 submit 自动进入下一题
-  await submit()
+  if (instantChoice.value) {
+    await submit()
+  }
 }
 
 function optionSelected(key: string) {
@@ -734,7 +740,7 @@ onUnmounted(() => {
           </div>
 
           <p v-if="!feedback" class="mt-3 text-xs text-slate-400">
-            单选/判断点击选项即判分；多选、填空、综合按 Enter 或 Ctrl+Enter 提交；← → 可切题
+            {{ instantChoice ? '单选/判断点击选项即判分；多选、填空、综合按 Enter 或 Ctrl+Enter 提交；← → 可切题' : '选择或填写答案后按 Enter（文本题 Ctrl+Enter）或点击底部按钮提交；← → 可切题' }}
           </p>
 
           <PracticeFeedbackCard v-if="feedback" :feedback="feedback" :review="review"
@@ -769,14 +775,14 @@ onUnmounted(() => {
     <PracticeFinishModal v-model="finishOpen" :info="finishInfo" :submitting="submitting"
                          @go-first="goFirstUnanswered" @finish="finishSession" />
 
-    <UiModal v-model="guestSaveOpen" title="保存这次进度？" size="sm">
+    <UiModal v-model="guestSaveOpen" title="登录以记录学习进度" size="sm">
       <div class="space-y-3">
         <p class="text-sm leading-6 text-fg-secondary">
-          登录后会自动保存本次答题、错题和学习报告。游客记录在关闭页面后不会保留。
+          登录后可自动记录后续做题进度、错题本与学习报告。当前游客试做记录在关闭页面后不会保留。
         </p>
         <NuxtLink :to="{ path: '/login', query: { redirect: route.fullPath } }"
                   class="block min-h-11 rounded-lg bg-brand px-4 py-2.5 text-center text-sm font-medium text-white hover:bg-brand-hover"
-                  @click="guestSaveOpen = false">登录 / 注册并保存</NuxtLink>
+                  @click="guestSaveOpen = false">去登录 / 注册</NuxtLink>
         <button type="button"
                 class="min-h-11 w-full rounded-lg border border-line-strong text-sm text-fg-secondary hover:border-brand hover:text-brand"
                 @click="guestSaveOpen = false">先不登录，继续试做</button>

@@ -12,6 +12,7 @@ const resetResult = ref<any>(null)
 const resetError = ref('')
 const error = ref('')
 const note = ref<Record<number, string>>({})
+const feedbackFilter = ref<'pending' | 'all'>('pending')
 
 function roleLabel(role: string) {
   if (role === 'admin') return '管理员'
@@ -41,11 +42,15 @@ function fmtTime(v: string | null) {
   })
 }
 
+async function loadFeedback() {
+  const f = await api.get<{ rows: any[] }>(`/api/admin/feedback?status=${feedbackFilter.value}`)
+  feedback.value = f.rows
+}
+
 async function load() {
   try {
     stats.value = await api.get('/api/admin/stats')
-    const f = await api.get<{ rows: any[] }>('/api/admin/feedback')
-    feedback.value = f.rows
+    await loadFeedback()
     const r = await api.get<{ rows: any[] }>('/api/admin/password-resets')
     resets.value = r.rows
     const u = await api.get<{ rows: any[] }>('/api/admin/users')
@@ -258,23 +263,47 @@ onMounted(load)
     </div>
 
     <div>
-      <h2 class="mb-2 text-sm font-semibold text-slate-700">待处理反馈</h2>
+      <div class="mb-2 flex items-center justify-between gap-2">
+        <h2 class="text-sm font-semibold text-slate-700">
+          {{ feedbackFilter === 'pending' ? '待处理反馈' : '全部反馈' }}（{{ feedback.length }}）
+        </h2>
+        <div class="flex gap-1 text-xs">
+          <button type="button" class="rounded-lg border px-2.5 py-1"
+                  :class="feedbackFilter === 'pending' ? 'border-blue-600 bg-blue-50 text-blue-700' : 'border-slate-200 text-slate-600'"
+                  @click="feedbackFilter = 'pending'; loadFeedback()">待处理</button>
+          <button type="button" class="rounded-lg border px-2.5 py-1"
+                  :class="feedbackFilter === 'all' ? 'border-blue-600 bg-blue-50 text-blue-700' : 'border-slate-200 text-slate-600'"
+                  @click="feedbackFilter = 'all'; loadFeedback()">全部</button>
+        </div>
+      </div>
       <ul class="divide-y divide-slate-100 rounded-xl border border-slate-200">
         <li v-for="f in feedback" :key="f.id" class="space-y-2 px-5 py-3 text-sm">
-          <div class="flex items-center justify-between">
-            <span class="text-slate-700">
-              <b>#{{ f.questionId }}</b> · {{ f.type }} · {{ f.username ?? '匿名' }}
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <span class="flex flex-wrap items-center gap-1.5 text-slate-700">
+              <b v-if="f.questionId">#{{ f.questionId }}</b>
+              <b v-else class="text-blue-700">联系作者</b>
+              <span>· {{ f.type }} · {{ f.username ?? '匿名' }}</span>
+              <span v-if="f.questionId && Number(f.questionFeedbackCount) > 1"
+                    class="rounded bg-amber-50 px-1.5 py-0.5 text-xs text-amber-700">
+                同题 {{ f.questionFeedbackCount }} 条
+              </span>
+              <span v-if="f.status === 'handled'" class="rounded bg-green-50 px-1.5 py-0.5 text-xs text-green-700">
+                已处理
+              </span>
             </span>
             <span class="text-xs text-slate-400">{{ (f.createdAt || '').slice(0, 16).replace('T', ' ') }}</span>
           </div>
-          <p class="text-slate-600">{{ f.content }}</p>
-          <p class="text-xs text-slate-400">题干：{{ formatText(f.stemPreview) }}</p>
-          <div class="flex gap-2">
-            <input v-model="note[f.id]" placeholder="处理备注" class="flex-1 rounded border px-2 py-1 text-xs" />
+          <p class="whitespace-pre-wrap text-slate-600">{{ f.content }}</p>
+          <p v-if="f.stemPreview" class="text-xs text-slate-400">题干：{{ formatText(f.stemPreview) }}</p>
+          <p v-if="f.adminNote && f.status === 'handled'" class="text-xs text-slate-500">处理备注：{{ f.adminNote }}</p>
+          <div v-if="f.status !== 'handled'" class="flex gap-2">
+            <input v-model="note[f.id]" placeholder="处理备注（用户可在「我的反馈」中看到）" class="flex-1 rounded border px-2 py-1 text-xs" />
             <button class="rounded bg-slate-700 px-3 py-1 text-xs text-white" @click="resolve(f.id)">标记已处理</button>
           </div>
         </li>
-        <li v-if="!feedback.length" class="px-5 py-6 text-sm text-slate-500">暂无待处理反馈。</li>
+        <li v-if="!feedback.length" class="px-5 py-6 text-sm text-slate-500">
+          {{ feedbackFilter === 'pending' ? '暂无待处理反馈。' : '暂无反馈记录。' }}
+        </li>
       </ul>
     </div>
   </section>

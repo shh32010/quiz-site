@@ -79,7 +79,7 @@ onMounted(() => load(1))
         <div v-if="!session.finishedAt" class="mt-2 flex items-center gap-3">
           <p class="text-sm text-amber-600">本次练习尚未结束</p>
           <NuxtLink :to="`/practice?session=${session.id}`"
-                    class="rounded-lg bg-blue-600 px-3 py-1 text-xs font-medium text-white">
+                    class="inline-flex min-h-11 items-center rounded-lg bg-blue-600 px-3.5 text-xs font-medium text-white hover:bg-blue-700">
             继续练习
           </NuxtLink>
         </div>

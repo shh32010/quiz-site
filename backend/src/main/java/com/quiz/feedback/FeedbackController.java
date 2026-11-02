@@ -6,11 +6,12 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
 /**
- * 用户反馈（复用数据库 submit_feedback：含 20 条/天限流）。
+ * 用户反馈（复用数据库 submit_feedback：含 20 条/天限流；并提供 /mine 查看处理结果）。
  */
 @RestController
 @RequestMapping("/api/feedback")
@@ -22,6 +23,23 @@ public class FeedbackController {
 
     public FeedbackController(JdbcTemplate jdbc) {
         this.jdbc = jdbc;
+    }
+
+    /** 当前登录用户的反馈记录与处理状态（含管理员回复） */
+    @GetMapping("/mine")
+    public Map<String, Object> mine(@AuthenticationPrincipal UUID uid) {
+        List<Map<String, Object>> rows = jdbc.queryForList("""
+                select f.id, f.question_id as "questionId", f.type, f.content,
+                       f.status, f.admin_note as "adminNote",
+                       f.created_at as "createdAt", f.handled_at as "handledAt",
+                       left(q.stem, 80) as "stemPreview"
+                  from feedback f
+                  left join t_question q on q.id = f.question_id
+                 where f.user_id = ?
+                 order by f.created_at desc
+                 limit 100
+                """, uid);
+        return Map.of("rows", rows);
     }
 
     @PostMapping

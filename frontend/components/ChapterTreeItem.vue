@@ -41,8 +41,8 @@ function num(code: string | null): string {
 
 <template>
   <li :id="anchorId" class="scroll-mt-20">
-    <div class="flex items-center justify-between py-2 pr-5" :class="pad">
-      <button class="flex min-w-0 items-center gap-2 text-left" :disabled="isLeaf"
+    <div class="flex items-center justify-between py-1 pr-5" :class="pad">
+      <button class="flex min-h-11 min-w-0 items-center gap-2 text-left" :disabled="isLeaf"
               @click="emit('toggle', node.id)">
         <span class="w-4 shrink-0 text-slate-400">{{ isLeaf ? '' : (open[node.id] ? '−' : '+') }}</span>
         <span v-if="label" class="shrink-0 rounded bg-blue-50 px-1.5 py-0.5 text-xs text-blue-600">{{ label }}</span>
@@ -50,7 +50,7 @@ function num(code: string | null): string {
         <span v-else-if="num(node.code)" class="shrink-0 font-mono text-xs text-slate-400">{{ num(node.code) }}</span>
         <span class="truncate" :class="nameClass">{{ displayName ?? node.name }}</span>
       </button>
-      <NuxtLink :to="`/chapters/${node.id}`" class="shrink-0 text-xs text-blue-600 hover:underline">
+      <NuxtLink :to="`/chapters/${node.id}`" class="inline-flex min-h-11 shrink-0 items-center px-1 text-xs text-blue-600 hover:underline">
         {{ node.questionCount.toLocaleString() }} 题 ›
       </NuxtLink>
     </div>
