@@ -12,11 +12,11 @@ export default defineConfig({
   projects: [
     {
       name: 'chromium-desktop',
-      use: { ...devices['Desktop Chrome'] },
+      use: { ...devices['Desktop Chrome'], channel: process.env.CI ? undefined : 'chrome' },
     },
     {
       name: 'chromium-mobile',
-      use: { ...devices['Pixel 7'] },
+      use: { ...devices['Pixel 7'], channel: process.env.CI ? undefined : 'chrome' },
     },
   ],
 })
