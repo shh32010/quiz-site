@@ -87,14 +87,14 @@ test.describe('刷题站核心链路 E2E', () => {
   test('个人页我的反馈回显与联系作者反馈弹窗', async ({ page }) => {
     await page.addInitScript(() => {
       localStorage.setItem('quiz_token', 'e2e-mock-token')
-      localStorage.setItem('quiz_announcement_daily', '2026-11-02-3|' + new Date().toISOString().slice(0, 10))
+      localStorage.setItem('quiz_announcement_daily', '2026-11-02-5|' + new Date().toISOString().slice(0, 10))
     })
     await page.route('**/api/announcement', async (route) => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({
-          version: '2026-11-02-3',
+          version: '2026-11-02-5',
           title: '站内公告',
           subtitle: '',
           date: '2026-11-02',
@@ -139,5 +139,23 @@ test.describe('刷题站核心链路 E2E', () => {
     await expect(fab).toBeVisible()
     await fab.click()
     await expect(page.getByRole('dialog')).toBeVisible()
+  })
+
+  test('结构化讲义页 S1-1：只看必记、搜索高亮与移动端无横向溢出', async ({ page }) => {
+    await page.goto('/knowledge/section/238?hl=main')
+    await expect(page.getByText('结构化讲义')).toBeVisible()
+    await expect(page.getByText('已高亮搜索词')).toBeVisible()
+
+    // 验证只看必记切换
+    const coreBtn = page.getByRole('button', { name: /只看必记/ })
+    await expect(coreBtn).toBeVisible()
+    await coreBtn.click()
+    await expect(page.getByRole('button', { name: /只看必记（已开启）/ })).toBeVisible()
+
+    // 验证全页无横向溢出（360px 移动端宽表自动转为纵向卡片）
+    const overflow = await page.evaluate(() =>
+      document.documentElement.scrollWidth > document.documentElement.clientWidth,
+    )
+    expect(overflow).toBe(false)
   })
 })

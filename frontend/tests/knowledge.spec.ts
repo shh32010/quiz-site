@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest'
-import { courseOf, flattenSections, rootsFor, type KNode } from '../utils/knowledge'
+import {
+  courseOf,
+  filterKbBlocks,
+  flattenSections,
+  importanceBadgeMeta,
+  renderInlineMarkup,
+  rootsFor,
+  type KbBlock,
+  type KNode,
+} from '../utils/knowledge'
 
 function node(partial: Partial<KNode> & Pick<KNode, 'id' | 'code' | 'name' | 'level'>): KNode {
   return { subjectId: 4, kpCount: 0, children: [], ...partial }
@@ -38,5 +47,29 @@ describe('knowledge tree utils', () => {
       node({ id: 4, code: 'B1', name: '信息和信息系统', level: 1 }),
     ]
     expect(rootsFor(tree, 'B').map(n => n.code)).toEqual(['B1', 'B3', 'B4'])
+  })
+
+  it('renderInlineMarkup 转义 HTML 并渲染必记高亮、行内代码、粗体与搜索词', () => {
+    const html = renderInlineMarkup('包含 `<stdio.h>` 时，**主函数** 是 ==唯一入口==', '入口')
+    expect(html).toContain('<code>&lt;stdio.h&gt;</code>')
+    expect(html).toContain('<strong>主函数</strong>')
+    expect(html).toContain('<mark class="kb-mark">唯一<mark class="kb-hl">入口</mark></mark>')
+  })
+
+  it('filterKbBlocks 支持只看必记过滤', () => {
+    const blocks: KbBlock[] = [
+      { id: 'b1', t: 'list', imp: 'core', items: ['必记要点'] },
+      { id: 'b2', t: 'code', imp: 'important', code: 'int main(void) { return 0; }' },
+      { id: 'b3', t: 'callout', kind: 'trap', text: '易错陷阱' },
+    ]
+    expect(filterKbBlocks(blocks, false)).toHaveLength(3)
+    expect(filterKbBlocks(blocks, true).map(b => b.id)).toEqual(['b1', 'b3'])
+  })
+
+  it('importanceBadgeMeta 返回等级标签与左边框样式', () => {
+    expect(importanceBadgeMeta('core').label).toBe('必记')
+    expect(importanceBadgeMeta('important').label).toBe('重点')
+    expect(importanceBadgeMeta('hard').label).toBe('难点')
+    expect(importanceBadgeMeta('normal').label).toBe('')
   })
 })

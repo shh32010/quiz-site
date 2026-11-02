@@ -1,23 +1,16 @@
 <script setup lang="ts">
-// 知识点入口：课程/技能卡片 + 继续学习 + 搜索
+// 知识点入口：课程/技能卡片 + 跨设备继续学习 + 搜索
 import { ALL_COURSES } from '~/utils/constants'
+import { type KNode } from '~/utils/knowledge'
 
 useHead({ title: '知识点学习' })
 
-interface KNode {
-  id: number
-  subjectId: number
-  code: string | null
-  name: string
-  level: number
-  kpCount: number
-  children: KNode[]
-}
-
 const route = useRoute()
 const router = useRouter()
+const api = useApi()
 const q = ref('')
 const lastSection = ref<{ id: number; name: string; courseName: string } | null>(null)
+const learnedCount = ref(0)
 
 // 兼容旧链接 /knowledge?kp=123（服务端 302，避免旧链接被当成入口页收录）
 if (Number(route.query.kp)) {
@@ -26,11 +19,40 @@ if (Number(route.query.kp)) {
 
 const { data: tree, error } = await useFetch<KNode[]>('/api/knowledge/tree')
 
-onMounted(() => {
+onMounted(async () => {
+  let localSet = new Set<number>()
   try {
     const raw = localStorage.getItem('quiz_last_section')
     if (raw) lastSection.value = JSON.parse(raw)
+    const learnedRaw = JSON.parse(localStorage.getItem('quiz_learned') ?? '[]')
+    if (Array.isArray(learnedRaw)) {
+      localSet = new Set(learnedRaw.map(Number).filter(Number.isFinite))
+      learnedCount.value = localSet.size
+    }
   } catch { /* 忽略 */ }
+
+  if (api.hasToken()) {
+    try {
+      const remote = await api.get<any>('/api/knowledge/progress')
+      const rows = Array.isArray(remote?.rows) ? remote.rows : []
+      if (rows.length > 0) {
+        for (const r of rows) {
+          if (r.learned && Number.isFinite(Number(r.sectionId))) {
+            localSet.add(Number(r.sectionId))
+          }
+        }
+        learnedCount.value = localSet.size
+        try { localStorage.setItem('quiz_learned', JSON.stringify([...localSet])) } catch { /* 忽略 */ }
+        if (!lastSection.value && rows[0]?.sectionId) {
+          lastSection.value = {
+            id: Number(rows[0].sectionId),
+            name: String(rows[0].sectionName ?? ''),
+            courseName: String(rows[0].courseName ?? ''),
+          }
+        }
+      }
+    } catch { /* 未登录或网络异常时退回本地记录 */ }
+  }
 })
 
 function rootsFor(code: string): KNode[] {
@@ -65,7 +87,8 @@ function search() {
     <div>
       <h1 class="text-2xl font-bold tracking-tight text-fg-primary">知识点学习</h1>
       <p class="mt-1 text-sm text-fg-secondary">
-        按课程 → 章 → 节连续阅读；共 {{ totalKp.toLocaleString() }} 条知识点。选一节开始，读完后可直接练相关题。
+        按课程 → 章 → 节连续阅读；共 {{ totalKp.toLocaleString() }} 条知识点
+        <span v-if="learnedCount > 0" class="text-success-fg">· 已学 {{ learnedCount }} 节</span>。选一节开始，读完后可直接练相关题。
       </p>
     </div>
 
@@ -104,7 +127,7 @@ function search() {
     </div>
 
     <p class="text-xs leading-5 text-fg-muted">
-      知识点内容来自题库整理，按节连续阅读；如发现内容缺失或错误，可在刷题页提交题目反馈。
+      知识点内容来自考试大纲讲义与题库整理，支持“只看必记”背诵模式；如发现内容缺失或错误，可在刷题页提交题目反馈。
     </p>
   </section>
 </template>

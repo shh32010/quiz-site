@@ -52,6 +52,8 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 // 公开
                 .requestMatchers("/api/health", "/api/auth/**", "/actuator/**").permitAll()
+                // 知识点阅读进度需登录（置于 /api/knowledge/** 之前）
+                .requestMatchers("/api/knowledge/progress/**").authenticated()
                 .requestMatchers("/api/chapters/**", "/api/courses", "/api/papers/**", "/api/questions/**",
                         "/api/knowledge/**", "/api/guest/**", "/api/stats/collect", "/api/announcement").permitAll()
                 // 需登录

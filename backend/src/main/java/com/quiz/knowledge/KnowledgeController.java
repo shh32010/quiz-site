@@ -1,15 +1,20 @@
 package com.quiz.knowledge;
 
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 /**
- * 知识点学习页接口（只读）。
+ * 知识点学习页接口（浏览公开；阅读进度同步需登录）。
  */
 @RestController
 @RequestMapping("/api/knowledge")
@@ -44,9 +49,26 @@ public class KnowledgeController {
         return service.search(q, page, size);
     }
 
+    /** 获取当前用户的服务端阅读进度：GET /api/knowledge/progress */
+    @GetMapping("/progress")
+    public Map<String, Object> listProgress(@AuthenticationPrincipal UUID uid) {
+        return service.listProgress(uid);
+    }
+
+    /** 更新当前用户在某节的阅读进度或已学状态：PUT /api/knowledge/progress/{sectionId} */
+    @PutMapping("/progress/{sectionId}")
+    public Map<String, Object> saveProgress(@AuthenticationPrincipal UUID uid,
+                                            @PathVariable int sectionId,
+                                            @RequestBody Map<String, Object> body) {
+        Integer progressPct = body.get("progressPct") instanceof Number n ? n.intValue() : null;
+        Boolean learned = body.get("learned") instanceof Boolean b ? b : null;
+        Integer lastKpId = body.get("lastKpId") instanceof Number n ? n.intValue() : null;
+        return service.saveProgress(uid, sectionId, progressPct, learned, lastKpId);
+    }
+
     /** 节阅读器：GET /api/knowledge/section/123?page=1&size=60 */
     @GetMapping("/section/{id}")
-    public Map<String, Object> section(@org.springframework.web.bind.annotation.PathVariable int id,
+    public Map<String, Object> section(@PathVariable int id,
                                        @RequestParam(defaultValue = "1") int page,
                                        @RequestParam(defaultValue = "60") int size) {
         return service.section(id, page, size);
@@ -54,7 +76,7 @@ public class KnowledgeController {
 
     /** 单条知识点：GET /api/knowledge/123 */
     @GetMapping("/{id}")
-    public Map<String, Object> detail(@org.springframework.web.bind.annotation.PathVariable int id) {
+    public Map<String, Object> detail(@PathVariable int id) {
         return service.detail(id);
     }
 }

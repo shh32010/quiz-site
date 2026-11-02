@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// 旧知识点深链：/knowledge?kp=123 或 /knowledge/kp/123 → 所在节锚点
+// 旧知识点深链：/knowledge?kp=123 或 /knowledge/kp/123 → 所在节锚点（保留 ?hl= 高亮词）
 import type { KNode } from '~/utils/knowledge'
 
 const route = useRoute()
@@ -25,7 +25,9 @@ const sectionId = computed(() => {
 })
 
 if (sectionId.value) {
-  await navigateTo(`/knowledge/section/${sectionId.value}#kp-${id.value}`, {
+  const hl = String(route.query.hl ?? '').trim()
+  const qs = hl ? `?hl=${encodeURIComponent(hl)}` : ''
+  await navigateTo(`/knowledge/section/${sectionId.value}${qs}#kp-${id.value}`, {
     replace: true,
     redirectCode: 302,
   })

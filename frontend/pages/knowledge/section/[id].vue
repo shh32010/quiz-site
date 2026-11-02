@@ -1,14 +1,25 @@
 <script setup lang="ts">
-// 节阅读器：一节内连续阅读全部知识点，支持锚点、上一节/下一节
+// 节阅读器：支持新版结构化讲义块（kb_entry + kb_revision）与旧版知识点双轨渲染、只看必记、搜索高亮及跨端进度同步
 import { ALL_COURSES } from '~/utils/constants'
 import { formatText } from '~/composables/format'
-import { normalizeKnowledgeContent, renderMarkdown } from '~/utils/markdown'
-import { courseOf, flattenSections, hasOwnNumbering, kpOrdinal, stripLeadingNumber, type KNode, type SectionRef } from '~/utils/knowledge'
+import { highlightText, normalizeKnowledgeContent, renderMarkdown } from '~/utils/markdown'
+import {
+  courseOf,
+  flattenSections,
+  hasOwnNumbering,
+  importanceBadgeMeta,
+  kpOrdinal,
+  stripLeadingNumber,
+  type KbEntry,
+  type KNode,
+  type SectionRef,
+} from '~/utils/knowledge'
 
 definePageMeta({ layout: 'immersive' })
 
 const route = useRoute()
 const router = useRouter()
+const api = useApi()
 const id = computed(() => Number(route.params.id))
 const part = computed(() => Math.max(1, Number(route.query.part) || 1))
 // 后端单次上限 100；100 条以内整节一次读完，不再分“第 1/2 部分”
@@ -19,9 +30,14 @@ const readerFont = ref(17)
 const fontOptions = [15, 17, 19]
 const learnedSections = ref<number[]>([])
 const activeKp = ref<number | null>(null)
+const activeEntryNode = ref<number | null>(null)
+const coreOnly = ref(false)
 const learned = computed(() => learnedSections.value.includes(id.value))
+const highlightKeyword = computed(() => String(route.query.hl ?? '').trim())
+const legacyForced = computed(() => route.query.legacy === '1')
 let spy: IntersectionObserver | null = null
 let lastProgressSave = 0
+let lastRemoteSync = 0
 
 const { data: tree } = await useFetch<KNode[]>('/api/knowledge/tree')
 const { data: payload, error: loadError } = await useFetch<any>(() => `/api/knowledge/section/${id.value}`, {
@@ -29,7 +45,11 @@ const { data: payload, error: loadError } = await useFetch<any>(() => `/api/know
 })
 
 const section = computed<any>(() => payload.value?.section ?? null)
+const entries = computed<KbEntry[]>(() => payload.value?.entries ?? [])
+const hasStructuredEntries = computed(() => entries.value.length > 0)
+const structuredMode = computed(() => hasStructuredEntries.value && !legacyForced.value)
 const kps = computed<any[]>(() => payload.value?.kps ?? [])
+
 const contentByKp = computed(() => {
   const map = new Map<number, string>()
   for (const kp of kps.value) {
@@ -37,9 +57,24 @@ const contentByKp = computed(() => {
   }
   return map
 })
+
 function contentOf(kp: any): string {
   return contentByKp.value.get(Number(kp.id)) ?? ''
 }
+
+function renderedLegacyContent(kp: any): string {
+  const html = renderMarkdown(contentOf(kp))
+  const kw = highlightKeyword.value
+  if (!kw) return html
+  const escaped = kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const re = new RegExp(escaped, 'gi')
+  return html.replace(/(<[^>]+>)|([^<]+)/g, (_m, tag, plain) => {
+    if (tag) return tag
+    return String(plain).replace(re, hit =>
+      `<mark style="background:rgb(var(--warn-bg));color:inherit;border-radius:2px;padding:0 2px">${hit}</mark>`)
+  })
+}
+
 const questionsByKp = computed(() => {
   const map = new Map<number, any[]>()
   for (const question of payload.value?.questions ?? []) {
@@ -49,6 +84,7 @@ const questionsByKp = computed(() => {
   }
   return map
 })
+
 const total = computed(() => payload.value?.total ?? 0)
 const totalPages = computed(() => Math.max(1, Math.ceil(total.value / size)))
 const flat = computed(() => flattenSections(tree.value ?? []))
@@ -86,13 +122,13 @@ function displayTitle(kp: any): string {
 }
 
 /** 标题已有“3.3”“10.4.1”等编号时不再加阅读器序号 */
-function kpPrefix(kp: any, index: number): string {
-  return hasOwnNumbering(displayTitle(kp)) ? '' : `${kpOrdinal(part.value, index, size)}. `
+function kpPrefix(kp: any, idx: number): string {
+  return hasOwnNumbering(displayTitle(kp)) ? '' : `${kpOrdinal(part.value, idx, size)}. `
 }
 
 /** 目录编号：1.1、1.2…；标题自带编号时在目录里去掉，避免重复 */
-function tocNumber(index: number): string {
-  return `1.${kpOrdinal(part.value, index, size)}`
+function tocNumber(idx: number): string {
+  return `1.${kpOrdinal(part.value, idx, size)}`
 }
 
 function tocTitle(kp: any): string {
@@ -112,6 +148,19 @@ function jumpToGroup(nodeId?: number) {
   nextTick(() => {
     document.getElementById(`group-${nodeId}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   })
+}
+
+function clearHighlight() {
+  const nextQuery = { ...route.query }
+  delete nextQuery.hl
+  router.replace({ path: route.path, query: nextQuery, hash: route.hash })
+}
+
+function toggleLegacyView() {
+  const nextQuery = { ...route.query }
+  if (legacyForced.value) delete nextQuery.legacy
+  else nextQuery.legacy = '1'
+  router.replace({ path: route.path, query: nextQuery })
 }
 
 interface TocRow {
@@ -135,8 +184,19 @@ function findNode(nodes: KNode[], target: number): KNode | null {
   return null
 }
 
-/** 有大纲小节时，目录只列三级条目；否则保持原来的知识点平铺 */
+/** 结构化讲义模式下直接列 L3 讲义条目；旧版模式下有大纲小节时列三级条目，否则平铺 */
 const tocRows = computed<TocRow[]>(() => {
+  if (structuredMode.value) {
+    return entries.value.map((entry, idx) => ({
+      kind: 'group',
+      key: `group-${entry.nodeId}`,
+      nodeId: entry.nodeId,
+      count: entry.blocks?.length ?? 0,
+      number: `1.${idx + 1}`,
+      code: entry.nodeCode ?? section.value?.code ?? '',
+      name: stripLeadingNumber(entry.nodeName ?? ''),
+    }))
+  }
   const sectionNode = findNode(tree.value ?? [], id.value)
   const childMap = new Map<number, KNode>()
   for (const child of sectionNode?.children ?? []) childMap.set(child.id, child)
@@ -162,16 +222,18 @@ const tocRows = computed<TocRow[]>(() => {
       }
     })
   }
-  return kps.value.map((kp, index) => ({
+  return kps.value.map((kp, idx) => ({
     kind: 'item',
     key: `kp-${kp.id}`,
     kp,
-    index,
+    index: idx,
   }))
 })
 
-const activeGroupId = computed(() =>
-  kps.value.find(kp => Number(kp.id) === activeKp.value)?.nodeId ?? null)
+const activeGroupId = computed(() => {
+  if (structuredMode.value) return activeEntryNode.value ?? entries.value[0]?.nodeId ?? null
+  return kps.value.find(kp => Number(kp.id) === activeKp.value)?.nodeId ?? null
+})
 
 interface ContentGroup {
   nodeId: number
@@ -180,10 +242,11 @@ interface ContentGroup {
   items: { kp: any; index: number }[]
 }
 
-/** 正文按大纲节点分组；只有一个节点时保持原来的平铺结构 */
+/** 旧版正文按大纲节点分组；支持“只看必记”过滤 */
 const contentGroups = computed<ContentGroup[]>(() => {
   const groups: ContentGroup[] = []
-  kps.value.forEach((kp, index) => {
+  kps.value.forEach((kp, idx) => {
+    if (coreOnly.value && importanceLabel(kp.importance) !== '必记') return
     const nodeId = Number(kp.nodeId ?? id.value)
     let group = groups.find(item => item.nodeId === nodeId)
     if (!group) {
@@ -196,7 +259,7 @@ const contentGroups = computed<ContentGroup[]>(() => {
       }
       groups.push(group)
     }
-    group.items.push({ kp, index })
+    group.items.push({ kp, index: idx })
   })
   return groups
 })
@@ -223,18 +286,29 @@ function practiceReturn(kpId?: number) {
   return `/practice?mode=${kpId ? 'kp' : 'chapter'}&target=${kpId ?? id.value}&return=${encodeURIComponent(readerPath(kpId))}`
 }
 
-function setFont(size: number) {
-  readerFont.value = size
-  try { localStorage.setItem('quiz_reader_font', String(size)) } catch { /* 忽略 */ }
+function setFont(fontSize: number) {
+  readerFont.value = fontSize
+  try { localStorage.setItem('quiz_reader_font', String(fontSize)) } catch { /* 忽略 */ }
 }
 
 function cycleFont() {
-  const index = fontOptions.indexOf(readerFont.value)
-  setFont(fontOptions[(index + 1) % fontOptions.length] ?? fontOptions[0]!)
+  const idx = fontOptions.indexOf(readerFont.value)
+  setFont(fontOptions[(idx + 1) % fontOptions.length] ?? fontOptions[0]!)
 }
 
 function isLearned(sectionId: number) {
   return learnedSections.value.includes(sectionId)
+}
+
+async function syncProgressToServer(learnedVal: boolean, progressPctVal: number) {
+  if (!api.hasToken() || !id.value) return
+  try {
+    await api.put(`/api/knowledge/progress/${id.value}`, {
+      learned: learnedVal,
+      progressPct: progressPctVal,
+      lastKpId: activeKp.value ?? null,
+    })
+  } catch { /* 网络或鉴权异常时静默降级为本地存储 */ }
 }
 
 function toggleLearned() {
@@ -243,25 +317,56 @@ function toggleLearned() {
   else set.add(id.value)
   learnedSections.value = [...set]
   try { localStorage.setItem('quiz_learned', JSON.stringify(learnedSections.value)) } catch { /* 忽略 */ }
+  syncProgressToServer(set.has(id.value), progress.value)
 }
 
-function loadPreferences() {
+async function loadPreferences() {
   try {
     const font = Number(localStorage.getItem('quiz_reader_font'))
     if (fontOptions.includes(font)) readerFont.value = font
     const raw = JSON.parse(localStorage.getItem('quiz_learned') ?? '[]')
     if (Array.isArray(raw)) learnedSections.value = raw.map(Number).filter(Number.isFinite)
   } catch { /* 忽略 */ }
+
+  if (api.hasToken()) {
+    try {
+      const remote = await api.get<any>('/api/knowledge/progress')
+      const rows = Array.isArray(remote?.rows) ? remote.rows : []
+      if (rows.length > 0) {
+        const merged = new Set(learnedSections.value)
+        for (const r of rows) {
+          if (r.learned && Number.isFinite(Number(r.sectionId))) {
+            merged.add(Number(r.sectionId))
+          }
+        }
+        learnedSections.value = [...merged]
+        try { localStorage.setItem('quiz_learned', JSON.stringify(learnedSections.value)) } catch { /* 忽略 */ }
+      }
+    } catch { /* 忽略 */ }
+  }
 }
 
 function setupSpy() {
   if (typeof window === 'undefined') return
   spy?.disconnect()
+  if (structuredMode.value) {
+    const elements = [...document.querySelectorAll<HTMLElement>('section[id^="group-"]')]
+    if (!elements.length) return
+    activeEntryNode.value = Number(elements[0]!.id.slice(6)) || null
+    spy = new IntersectionObserver((obsEntries) => {
+      const visible = obsEntries
+        .filter(entry => entry.isIntersecting)
+        .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)
+      if (visible[0]) activeEntryNode.value = Number(visible[0].target.id.slice(6)) || null
+    }, { rootMargin: '-100px 0px -60% 0px', threshold: [0, 1] })
+    elements.forEach(element => spy!.observe(element))
+    return
+  }
   const elements = [...document.querySelectorAll<HTMLElement>('section[id^="kp-"]')]
   if (!elements.length) return
   activeKp.value = Number(elements[0]!.id.slice(3)) || null
-  spy = new IntersectionObserver((entries) => {
-    const visible = entries
+  spy = new IntersectionObserver((obsEntries) => {
+    const visible = obsEntries
       .filter(entry => entry.isIntersecting)
       .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)
     if (visible[0]) activeKp.value = Number(visible[0].target.id.slice(3)) || null
@@ -269,27 +374,47 @@ function setupSpy() {
   elements.forEach(element => spy!.observe(element))
 }
 
+/** 兼容旧版 #kp-123 锚点：在结构化讲义模式下自动定位到所属 L3 条目 #group-{nodeId} */
+function resolveLegacyHashInStructuredMode() {
+  if (typeof window === 'undefined' || !structuredMode.value) return
+  const hash = window.location.hash
+  if (!hash.startsWith('#kp-')) return
+  const kpId = Number(hash.slice(4))
+  const hitKp = kps.value.find(item => Number(item.id) === kpId)
+  if (hitKp?.nodeId) {
+    nextTick(() => {
+      document.getElementById(`group-${hitKp.nodeId}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    })
+  }
+}
+
 watch(part, async () => {
   await nextTick()
   if (typeof window !== 'undefined') window.scrollTo({ top: 0 })
 })
-watch(kps, async () => {
+watch([kps, entries, structuredMode], async () => {
   await nextTick()
   setupSpy()
+  resolveLegacyHashInStructuredMode()
 }, { immediate: true })
 
 function onScroll() {
   const el = document.documentElement
   const max = el.scrollHeight - el.clientHeight
   progress.value = max > 0 ? Math.min(100, Math.round((window.scrollY / max) * 100)) : 0
-  if (Date.now() - lastProgressSave > 800) {
-    lastProgressSave = Date.now()
+  const now = Date.now()
+  if (now - lastProgressSave > 800) {
+    lastProgressSave = now
     try {
       const raw = JSON.parse(localStorage.getItem('quiz_reader_progress') ?? '{}')
       const map = raw && typeof raw === 'object' ? raw : {}
       map[id.value] = progress.value
       localStorage.setItem('quiz_reader_progress', JSON.stringify(map))
     } catch { /* 忽略 */ }
+  }
+  if (now - lastRemoteSync > 6000) {
+    lastRemoteSync = now
+    syncProgressToServer(learned.value, progress.value)
   }
 }
 
@@ -381,13 +506,25 @@ watch(section, (value) => {
           </nav>
 
           <header class="mt-3 border-b border-line-subtle pb-4">
-            <h1 class="text-2xl font-bold tracking-tight text-fg-primary">{{ section.name }}</h1>
+            <div class="flex flex-wrap items-center gap-2">
+              <h1 class="text-2xl font-bold tracking-tight text-fg-primary">{{ section.name }}</h1>
+              <UiBadge v-if="structuredMode" tone="blue">结构化讲义</UiBadge>
+            </div>
             <p class="mt-1 text-sm text-fg-secondary">
               {{ section.code }} ·
-              <template v-if="contentGroups.length > 1">{{ contentGroups.length }} 个大纲条目 · {{ total }} 条内容</template>
+              <template v-if="structuredMode">{{ entries.length }} 个大纲考点讲义 · 已精编</template>
+              <template v-else-if="contentGroups.length > 1">{{ contentGroups.length }} 个大纲条目 · {{ total }} 条内容</template>
               <template v-else>共 {{ total }} 条知识点</template>
-              <span v-if="totalPages > 1">· 第 {{ part }} / {{ totalPages }} 部分</span>
+              <span v-if="!structuredMode && totalPages > 1">· 第 {{ part }} / {{ totalPages }} 部分</span>
             </p>
+
+            <!-- 搜索高亮提示条 -->
+            <div v-if="highlightKeyword"
+                 class="mt-2.5 inline-flex items-center gap-2 rounded-lg border border-warn-border bg-warn-bg/60 px-3 py-1.5 text-xs text-warn-fg">
+              <span>已高亮搜索词：「<b>{{ highlightKeyword }}</b>」</span>
+              <button type="button" class="underline hover:text-fg-primary" @click="clearHighlight">清除高亮</button>
+            </div>
+
             <div class="mt-3 flex flex-wrap items-center gap-2 text-xs">
               <button type="button"
                       class="inline-flex min-h-11 items-center rounded-lg border px-3"
@@ -395,25 +532,77 @@ watch(section, (value) => {
                       @click="toggleLearned">
                 {{ learned ? '✓ 已学' : '标记本节已学' }}
               </button>
+              <button type="button"
+                      class="inline-flex min-h-11 items-center rounded-lg border px-3 transition"
+                      :class="coreOnly ? 'border-danger-border bg-danger-bg text-danger-fg font-medium' : 'border-line-strong text-fg-secondary hover:border-brand hover:text-brand'"
+                      :aria-pressed="coreOnly"
+                      @click="coreOnly = !coreOnly">
+                {{ coreOnly ? '★ 只看必记（已开启）' : '☆ 只看必记' }}
+              </button>
               <NuxtLink :to="practiceReturn()"
                         class="inline-flex min-h-11 items-center rounded-lg border border-brand/30 px-3 text-brand hover:bg-brand-soft">
                 练本节题目
               </NuxtLink>
+              <button v-if="hasStructuredEntries"
+                      type="button"
+                      class="inline-flex min-h-11 items-center rounded-lg border border-line-subtle px-3 text-fg-muted hover:border-line-strong hover:text-fg-secondary"
+                      @click="toggleLegacyView">
+                {{ legacyForced ? '切换新版讲义' : `查看旧版卡片（${total}）` }}
+              </button>
               <span class="hidden items-center gap-0.5 rounded-lg border border-line-subtle bg-surface-card p-0.5 lg:inline-flex"
                     role="group" aria-label="正文字号">
                 <span class="px-1.5 text-[11px] text-fg-muted">Aa</span>
-                <button v-for="size in fontOptions" :key="size" type="button"
+                <button v-for="fontSize in fontOptions" :key="fontSize" type="button"
                         class="inline-flex h-8 min-w-8 items-center justify-center rounded-md px-1 text-xs"
-                        :class="readerFont === size ? 'bg-brand text-white' : 'text-fg-muted hover:bg-surface-muted hover:text-fg-primary'"
-                        :aria-label="`字号 ${size}px`" :aria-pressed="readerFont === size"
-                        :title="`字号 ${size}px`" @click="setFont(size)">
-                  {{ size }}
+                        :class="readerFont === fontSize ? 'bg-brand text-white' : 'text-fg-muted hover:bg-surface-muted hover:text-fg-primary'"
+                        :aria-label="`字号 ${fontSize}px`" :aria-pressed="readerFont === fontSize"
+                        :title="`字号 ${fontSize}px`" @click="setFont(fontSize)">
+                  {{ fontSize }}
                 </button>
               </span>
             </div>
           </header>
 
-          <article v-if="kps.length" class="mt-2" :style="{ '--reader-fs': `${readerFont}px` }">
+          <!-- 轨道 A：新版结构化讲义阅读器 -->
+          <article v-if="structuredMode" class="mt-4 space-y-8" :style="{ '--reader-fs': `${readerFont}px` }">
+            <section v-for="entry in entries" :id="`group-${entry.nodeId}`" :key="entry.nodeId"
+                     class="scroll-mt-28 rounded-2xl border border-line-subtle bg-surface-card/60 p-4 sm:p-6">
+              <div class="flex flex-wrap items-start justify-between gap-2 border-b border-line-subtle pb-3">
+                <div class="min-w-0">
+                  <p v-if="entry.nodeCode" class="font-mono text-xs font-semibold text-brand">{{ entry.nodeCode }}</p>
+                  <h2 class="mt-0.5 text-lg font-bold text-fg-primary sm:text-xl">{{ entry.nodeName }}</h2>
+                </div>
+                <div class="flex shrink-0 items-center gap-1.5">
+                  <UiBadge tone="blue">精编讲义 v{{ entry.revNo }}</UiBadge>
+                  <a :href="`#group-${entry.nodeId}`"
+                     class="flex h-9 w-9 items-center justify-center rounded-lg text-fg-muted hover:bg-surface-muted hover:text-brand"
+                     :aria-label="`定位到考点：${entry.nodeName}`">#</a>
+                </div>
+              </div>
+
+              <div class="mt-4">
+                <KnowledgeBlockRenderer
+                  :blocks="entry.blocks ?? []"
+                  :core-only="coreOnly"
+                  :highlight-keyword="highlightKeyword"
+                />
+              </div>
+
+              <details v-if="entry.questions?.length"
+                       class="mt-4 overflow-hidden rounded-xl border border-line-subtle bg-surface-card">
+                <summary class="flex min-h-11 cursor-pointer items-center justify-between gap-2 px-3.5 text-xs font-medium text-fg-secondary">
+                  <span>随堂自测（{{ entry.questions.length }} 题 · 共 {{ entry.questionCount || entry.questions.length }} 道关联题）</span>
+                  <span class="text-brand">展开作答</span>
+                </summary>
+                <div class="space-y-2.5 border-t border-line-subtle p-3.5">
+                  <KnowledgeQuestion v-for="q in entry.questions" :key="q.id" :question="q" />
+                </div>
+              </details>
+            </section>
+          </article>
+
+          <!-- 轨道 B：旧版知识点卡片阅读器（未迁移章节或 ?legacy=1） -->
+          <article v-else-if="contentGroups.length" class="mt-2" :style="{ '--reader-fs': `${readerFont}px` }">
             <template v-for="(group, groupIndex) in contentGroups" :key="group.nodeId">
               <div v-if="contentGroups.length > 1" :id="`group-${group.nodeId}`"
                    class="mt-8 scroll-mt-28 rounded-xl border border-brand/15 bg-brand-soft/40 px-4 py-3"
@@ -421,56 +610,66 @@ watch(section, (value) => {
                 <p class="font-mono text-xs text-brand">{{ group.code }}</p>
                 <h2 class="mt-0.5 text-lg font-bold text-fg-primary">{{ group.name }}</h2>
               </div>
-              <section v-for="entry in group.items" :id="`kp-${entry.kp.id}`" :key="entry.kp.id" class="scroll-mt-28 border-b border-line-subtle py-6 last:border-b-0">
-              <div class="flex flex-wrap items-start justify-between gap-2">
-                <component :is="contentGroups.length > 1 ? 'h3' : 'h2'"
-                           class="min-w-0 font-semibold leading-7 text-fg-primary"
-                           :class="contentGroups.length > 1 ? 'text-base' : 'text-lg'">
-                  {{ kpPrefix(entry.kp, entry.index) }}{{ displayTitle(entry.kp) }}
-                </component>
-                <div class="flex shrink-0 items-center gap-1.5">
-                  <UiBadge v-if="importanceLabel(entry.kp.importance)" tone="amber">{{ importanceLabel(entry.kp.importance) }}</UiBadge>
-                  <a :href="`#kp-${entry.kp.id}`" class="flex h-9 w-9 items-center justify-center rounded-lg text-fg-muted hover:bg-surface-muted hover:text-brand"
-                     :aria-label="`跳转到该知识点：${displayTitle(entry.kp)}`">#</a>
+              <section v-for="entry in group.items" :id="`kp-${entry.kp.id}`" :key="entry.kp.id"
+                       class="scroll-mt-28 border-b border-line-subtle py-6 last:border-b-0">
+                <div class="flex flex-wrap items-start justify-between gap-2">
+                  <component :is="contentGroups.length > 1 ? 'h3' : 'h2'"
+                             class="min-w-0 font-semibold leading-7 text-fg-primary"
+                             :class="contentGroups.length > 1 ? 'text-base' : 'text-lg'">
+                    <span>{{ kpPrefix(entry.kp, entry.index) }}</span>
+                    <span v-html="highlightText(displayTitle(entry.kp), highlightKeyword)" />
+                  </component>
+                  <div class="flex shrink-0 items-center gap-1.5">
+                    <UiBadge v-if="importanceLabel(entry.kp.importance)"
+                             :tone="importanceBadgeMeta(entry.kp.importance).tone">
+                      {{ importanceLabel(entry.kp.importance) }}
+                    </UiBadge>
+                    <a :href="`#kp-${entry.kp.id}`"
+                       class="flex h-9 w-9 items-center justify-center rounded-lg text-fg-muted hover:bg-surface-muted hover:text-brand"
+                       :aria-label="`跳转到该知识点：${displayTitle(entry.kp)}`">#</a>
+                  </div>
                 </div>
-              </div>
-              <p v-if="sectionLabel(entry.kp)" class="mt-1 text-xs text-fg-muted">{{ sectionLabel(entry.kp) }}</p>
-              <div v-if="contentOf(entry.kp)" class="reader-content mt-3" v-html="renderMarkdown(contentOf(entry.kp))" />
-              <p v-else class="mt-3 rounded-lg border border-dashed border-line-strong px-3 py-2 text-sm leading-6 text-fg-muted">
-                本知识点暂无展开讲解，建议直接练习相关题目或结合教材阅读。
-              </p>
-              <p v-if="contentOf(entry.kp) && contentOf(entry.kp).length < 20" class="mt-2 text-xs text-warn-fg">
-                内容较短，建议结合教材核对。
-              </p>
+                <p v-if="sectionLabel(entry.kp)" class="mt-1 text-xs text-fg-muted">{{ sectionLabel(entry.kp) }}</p>
+                <div v-if="contentOf(entry.kp)" class="reader-content mt-3" v-html="renderedLegacyContent(entry.kp)" />
+                <p v-else class="mt-3 rounded-lg border border-dashed border-line-strong px-3 py-2 text-sm leading-6 text-fg-muted">
+                  本知识点暂无展开讲解，建议直接练习相关题目或结合教材阅读。
+                </p>
+                <p v-if="contentOf(entry.kp) && contentOf(entry.kp).length < 20" class="mt-2 text-xs text-warn-fg">
+                  内容较短，建议结合教材核对。
+                </p>
 
-              <details v-if="questionsByKp.get(entry.kp.id)?.length"
-                       class="mt-3 overflow-hidden rounded-lg border border-line-subtle bg-surface-card">
-                <summary class="flex min-h-11 cursor-pointer items-center justify-between gap-2 px-3 text-xs text-fg-secondary">
-                  <span>自测（{{ questionsByKp.get(entry.kp.id)?.length }}）</span>
-                  <span class="text-fg-muted">展开作答</span>
-                </summary>
-                <div class="space-y-2 border-t border-line-subtle p-3">
-                  <KnowledgeQuestion v-for="q in questionsByKp.get(entry.kp.id)" :key="q.id" :question="q" />
-                  <p class="text-xs text-fg-muted">
-                    想记录进度？
-                    <NuxtLink :to="practiceReturn(entry.kp.id)" class="text-brand hover:underline">进入完整练习</NuxtLink>
-                  </p>
+                <details v-if="questionsByKp.get(entry.kp.id)?.length"
+                         class="mt-3 overflow-hidden rounded-lg border border-line-subtle bg-surface-card">
+                  <summary class="flex min-h-11 cursor-pointer items-center justify-between gap-2 px-3 text-xs text-fg-secondary">
+                    <span>自测（{{ questionsByKp.get(entry.kp.id)?.length }}）</span>
+                    <span class="text-fg-muted">展开作答</span>
+                  </summary>
+                  <div class="space-y-2 border-t border-line-subtle p-3">
+                    <KnowledgeQuestion v-for="q in questionsByKp.get(entry.kp.id)" :key="q.id" :question="q" />
+                    <p class="text-xs text-fg-muted">
+                      想记录进度？
+                      <NuxtLink :to="practiceReturn(entry.kp.id)" class="text-brand hover:underline">进入完整练习</NuxtLink>
+                    </p>
+                  </div>
+                </details>
+
+                <div class="mt-3 flex flex-wrap items-center gap-3 text-xs">
+                  <NuxtLink v-if="entry.kp.questionCount" :to="practiceReturn(entry.kp.id)"
+                            class="inline-flex min-h-11 items-center rounded-lg border border-brand/30 px-3 text-brand hover:bg-brand-soft">
+                    练相关题（{{ entry.kp.questionCount }}）
+                  </NuxtLink>
+                  <span v-else class="text-fg-muted">暂无关联题</span>
                 </div>
-              </details>
-
-              <div class="mt-3 flex flex-wrap items-center gap-3 text-xs">
-                <NuxtLink v-if="entry.kp.questionCount" :to="practiceReturn(entry.kp.id)"
-                          class="inline-flex min-h-11 items-center rounded-lg border border-brand/30 px-3 text-brand hover:bg-brand-soft">
-                  练相关题（{{ entry.kp.questionCount }}）
-                </NuxtLink>
-                <span v-else class="text-fg-muted">暂无关联题</span>
-              </div>
-            </section>
+              </section>
             </template>
           </article>
 
           <div v-else class="mt-6 rounded-xl border border-line-subtle bg-surface-card px-5 py-8 text-center text-sm text-fg-secondary">
-            <template v-if="total > 0 && part > 1">
+            <template v-if="coreOnly && kps.length > 0">
+              本节暂未标记“必记”卡片。
+              <button type="button" class="ml-1 text-brand hover:underline" @click="coreOnly = false">显示全部内容</button>
+            </template>
+            <template v-else-if="total > 0 && part > 1">
               这一部分没有内容。
               <NuxtLink :to="partLink(1)" class="text-brand hover:underline">回到第 1 部分</NuxtLink>
             </template>
@@ -482,7 +681,7 @@ watch(section, (value) => {
             </template>
           </div>
 
-          <nav v-if="totalPages > 1" class="mt-6 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-line-subtle bg-surface-card px-4 py-3 text-sm">
+          <nav v-if="!structuredMode && totalPages > 1" class="mt-6 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-line-subtle bg-surface-card px-4 py-3 text-sm">
             <NuxtLink v-if="part > 1" :to="partLink(part - 1)" class="text-brand hover:underline">← 上一部分</NuxtLink>
             <span v-else></span>
             <span class="text-xs text-fg-muted">第 {{ part }} / {{ totalPages }} 部分</span>
@@ -526,7 +725,7 @@ watch(section, (value) => {
               <span class="min-w-0">{{ tocTitle(row.kp) }}</span>
             </a>
           </template>
-          <p v-if="!kps.length" class="text-xs text-fg-muted">暂无知识点</p>
+          <p v-if="!kps.length && !entries.length" class="text-xs text-fg-muted">暂无知识点</p>
         </div>
       </aside>
     </div>
@@ -571,7 +770,7 @@ watch(section, (value) => {
           </a>
         </template>
       </div>
-      <p v-if="!kps.length" class="py-6 text-center text-sm text-fg-muted">暂无知识点</p>
+      <p v-if="!kps.length && !entries.length" class="py-6 text-center text-sm text-fg-muted">暂无知识点</p>
       <NuxtLink :to="`/knowledge/course/${courseCode}`"
                 class="mt-3 inline-flex text-xs text-brand hover:underline"
                 @click="tocOpen = false">查看课程全部章节 →</NuxtLink>

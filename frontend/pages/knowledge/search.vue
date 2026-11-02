@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// 知识点搜索：标题/内容关键词，结果跳到所在节锚点
+// 知识点搜索：标题/内容关键词，结果跳到所在节锚点并携带 ?hl= 搜索词高亮
 import { formatText } from '~/composables/format'
 import { highlightText, plainSnippet } from '~/utils/markdown'
 
@@ -50,7 +50,7 @@ function search() {
       <span class="text-fg-secondary">搜索</span>
     </nav>
 
-    <UiPageHeader title="搜索知识点" subtitle="搜索标题或正文；结果会跳到所在节的对应知识点。" />
+    <UiPageHeader title="搜索知识点" subtitle="搜索标题或正文；结果会跳到所在节的对应知识点并高亮命中词。" />
 
     <form class="flex flex-wrap gap-2" @submit.prevent="search">
       <input v-model="input" type="search" placeholder="输入关键词，如“二叉树”“SQL 索引”"
@@ -80,7 +80,7 @@ function search() {
           </div>
           <ul class="divide-y divide-line-subtle">
             <li v-for="row in group.rows" :key="row.id">
-              <NuxtLink :to="`/knowledge/kp/${row.id}`" class="block px-4 py-3 hover:bg-surface-muted">
+              <NuxtLink :to="{ path: `/knowledge/kp/${row.id}`, query: q ? { hl: q } : {} }" class="block px-4 py-3 hover:bg-surface-muted">
                 <div class="flex flex-wrap items-center gap-2">
                   <span v-if="row.nodeCode" class="rounded bg-surface-muted px-1.5 py-0.5 font-mono text-xs text-fg-muted">{{ row.nodeCode }}</span>
                   <span class="text-sm font-medium text-fg-primary" v-html="highlightText(formatText(row.title), q)"></span>

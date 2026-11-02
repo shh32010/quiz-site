@@ -1,9 +1,10 @@
 <script setup lang="ts">
-// 课程/技能目录：章 → 节，进入节阅读器
+// 课程/技能目录：章 → 节，进入节阅读器，支持跨设备阅读进度合并
 import { ALL_COURSES } from '~/utils/constants'
 import { rootsFor, type KNode } from '~/utils/knowledge'
 
 const route = useRoute()
+const api = useApi()
 const course = computed(() => String(route.params.course ?? '').toUpperCase())
 const courseInfo = computed(() => ALL_COURSES.find(item => item.code === course.value) ?? null)
 const { data: tree, error } = await useFetch<KNode[]>('/api/knowledge/tree')
@@ -25,13 +26,38 @@ const total = computed(() => roots.value.reduce((sum, node) => sum + node.kpCoun
 const learned = ref<number[]>([])
 const progressMap = ref<Record<string, number>>({})
 
-onMounted(() => {
+onMounted(async () => {
   try {
     const rawLearned = JSON.parse(localStorage.getItem('quiz_learned') ?? '[]')
     if (Array.isArray(rawLearned)) learned.value = rawLearned.map(Number).filter(Number.isFinite)
     const rawProgress = JSON.parse(localStorage.getItem('quiz_reader_progress') ?? '{}')
     if (rawProgress && typeof rawProgress === 'object') progressMap.value = rawProgress
   } catch { /* 忽略 */ }
+
+  if (api.hasToken()) {
+    try {
+      const remote = await api.get<any>('/api/knowledge/progress')
+      const rows = Array.isArray(remote?.rows) ? remote.rows : []
+      if (rows.length > 0) {
+        const merged = new Set(learned.value)
+        const nextProg: Record<string, number> = { ...progressMap.value }
+        for (const r of rows) {
+          const sid = Number(r.sectionId)
+          if (!Number.isFinite(sid)) continue
+          if (r.learned) merged.add(sid)
+          if (typeof r.progressPct === 'number') {
+            nextProg[String(sid)] = Math.max(Number(nextProg[String(sid)] ?? 0), r.progressPct)
+          }
+        }
+        learned.value = [...merged]
+        progressMap.value = nextProg
+        try {
+          localStorage.setItem('quiz_learned', JSON.stringify(learned.value))
+          localStorage.setItem('quiz_reader_progress', JSON.stringify(progressMap.value))
+        } catch { /* 忽略 */ }
+      }
+    } catch { /* 忽略 */ }
+  }
 })
 
 function isLearned(sectionId: number) {
