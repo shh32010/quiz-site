@@ -113,10 +113,17 @@ public class PracticeService {
                     select id from t_question
                      where id = ? and not deleted and review_status = 'ok'
                     """, Integer.class, targetId);
-            // 错题复习：按未掌握优先、复习时间排序
+            // 错题复习：支持按间隔重复状态（due/pending/frequent/resolved）与题型过滤，按未掌握优先、复习时间排序
             case "wrong" -> {
                 List<Object> params = new java.util.ArrayList<>();
                 params.add(uid);
+                String statusFilter = switch (target == null ? "" : target.trim()) {
+                    case "due" -> " and not w.resolved and (w.next_review_at is null or w.next_review_at <= now())";
+                    case "pending" -> " and not w.resolved";
+                    case "frequent" -> " and w.wrong_count >= 2";
+                    case "resolved" -> " and w.resolved";
+                    default -> "";
+                };
                 String typeFilter = "";
                 if (type != null && type >= 1 && type <= 5) {
                     typeFilter = " and q.question_type = ?";
@@ -128,7 +135,7 @@ public class PracticeService {
                           from wrong_question w
                           join t_question q on q.id = w.question_id
                          where w.user_id = ? and w.deleted_at is null and not q.deleted and q.review_status = 'ok'
-                        """ + typeFilter + """
+                        """ + statusFilter + typeFilter + """
                          order by w.resolved asc, w.next_review_at nulls last, w.question_id
                          limit ?
                         """, Integer.class, params.toArray());

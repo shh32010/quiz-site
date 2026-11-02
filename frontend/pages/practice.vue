@@ -428,25 +428,6 @@ async function selectOption(rawKey: string) {
   }
 }
 
-function optionSelected(key: string) {
-  return question.value?.questionType === 2 ? multi.value.includes(key) : answer.value === key
-}
-
-function optionIsCorrect(key: string) {
-  return Boolean(feedback.value) && correctKeys.value.includes(key)
-}
-
-function optionClass(key: string) {
-  if (feedback.value) {
-    if (optionIsCorrect(key)) return 'border-green-400 bg-green-50 text-green-900'
-    if (optionSelected(key)) return 'border-red-400 bg-red-50 text-red-900'
-    return 'border-slate-200 bg-white text-slate-500'
-  }
-  return optionSelected(key)
-    ? 'border-blue-500 bg-blue-50 text-slate-900'
-    : 'border-slate-200 bg-white text-slate-700 hover:border-blue-300'
-}
-
 async function submit() {
   const q = question.value
   if (!q || feedback.value || submitting.value || navigating.value) return
@@ -675,20 +656,20 @@ onUnmounted(() => {
       <PracticeResult v-if="finished" :finished="finished" @exit="exit" />
 
       <template v-else-if="question">
-        <article class="min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
+        <article class="min-w-0 overflow-hidden rounded-2xl border border-line-subtle bg-surface-card p-4 shadow-sm sm:p-6">
           <div class="flex flex-wrap items-center justify-between gap-2">
-            <div class="flex flex-wrap items-center gap-2 text-xs text-slate-500">
-              <span class="rounded-full bg-blue-50 px-2 py-0.5 text-blue-700">{{ TYPE_LABEL[question.questionType] ?? '题目' }}</span>
+            <div class="flex flex-wrap items-center gap-2 text-xs text-fg-secondary">
+              <span class="rounded-full bg-brand-soft px-2 py-0.5 text-brand">{{ TYPE_LABEL[question.questionType] ?? '题目' }}</span>
               <span>{{ question.score }} 分</span>
             </div>
-            <span class="text-xs text-slate-400">第 {{ currentOrder }} 题</span>
+            <span class="text-xs text-fg-muted">第 {{ currentOrder }} 题</span>
           </div>
           <p v-if="question.chapterPath || question.chapterName"
-             class="mt-1 max-w-full break-words text-xs leading-5 text-slate-500">
+             class="mt-1 max-w-full break-words text-xs leading-5 text-fg-secondary">
             {{ question.chapterPath || ((question.chapterCode ? question.chapterCode + ' ' : '') + question.chapterName) }}
           </p>
 
-          <p class="mt-4 whitespace-pre-wrap break-words text-base leading-7 text-slate-900 md:text-[17px]">{{ formatText(question.stem) }}</p>
+          <p class="mt-4 whitespace-pre-wrap break-words text-base leading-7 text-fg-primary md:text-[17px]">{{ formatText(question.stem) }}</p>
           <div v-if="images.length" class="mt-3 space-y-2">
             <button v-for="(src, i) in images" :key="i" type="button"
                     class="block w-fit max-w-full cursor-zoom-in text-left"
@@ -702,44 +683,18 @@ onUnmounted(() => {
           <QuestionFeedback class="mt-3" :question-id="question.id" :guest="guest" />
 
           <div v-if="relatedKps.length" class="mt-3 flex flex-wrap items-center gap-1.5">
-            <span class="text-xs text-slate-400">相关知识点：</span>
+            <span class="text-xs text-fg-muted">相关知识点：</span>
             <NuxtLink v-for="k in relatedKps" :key="k.id" :to="`/knowledge?kp=${k.id}`"
-                      class="rounded bg-slate-100 px-1.5 py-0.5 text-xs text-slate-600 hover:bg-blue-50 hover:text-blue-700"
+                      class="rounded bg-surface-muted px-1.5 py-0.5 text-xs text-fg-secondary hover:bg-brand-soft hover:text-brand"
                       :title="k.nodeName">{{ k.title }}</NuxtLink>
           </div>
 
-          <div v-if="question.questionType === 1 || question.questionType === 3" class="mt-5 space-y-2">
-            <label v-for="[k, v] in choiceOptions" :key="k"
-                   class="flex cursor-pointer items-start gap-2.5 rounded-xl border p-3 text-sm transition-colors"
-                   :class="optionClass(k)">
-              <input v-model="answer" type="radio" :value="k" :disabled="Boolean(feedback)"
-                     class="mt-1" @change="selectOption(k)" />
-              <span class="min-w-0 flex-1"><b class="mr-1">{{ k }}.</b>{{ v }}</span>
-              <span v-if="optionIsCorrect(k)" class="text-green-600">✓</span>
-              <span v-else-if="feedback && optionSelected(k)" class="text-red-600">✗</span>
-            </label>
-          </div>
+          <PracticeOptionGroup v-model:multi="multi" v-model:fill="fill"
+                               :question-type="question.questionType" :choice-options="choiceOptions"
+                               :answer="answer" :has-feedback="Boolean(feedback)" :correct-keys="correctKeys"
+                               @select-option="selectOption" />
 
-          <div v-else-if="question.questionType === 2" class="mt-5 space-y-2">
-            <label v-for="[k, v] in choiceOptions" :key="k"
-                   class="flex cursor-pointer items-start gap-2.5 rounded-xl border p-3 text-sm transition-colors"
-                   :class="optionClass(k)">
-              <input v-model="multi" type="checkbox" :value="k" :disabled="Boolean(feedback)" class="mt-1" />
-              <span class="min-w-0 flex-1"><b class="mr-1">{{ k }}.</b>{{ v }}</span>
-              <span v-if="optionIsCorrect(k)" class="text-green-600">✓</span>
-              <span v-else-if="feedback && optionSelected(k)" class="text-red-600">✗</span>
-            </label>
-          </div>
-
-          <div v-else class="mt-5">
-            <textarea ref="answerBox" v-model="fill" :disabled="Boolean(feedback)"
-                      data-practice-answer="true"
-                      :rows="question.questionType === 5 ? 5 : 3"
-                      placeholder="多空用中文分号「；」分隔；程序题可直接按行输入"
-                      class="w-full rounded-xl border border-line-strong bg-surface-card px-3 py-2.5 text-base outline-none focus:border-brand sm:text-sm" />
-          </div>
-
-          <p v-if="!feedback" class="mt-3 text-xs text-slate-400">
+          <p v-if="!feedback" class="mt-3 text-xs text-fg-muted">
             {{ instantChoice ? '单选/判断点击选项即判分；多选、填空、综合按 Enter 或 Ctrl+Enter 提交；← → 可切题' : '选择或填写答案后按 Enter（文本题 Ctrl+Enter）或点击底部按钮提交；← → 可切题' }}
           </p>
 
@@ -750,8 +705,8 @@ onUnmounted(() => {
         </article>
       </template>
 
-      <p v-else-if="loading" class="py-12 text-center text-sm text-slate-500">加载中…</p>
-      <p v-else class="py-12 text-center text-sm text-slate-500">这个范围暂时没有可练习题。</p>
+      <p v-else-if="loading" class="py-12 text-center text-sm text-fg-secondary">加载中…</p>
+      <p v-else class="py-12 text-center text-sm text-fg-secondary">这个范围暂时没有可练习题。</p>
     </main>
 
     <div v-if="!finished && question" class="fixed inset-x-0 bottom-0 z-30 border-t border-line-subtle bg-surface-glass backdrop-blur">
@@ -792,12 +747,12 @@ onUnmounted(() => {
     </UiModal>
 
     <UiModal v-model="helpOpen" title="键盘快捷键" size="sm">
-      <dl class="space-y-2 text-sm text-slate-600">
-        <div class="flex justify-between"><dt>选择选项</dt><dd class="text-slate-900">1-9 / A-H</dd></div>
-        <div class="flex justify-between"><dt>提交 / 下一题</dt><dd class="text-slate-900">Enter</dd></div>
-        <div class="flex justify-between"><dt>上一题 / 下一题</dt><dd class="text-slate-900">← / →</dd></div>
-        <div class="flex justify-between"><dt>文本题提交</dt><dd class="text-slate-900">Ctrl / Cmd + Enter</dd></div>
-        <div class="flex justify-between"><dt>本帮助</dt><dd class="text-slate-900">?</dd></div>
+      <dl class="space-y-2 text-sm text-fg-secondary">
+        <div class="flex justify-between"><dt>选择选项</dt><dd class="text-fg-primary">1-9 / A-H</dd></div>
+        <div class="flex justify-between"><dt>提交 / 下一题</dt><dd class="text-fg-primary">Enter</dd></div>
+        <div class="flex justify-between"><dt>上一题 / 下一题</dt><dd class="text-fg-primary">← / →</dd></div>
+        <div class="flex justify-between"><dt>文本题提交</dt><dd class="text-fg-primary">Ctrl / Cmd + Enter</dd></div>
+        <div class="flex justify-between"><dt>本帮助</dt><dd class="text-fg-primary">?</dd></div>
       </dl>
     </UiModal>
 

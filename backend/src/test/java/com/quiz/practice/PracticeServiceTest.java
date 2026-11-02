@@ -58,4 +58,23 @@ class PracticeServiceTest {
         assertThat(res.get("is_correct")).isEqualTo(true);
         verify(jdbc, never()).queryForObject(contains("count(distinct question_id)"), eq(Integer.class), any(), any());
     }
+
+    @Test
+    void wrongModeSupportsDueAndFrequentTargetFilters() {
+        JdbcTemplate jdbc = mock(JdbcTemplate.class);
+        UUID uid = UUID.randomUUID();
+
+        when(jdbc.queryForList(contains("w.next_review_at <= now()"), eq(Integer.class), any(Object[].class)))
+                .thenReturn(List.of(2001, 2002));
+        when(jdbc.queryForObject(startsWith("insert into practice_session"), eq(Long.class), eq(uid), eq("wrong"), isNull()))
+                .thenReturn(99L);
+
+        PracticeService service = new PracticeService(jdbc);
+        Map<String, Object> res = service.start(uid, "wrong", "due", 20, null);
+
+        assertThat(res.get("sessionId")).isEqualTo(99L);
+        assertThat(res.get("count")).isEqualTo(2);
+        verify(jdbc).queryForList(contains("not w.resolved and (w.next_review_at is null or w.next_review_at <= now())"),
+                eq(Integer.class), any(Object[].class));
+    }
 }

@@ -2,7 +2,12 @@
 // 首页：入口导航 + 题库概况
 import { ALL_COURSES as COURSE_META } from '~/utils/constants'
 
-useHead({ title: '专转本计算机刷题' })
+import { buildHomeJsonLd } from '~/utils/seo'
+
+useHead({
+  title: '专转本计算机刷题',
+  script: [{ type: 'application/ld+json', innerHTML: JSON.stringify(buildHomeJsonLd(COURSE_META)) }],
+})
 
 const { loggedIn } = useAuth()
 const api = useApi()

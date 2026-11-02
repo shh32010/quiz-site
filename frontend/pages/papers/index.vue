@@ -1,5 +1,7 @@
 <script setup lang="ts">
 // 真题卷列表
+import { buildPaperListJsonLd } from '~/utils/seo'
+
 interface Paper {
   id: number
   name: string
@@ -12,6 +14,13 @@ interface Paper {
 }
 
 const { data } = await useFetch<Paper[]>('/api/papers')
+
+useHead(() => ({
+  title: '历年真题 · 专转本计算机刷题',
+  script: data.value?.length
+    ? [{ type: 'application/ld+json', innerHTML: JSON.stringify(buildPaperListJsonLd(data.value)) }]
+    : [],
+}))
 </script>
 
 <template>
@@ -21,9 +30,9 @@ const { data } = await useFetch<Paper[]>('/api/papers')
     <ul class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
       <li v-for="p in data ?? []" :key="p.id">
         <NuxtLink :to="`/papers/${p.id}`"
-                  class="flex flex-col gap-1 rounded-xl border border-slate-200 p-4 transition hover:border-blue-400 hover:shadow-sm">
-          <span class="text-base font-semibold text-slate-800">{{ p.name }}</span>
-          <span class="text-xs text-slate-500">
+                  class="flex flex-col gap-1 rounded-xl border border-line-subtle bg-surface-card p-4 transition hover:border-brand hover:shadow-sm">
+          <span class="text-base font-semibold text-fg-primary">{{ p.name }}</span>
+          <span class="text-xs text-fg-secondary">
             <template v-if="(p.availableCount ?? p.questionCount) < p.questionCount">
               可练 {{ p.availableCount }} / 原卷 {{ p.questionCount }} 题 · 可练 {{ p.availableScore }} / {{ p.score }} 分
             </template>

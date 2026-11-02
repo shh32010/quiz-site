@@ -6,12 +6,14 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
 /**
- * 学习报告：总览 + 最近练习。
+ * 学习报告：总览 + 最近练习 + 章节/知识点掌握度。
  */
 @RestController
 @RequestMapping("/api/report")
@@ -23,16 +25,16 @@ public class ReportController {
         this.jdbc = jdbc;
     }
 
-    /** 全站总进度：去重已做过的题 / 当前可练总题。 */
+    /** 全站总进度：去重已做过的题 / 当前可练总题（走用户作答索引，避免全表左连接）。 */
     @GetMapping("/progress")
     public Map<String, Object> progress(@AuthenticationPrincipal UUID uid) {
         Map<String, Object> row = jdbc.queryForMap("""
-                select count(distinct q.id) as "total",
-                       count(distinct q.id) filter (where pa.id is not null) as "answered"
-                  from t_question q
-                  left join practice_answer pa
-                         on pa.question_id = q.id and pa.user_id = ? and pa.deleted_at is null
-                 where not q.deleted and q.review_status = 'ok'
+                select (select count(*) from t_question where not deleted and review_status = 'ok') as "total",
+                       (select count(distinct pa.question_id)
+                          from practice_answer pa
+                          join t_question q on q.id = pa.question_id
+                         where pa.user_id = ? and pa.deleted_at is null
+                           and not q.deleted and q.review_status = 'ok') as "answered"
                 """, uid);
         int total = ((Number) row.get("total")).intValue();
         int answered = ((Number) row.get("answered")).intValue();
@@ -97,29 +99,8 @@ public class ReportController {
                   from wrong_question where user_id = ? and deleted_at is null
                 """, uid);
 
-        // 章节掌握度（按 L1 章/技能汇总，已答题目正确率）
-        List<Map<String, Object>> mastery = jdbc.queryForList("""
-                with recursive anc as (
-                  select id, parent_id, id as root from t_chapter where level = 1 and not deleted
-                  union all
-                  select c.id, c.parent_id, a.root from t_chapter c join anc a on c.parent_id = a.id
-                 where not c.deleted
-                )
-                select l.code, l.name,
-                       count(*) as "total",
-                       count(*) filter (where pa.is_correct) as "correct",
-                       round(100.0 * count(*) filter (where pa.is_correct) / count(*)) as "rate"
-                  from practice_answer pa
-                  join t_question q on q.id = pa.question_id
-                  join anc on anc.id = q.chapter_id
-                  join t_chapter l on l.id = anc.root
-                 where pa.user_id = ? and pa.deleted_at is null and not q.deleted and q.review_status = 'ok'
-                 group by l.code, l.name
-                 order by l.code
-                """, uid);
-
-        // 节级掌握度（按 L2 节汇总；章直属题没有节，不纳入）
-        List<Map<String, Object>> sections = jdbc.queryForList("""
+        // 单次递归 CTE 同时查出章级与节级明细，避免两次重复扫描整棵章节树与作答表
+        List<Map<String, Object>> rawRows = jdbc.queryForList("""
                 with recursive anc as (
                   select id, parent_id, id as root,
                          case when level = 2 then id end as section
@@ -139,11 +120,46 @@ public class ReportController {
                   join t_question q on q.id = pa.question_id
                   join anc on anc.id = q.chapter_id
                   join t_chapter l on l.id = anc.root
-                  join t_chapter s on s.id = anc.section
+                  left join t_chapter s on s.id = anc.section
                  where pa.user_id = ? and pa.deleted_at is null and not q.deleted and q.review_status = 'ok'
                  group by l.code, l.name, s.code, s.name
-                 order by l.code, s.code
+                 order by l.code, s.code nulls first
                 """, uid);
+
+        Map<String, long[]> chapterAgg = new LinkedHashMap<>();
+        Map<String, String> chapterNames = new LinkedHashMap<>();
+        List<Map<String, Object>> sections = new ArrayList<>();
+
+        for (Map<String, Object> r : rawRows) {
+            String chCode = (String) r.get("chapterCode");
+            String chName = (String) r.get("chapterName");
+            long total = ((Number) r.get("total")).longValue();
+            long correct = ((Number) r.get("correct")).longValue();
+
+            chapterNames.putIfAbsent(chCode, chName);
+            long[] counts = chapterAgg.computeIfAbsent(chCode, k -> new long[2]);
+            counts[0] += total;
+            counts[1] += correct;
+
+            if (r.get("sectionCode") != null || r.get("sectionName") != null) {
+                sections.add(r);
+            }
+        }
+
+        List<Map<String, Object>> mastery = new ArrayList<>();
+        for (Map.Entry<String, long[]> entry : chapterAgg.entrySet()) {
+            String code = entry.getKey();
+            long total = entry.getValue()[0];
+            long correct = entry.getValue()[1];
+            long rate = total > 0 ? Math.round(100.0 * correct / total) : 0L;
+            mastery.add(Map.of(
+                    "code", code,
+                    "name", chapterNames.getOrDefault(code, ""),
+                    "total", total,
+                    "correct", correct,
+                    "rate", rate
+            ));
+        }
 
         // 知识点掌握度（已答题关联知识点，至少答过 2 次）
         List<Map<String, Object>> kps = jdbc.queryForList("""

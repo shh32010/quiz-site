@@ -70,30 +70,30 @@ const totalPages = computed(() => Math.max(1, Math.ceil((data.value?.total ?? 0)
     </form>
 
     <div v-if="kp" class="flex items-center gap-2 text-sm">
-      <span class="rounded bg-blue-50 px-2 py-1 text-xs text-blue-700">知识点：{{ kpTitle || ('#' + kp) }}</span>
-      <button class="text-xs text-slate-400 hover:text-red-600" @click="clearKp">清除</button>
+      <span class="rounded bg-brand-soft px-2 py-1 text-xs text-brand">知识点：{{ kpTitle || ('#' + kp) }}</span>
+      <button class="min-h-9 px-2 text-xs text-fg-muted hover:text-danger-fg" @click="clearKp">清除</button>
     </div>
 
-    <p v-if="data" class="text-sm text-slate-500">找到 {{ data.total }} 题</p>
+    <p v-if="data" class="text-sm text-fg-secondary">找到 {{ data.total }} 题</p>
 
-    <ul class="divide-y divide-slate-100 rounded-xl border border-slate-200">
+    <ul class="divide-y divide-line-subtle rounded-xl border border-line-subtle bg-surface-card">
       <li v-for="r in data?.rows ?? []" :key="r.id" class="flex items-start gap-3 px-5 py-3">
-        <span class="mt-0.5 shrink-0 rounded bg-slate-100 px-1.5 py-0.5 text-xs text-slate-600">
+        <span class="mt-0.5 shrink-0 rounded bg-surface-muted px-1.5 py-0.5 text-xs text-fg-secondary">
           {{ TYPE_LABEL[r.questionType] ?? r.questionType }}
         </span>
-        <span class="min-w-0 flex-1 text-sm leading-6 text-slate-800">{{ formatText(r.stem) }}</span>
+        <span class="min-w-0 flex-1 text-sm leading-6 text-fg-primary">{{ formatText(r.stem) }}</span>
         <NuxtLink :to="`/practice?mode=single&target=${r.id}&from=/search`"
-                  class="shrink-0 text-xs font-medium text-blue-600 hover:underline">练这题 →</NuxtLink>
+                  class="inline-flex min-h-9 shrink-0 items-center text-xs font-medium text-brand hover:underline">练这题 →</NuxtLink>
       </li>
-      <li v-if="data && !data.rows.length" class="px-5 py-6 text-sm text-slate-500">
+      <li v-if="data && !data.rows.length" class="px-5 py-6 text-sm text-fg-muted">
         {{ !kp && q.trim().length < 2 ? '请输入至少 2 个字' : (kp ? '该知识点下没有匹配题目' : '没有匹配的题目') }}
       </li>
     </ul>
 
     <div v-if="totalPages > 1" class="flex items-center justify-center gap-2 text-sm">
-      <button v-if="page > 1" class="rounded border px-3 py-1" @click="go(page - 1)">上一页</button>
-      <span class="text-slate-500">{{ page }} / {{ totalPages }}</span>
-      <button v-if="page < totalPages" class="rounded border px-3 py-1" @click="go(page + 1)">下一页</button>
+      <button v-if="page > 1" class="min-h-11 rounded-lg border border-line-strong bg-surface-card px-3 py-1 text-fg-secondary hover:border-brand" @click="go(page - 1)">上一页</button>
+      <span class="text-fg-secondary">{{ page }} / {{ totalPages }}</span>
+      <button v-if="page < totalPages" class="min-h-11 rounded-lg border border-line-strong bg-surface-card px-3 py-1 text-fg-secondary hover:border-brand" @click="go(page + 1)">下一页</button>
     </div>
   </section>
 </template>

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // 错题本
 import { TYPE_LABEL, TYPE_TABS } from '~/utils/constants'
-import { WRONG_STATUS_TABS, filterWrongRows, fmtReviewDue, type WrongStatusFilter } from '~/utils/wrong'
+import { WRONG_STATUS_TABS, buildWrongPracticeUrl, filterWrongRows, fmtReviewDue, type WrongStatusFilter } from '~/utils/wrong'
 
 definePageMeta({ middleware: 'auth' })
 const api = useApi()
@@ -97,12 +97,12 @@ async function printPage() {
     <UiPageHeader title="错题本" subtitle="按间隔复习；已下架题不可进入" class="print:hidden">
       <template #actions>
         <NuxtLink v-if="data && (data.total - (data.unavailable ?? 0)) > 0"
-                  :to="`/practice?mode=wrong${selectedType ? `&type=${selectedType}` : ''}`"
+                  :to="buildWrongPracticeUrl(selectedType, statusFilter)"
                   class="print:hidden inline-flex min-h-11 items-center rounded-lg bg-brand px-4 text-sm font-medium text-white hover:bg-brand-hover">
-          {{ selectedType ? '复习该题型错题' : '复习全部错题' }}
+          {{ selectedType || statusFilter !== 'all' ? '复习当前筛选错题' : '复习全部错题' }}
         </NuxtLink>
         <NuxtLink v-if="data && (data.total - (data.unavailable ?? 0)) > 0"
-                  :to="`/practice?mode=wrong&limit=20${selectedType ? `&type=${selectedType}` : ''}`"
+                  :to="buildWrongPracticeUrl(selectedType, statusFilter, 20)"
                   class="print:hidden inline-flex min-h-11 items-center rounded-lg border border-line-strong px-4 text-sm font-medium text-fg-secondary hover:border-brand hover:text-brand">
           抽测 20 题
         </NuxtLink>
