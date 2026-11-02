@@ -11,6 +11,10 @@ const { show: showAnnouncement } = useAnnouncement()
       <a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer" class="hover:text-brand">
         苏ICP备2026082091号-1
       </a>
+      <a href="https://beian.mps.gov.cn/#/query/webSearch?code=32132402000835" target="_blank"
+         rel="noopener noreferrer" class="hover:text-brand">
+        苏公网安备32132402000835号
+      </a>
       <NuxtLink to="/privacy" class="hover:text-brand">隐私政策</NuxtLink>
       <NuxtLink to="/terms" class="hover:text-brand">用户协议</NuxtLink>
       <button type="button" class="hover:text-brand" @click="showAnnouncement">站内公告</button>
