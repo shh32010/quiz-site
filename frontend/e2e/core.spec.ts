@@ -146,11 +146,16 @@ test.describe('刷题站核心链路 E2E', () => {
     await expect(page.getByText('结构化讲义')).toBeVisible()
     await expect(page.getByText('已高亮搜索词')).toBeVisible()
 
-    // 验证只看必记切换
+    // 验证只看必记切换（expect.toPass 避免 SSR 水合未完成时的点击竞态）
     const coreBtn = page.getByRole('button', { name: /只看必记/ })
     await expect(coreBtn).toBeVisible()
-    await coreBtn.click()
-    await expect(page.getByRole('button', { name: /只看必记（已开启）/ })).toBeVisible()
+    await expect(async () => {
+      const active = await page.getByRole('button', { name: /只看必记（已开启）/ }).isVisible()
+      if (!active) {
+        await coreBtn.click()
+      }
+      expect(active).toBe(true)
+    }).toPass({ timeout: 5000 })
 
     // 验证全页无横向溢出（360px 移动端宽表自动转为纵向卡片）
     const overflow = await page.evaluate(() =>
