@@ -1,10 +1,10 @@
 /**
  * 站内公告配置。
- * 公告每天最多提示一次；发布新公告时递增 version，当天也会重新提示。
- * 公告内容只影响前端展示，不需要改数据库。
+ * 公告仅在有更新变动（version 变化）时提示一次；已读后跨天不再重复打扰。
+ * 公告内容支持后台热更新，内置配置作为默认回退。
  */
 
-/** 本地日期 YYYY-MM-DD，避免 UTC 跨天导致提前/延后弹出 */
+/** 本地日期 YYYY-MM-DD */
 export function localDateKey(date: Date = new Date()): string {
   const year = date.getFullYear()
   const month = String(date.getMonth() + 1).padStart(2, '0')
@@ -12,12 +12,12 @@ export function localDateKey(date: Date = new Date()): string {
   return `${year}-${month}-${day}`
 }
 
-/** 已读标记：版本 + 本地日期；跨天或版本变化都会重新提示 */
-export function announcementMarker(version: string, date: Date = new Date()): string {
-  return `${version}|${localDateKey(date)}`
+/** 已读标记：仅按版本号标识；跨天保持已读，只有版本更新变动才重新提示 */
+export function announcementMarker(version: string, _date?: Date): string {
+  return (version ?? '').trim()
 }
 
-/** 生成今日下一个公告版本号（如 2026-11-02-2 -> 2026-11-02-3，跨天则为 YYYY-MM-DD-1） */
+/** 生成今日下一个公告版本号（如 2026-11-10-1 -> 2026-11-10-2，跨天则为 YYYY-MM-DD-1） */
 export function nextAnnouncementVersion(currentVersion: string, date: Date = new Date()): string {
   const today = localDateKey(date)
   const prefix = `${today}-`
@@ -46,7 +46,7 @@ export interface AnnouncementHistoryItem {
 }
 
 export interface Announcement {
-  /** 版本号：变化后当天也会重新提示一次 */
+  /** 版本号：变化后重新提示一次 */
   version: string
   title: string
   subtitle: string
@@ -60,11 +60,12 @@ export interface Announcement {
 }
 
 export const ANNOUNCEMENT: Announcement = {
-  version: '2026-11-02-7',
+  version: '2026-11-10-1',
   title: '关于这个刷题站的几句说明',
   subtitle: '跟大家交个底，说说题库哪来的、怎么做的，还有平时怎么维护。',
-  date: '2026 年 11 月 2 日',
+  date: '2026 年 11 月 10 日',
   history: [
+    { date: '2026-11-10', text: '知识库二期全量升级：两本复习教程 PDF 正文、红/绿/黄三色重点标记、45 张表格与 612 张去水印配图 100% 无损收录，融合真题补充要点；统一新版讲义视图，题目关联全面切换至考纲三级节点；公告改为仅在有更新变动时提示' },
     { date: '2026-11-02', text: '知识库全量重构收官：全考纲 232 篇三级结构化讲义全量发布上线，旧版卡片全部下沉对齐考纲，上线「只看必记」背诵模式与移动端自适应' },
     { date: '2026-11-02', text: '错题本新增「今日到期」间隔重复筛选并支持按当前筛选直接开练或抽测；优化学习报告加载速度与夜间模式配色细节' },
     { date: '2026-11-02', text: '完成 C 语言错题解析、229 道误标填空的选择题题型修正及 X9 未分类章节清零；支持后台免发版热更新公告' },
@@ -88,13 +89,13 @@ export const ANNOUNCEMENT: Announcement = {
   items: [
     {
       tag: '重磅',
-      title: '知识库全量重构：全考纲 232 篇精编讲义上线',
-      desc: '操作篇（S1~S6 全部 77 节考纲考点）与理论篇（A1~A4、B1~B7 全部 155 节考纲考点）结构化讲义 100% 编写发布！支持「只看必记」一键背诵过滤、移动端 360px 宽表转卡片自适应、搜索词正文黄色高亮，并内置随堂真题自测与多端学习进度自动同步。',
+      title: '知识库全量保真升级：232 篇讲义 + 三色标记 + 612 张配图',
+      desc: '两本复习教程 PDF（理论 135 页 + 操作技能 168 页）正文、红（必记）/绿（重点）/黄（难点）三色标记、45 张结构化表格与 612 张去水印高清配图 100% 无损收录，并在每节末尾融合真题独有补充要点。支持「只看必记」一键背诵、配图点击灯箱放大与移动端宽表自适应。',
     },
     {
-      tag: '治理',
-      title: '旧知识点彻底归位，题目关联无损保留',
-      desc: '历史挂在二级的 2,800+ 条旧知识点已全部聚类下沉归入对应的考纲三级节点，二级/一级悬空彻底清零！全部 8,359 条历史卡片与 11.7 万条题目关联无损保留，既支持新版深度精读，也可一键切回旧版卡片对照。',
+      tag: '关联',
+      title: '全站统一样式，题目关联全面切至新版讲义',
+      desc: '全面统一为新版结构化讲义视图，彻底告别碎片化旧卡片与错位 Office 考点。刷题解析、错题本、收藏夹、学习报告与全站搜索已全部切换至新版 232 个考纲三级讲义节点，点击即可精准定位到对应考点。',
     },
     {
       tag: '规则',
@@ -104,17 +105,17 @@ export const ANNOUNCEMENT: Announcement = {
     {
       tag: '体验',
       title: '错题本、组卷与反馈持续打磨',
-      desc: '错题本新增「今日到期」间隔重复筛选与高频错题一键开练；随机组卷提供 100/50 分钟计时并与常规练习统一快刷体验；个人页「我的反馈」可随时查看作者处理进度；C 语言题目与多轮重复题已完成深度复核。',
+      desc: '错题本支持「今日到期」间隔重复筛选与高频错题一键开练；随机组卷提供 100/50 分钟计时并与常规练习统一快刷体验；个人页「我的反馈」可随时查看作者处理进度；C 语言题目与多轮重复题已完成深度复核。',
     },
     {
       tag: '题库',
       title: '公开资料整理，做过多轮清洗',
-      desc: '里面的题目来自公开网络流传的机构资料 PDF，先用 MinerU 识别提取出来，再由 DeepSeek-V4.1-Flash（1017 版）一轮轮精读、清洗、去重，顺手把缺的答案和解析也补全了。',
+      desc: '里面的题目和讲义来自公开网络流传的复习资料 PDF，先用 MinerU 与 PyMuPDF 无损提取，再由多模型协同精读、清洗、去重与编译校验，补全答案解析与结构化排版。',
     },
     {
       tag: '协作',
-      title: '按江苏考纲搭结构，三个模型一起写',
-      desc: '题库结构和知识点目录都是参照江苏省计算机专转本考试大纲排的。网站开发、内容清洗和代码检查，由 DeepSeek-V4.1-Flash、Claude Opus 5.5 和 Gemini 4 Argon 一起完成。',
+      title: '按江苏考纲搭结构，多模型协同开发',
+      desc: '题库结构和知识点目录都是参照江苏省计算机专转本考试大纲排的。网站开发、内容清洗和代码检查，由 DeepSeek-V4.1-Flash、Claude Opus 5.5、Gemini 4 Argon 与 Gemini 3.8 Flash 协同完成。',
     },
     {
       tag: '部署',
@@ -122,5 +123,5 @@ export const ANNOUNCEMENT: Announcement = {
       desc: '站点部署在阿里云杭州节点，域名已完成 ICP 备案和公安联网备案（苏公网安备32132402000835号），平时打开和切题基本是毫秒级响应。不用装软件，手机浏览器直接点开就能刷。',
     },
   ],
-  footnote: '题库仅用于学习交流，如果哪部分涉及版权问题，在站内「我的 → 联系作者」跟我说一声，会尽快处理。这个公告每天只提示一次，关掉后想再看，从页面底部的「站内公告」随时能点开。',
+  footnote: '题库仅用于学习交流，如果哪部分涉及版权问题，在站内「我的 → 联系作者」跟我说一声，会尽快处理。这个公告仅在有更新变动时提示一次，关掉后想再看，从页面底部的「站内公告」随时能点开。',
 }

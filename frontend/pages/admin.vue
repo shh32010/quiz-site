@@ -193,7 +193,7 @@ onMounted(load)
       <summary class="flex cursor-pointer list-none items-center justify-between gap-2 [&::-webkit-details-marker]:hidden">
         <div>
           <h2 class="text-sm font-semibold text-slate-700">站内公告配置（免发版热更新）</h2>
-          <p class="mt-0.5 text-xs text-slate-400">当前生效版本：{{ announcement.version }} · 修改版本号后用户当天会重新弹出一次</p>
+          <p class="mt-0.5 text-xs text-slate-400">当前生效版本：{{ announcement.version }} · 修改版本号后用户会重新弹出一次</p>
         </div>
         <span class="rounded-lg border border-slate-200 px-2.5 py-1 text-xs text-slate-600 group-open:bg-slate-100">
           展开编辑

@@ -1,6 +1,6 @@
 # `docs/` 目录索引
 
-**最后整理**：2026-11-02
+**最后整理**：2026-11-10
 
 ---
 
@@ -8,6 +8,7 @@
 
 ```text
 docs/
+├── KNOWLEDGE_STANDARD.md  知识点讲义内容与展示标准（唯一标准，入库）
 ├── project/        本机项目核心文档（Git 忽略）：STATUS.md / TODO.md / KNOWLEDGE_REFACTOR.md
 ├── reference/      本机考试大纲与真题参考（Git 忽略）
 ├── sql/            数据库结构、核心判分/抽题函数、长期触发器基线 SQL
@@ -15,6 +16,8 @@ docs/
 ├── ops/            备份、巡检、数据一致性校验脚本与运维记录
 └── archive/        历史一次性数据清洗与修题 SQL 归档（只作历史记录，切勿重复执行）
 ```
+
+> **知识点讲义**的编写、重写、审核、验收一律以 [`KNOWLEDGE_STANDARD.md`](KNOWLEDGE_STANDARD.md) 为准：PDF 内容与红/绿/黄标记全覆盖，前端只展示一份讲义。
 
 ---
 
@@ -26,7 +29,7 @@ docs/
 | :--- | :--- |
 | **[`project/STATUS.md`](project/STATUS.md)** | **项目状态与运维手册**：线上入口、服务器与数据库连接、最新数据基线、角色限额规则、测试与部署流程 |
 | **[`project/TODO.md`](project/TODO.md)** | **待办清单与里程碑**：按 P0 / P1 / P2 / 暂缓排列的唯一真实待办表与近期完成记录 |
-| **[`project/KNOWLEDGE_REFACTOR.md`](project/KNOWLEDGE_REFACTOR.md)** | **知识点页面与 PDF 重构专案**：下一阶段 P0 唯一设计方案与 S1 待复核点名表 |
+| **[`project/KNOWLEDGE_REFACTOR.md`](project/KNOWLEDGE_REFACTOR.md)** | **知识点重构专案历史**：表结构设计与阶段记录（内容约束已被 `KNOWLEDGE_STANDARD.md` 取代） |
 
 ---
 

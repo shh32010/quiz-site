@@ -13,19 +13,17 @@ describe('announcement daily marker', () => {
     expect(nextAnnouncementVersion('2026-11-02-2', d)).toBe('2026-11-02-3')
   })
 
-  it('同一天、同一版本的标记相同', () => {
-    const morning = announcementMarker('v1', new Date(2026, 9, 29, 8, 0))
-    const night = announcementMarker('v1', new Date(2026, 9, 29, 23, 59))
-    expect(morning).toBe(night)
-    expect(morning).toBe('v1|2026-10-29')
+  it('同一版本跨天标记保持一致（仅按版本变动弹出）', () => {
+    const today = announcementMarker('v1', new Date(2026, 9, 29, 8, 0))
+    const tomorrow = announcementMarker('v1', new Date(2026, 9, 30, 23, 59))
+    expect(today).toBe(tomorrow)
+    expect(today).toBe('v1')
   })
 
-  it('跨天或版本变化时标记不同', () => {
-    const today = announcementMarker('v1', new Date(2026, 9, 29))
-    const tomorrow = announcementMarker('v1', new Date(2026, 9, 30))
-    const newVersion = announcementMarker('v2', new Date(2026, 9, 29))
-    expect(today).not.toBe(tomorrow)
-    expect(today).not.toBe(newVersion)
+  it('版本变化时标记不同', () => {
+    const v1 = announcementMarker('v1', new Date(2026, 9, 29))
+    const v2 = announcementMarker('v2', new Date(2026, 9, 29))
+    expect(v1).not.toBe(v2)
   })
 
   it('更新历史条目包含日期和说明', () => {

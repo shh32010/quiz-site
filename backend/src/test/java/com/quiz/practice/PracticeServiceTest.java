@@ -77,4 +77,22 @@ class PracticeServiceTest {
         verify(jdbc).queryForList(contains("not w.resolved and (w.next_review_at is null or w.next_review_at <= now())"),
                 eq(Integer.class), any(Object[].class));
     }
+
+    @Test
+    void kpModeQueriesBothChapterIdAndQuestionKp() {
+        JdbcTemplate jdbc = mock(JdbcTemplate.class);
+        UUID uid = UUID.randomUUID();
+
+        when(jdbc.queryForList(contains("q.chapter_id = ? or q.id in (select x.question_id from t_question_kp"),
+                eq(Integer.class), eq(239), eq(239), eq(20)))
+                .thenReturn(List.of(101, 102));
+        when(jdbc.queryForObject(startsWith("insert into practice_session"), eq(Long.class), eq(uid), eq("kp"), eq(239)))
+                .thenReturn(100L);
+
+        PracticeService service = new PracticeService(jdbc);
+        Map<String, Object> res = service.start(uid, "kp", "239", 20, null);
+
+        assertThat(res.get("sessionId")).isEqualTo(100L);
+        assertThat(res.get("count")).isEqualTo(2);
+    }
 }

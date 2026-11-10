@@ -30,7 +30,7 @@ test.describe('刷题站核心链路 E2E', () => {
     await expect(dialog).toBeHidden()
 
     const seenMarker = await page.evaluate(() => localStorage.getItem('quiz_announcement_daily'))
-    expect(seenMarker).toContain('2026-11-02-e2e|')
+    expect(seenMarker).toBe('2026-11-02-e2e')
   })
 
   test('游客模式刷题：单选点击即判分、退出触发登录提示弹窗', async ({ page }) => {
@@ -141,9 +141,12 @@ test.describe('刷题站核心链路 E2E', () => {
     await expect(page.getByRole('dialog')).toBeVisible()
   })
 
-  test('结构化讲义页 S1-1：只看必记、搜索高亮与移动端无横向溢出', async ({ page }) => {
+  test('结构化讲义页 S1-1：统一新版视图、四色图例、只看必记、搜索高亮与移动端无横向溢出', async ({ page }) => {
     await page.goto('/knowledge/section/238?hl=main')
     await expect(page.getByText('结构化讲义')).toBeVisible()
+    await expect(page.getByText('精编讲义 v2').first()).toBeVisible()
+    await expect(page.getByText('图例：')).toBeVisible()
+    await expect(page.getByText('查看旧版卡片')).toHaveCount(0)
     await expect(page.getByText('已高亮搜索词')).toBeVisible()
 
     // 验证只看必记切换（expect.toPass 避免 SSR 水合未完成时的点击竞态）

@@ -102,12 +102,11 @@ public class PracticeService {
                      order by e.item_order limit 500
                     """, Integer.class, targetId);
             case "kp" -> jdbc.queryForList("""
-                    select x.question_id from t_question_kp x
-                      join t_question q on q.id = x.question_id
-                     where x.kp_id = ? and not q.deleted and q.review_status = 'ok'
-                     order by case x.confidence when '高' then 0 when '中' then 1 else 2 end, x.question_id
-                     limit ?
-                    """, Integer.class, targetId, limit);
+                    select q.id from t_question q
+                     where not q.deleted and q.review_status = 'ok'
+                       and (q.chapter_id = ? or q.id in (select x.question_id from t_question_kp x where x.kp_id = ?))
+                     order by q.id limit ?
+                    """, Integer.class, targetId, targetId, limit);
             // 单题练习：从章节题目列表点进来
             case "single" -> jdbc.queryForList("""
                     select id from t_question
@@ -255,7 +254,7 @@ public class PracticeService {
                          when 'chapter_random' then (select trim(coalesce(c.code, '') || ' ' || c.name)
                                                 from t_chapter c where c.id = s.target_id)
                          when 'paper' then (select p.name from t_exam_paper p where p.id = s.target_id)
-                         when 'kp' then (select k.title from t_knowledge_point k where k.id = s.target_id)
+                         when 'kp' then coalesce((select trim(coalesce(c.code, '') || ' ' || c.name) from t_chapter c where c.id = s.target_id), (select k.title from t_knowledge_point k where k.id = s.target_id))
                          when 'wrong' then '错题复习'
                          when 'course' then '课程练习'
                          when 'random' then case s.target_id

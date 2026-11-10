@@ -56,14 +56,18 @@ class ReportControllerTest {
                                 "sectionCode", "1.2", "sectionName", "数字技术基础",
                                 "total", 4L, "correct", 3L, "rate", 75L)
                 ));
-        when(jdbc.queryForList(contains("t_question_kp"), eq(uid)))
-                .thenReturn(List.of());
+        when(jdbc.queryForList(contains("c.level = 3"), eq(uid)))
+                .thenReturn(List.of(
+                        Map.of("id", 239, "nodeId", 239, "sectionId", 238, "title", "S1-1.1 程序的构成",
+                                "wrongCount", 1L, "totalCount", 3L, "accuracy", 67L)
+                ));
 
         ReportController controller = new ReportController(jdbc);
         Map<String, Object> report = controller.report(uid);
 
         List<Map<String, Object>> mastery = (List<Map<String, Object>>) report.get("mastery");
         List<Map<String, Object>> sections = (List<Map<String, Object>>) report.get("sections");
+        List<Map<String, Object>> kps = (List<Map<String, Object>>) report.get("kps");
 
         assertThat(sections).hasSize(2);
         assertThat(mastery).hasSize(1);
@@ -71,5 +75,8 @@ class ReportControllerTest {
         assertThat(mastery.getFirst().get("total")).isEqualTo(10L);
         assertThat(mastery.getFirst().get("correct")).isEqualTo(8L);
         assertThat(mastery.getFirst().get("rate")).isEqualTo(80L);
+        assertThat(kps).hasSize(1);
+        assertThat(kps.getFirst().get("nodeId")).isEqualTo(239);
+        assertThat(kps.getFirst().get("sectionId")).isEqualTo(238);
     }
 }

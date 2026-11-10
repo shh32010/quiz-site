@@ -1,6 +1,6 @@
 import { ANNOUNCEMENT, announcementMarker, type Announcement } from '~/utils/announcement'
 
-/** 每天最多提示一次；版本变化时当天也会重新提示 */
+/** 仅在公告版本更新变动时提示一次 */
 const SEEN_KEY = 'quiz_announcement_daily'
 
 export function useAnnouncement() {
@@ -32,7 +32,9 @@ export function useAnnouncement() {
   function hasSeen(): boolean {
     if (!import.meta.client) return true
     try {
-      return localStorage.getItem(SEEN_KEY) === marker()
+      const m = marker()
+      const stored = localStorage.getItem(SEEN_KEY) ?? ''
+      return stored === m || stored.startsWith(`${m}|`)
     } catch {
       return false
     }

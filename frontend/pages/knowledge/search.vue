@@ -40,6 +40,18 @@ const groups = computed(() => {
 function search() {
   router.push({ path: '/knowledge/search', query: input.value.trim() ? { q: input.value.trim() } : {} })
 }
+
+function searchResultLink(row: any) {
+  const query = q.value ? { hl: q.value } : {}
+  if (row.sectionId && row.nodeId) {
+    return {
+      path: `/knowledge/section/${row.sectionId}`,
+      query,
+      hash: `#group-${row.nodeId}`,
+    }
+  }
+  return { path: `/knowledge/kp/${row.id}`, query }
+}
 </script>
 
 <template>
@@ -80,7 +92,7 @@ function search() {
           </div>
           <ul class="divide-y divide-line-subtle">
             <li v-for="row in group.rows" :key="row.id">
-              <NuxtLink :to="{ path: `/knowledge/kp/${row.id}`, query: q ? { hl: q } : {} }" class="block px-4 py-3 hover:bg-surface-muted">
+              <NuxtLink :to="searchResultLink(row)" class="block px-4 py-3 hover:bg-surface-muted">
                 <div class="flex flex-wrap items-center gap-2">
                   <span v-if="row.nodeCode" class="rounded bg-surface-muted px-1.5 py-0.5 font-mono text-xs text-fg-muted">{{ row.nodeCode }}</span>
                   <span class="text-sm font-medium text-fg-primary" v-html="highlightText(formatText(row.title), q)"></span>

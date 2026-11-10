@@ -161,19 +161,25 @@ public class ReportController {
             ));
         }
 
-        // 知识点掌握度（已答题关联知识点，至少答过 2 次）
+        // 薄弱知识点（按用户答题所属的三级考纲章节聚合统计，至少答过 2 次）
         List<Map<String, Object>> kps = jdbc.queryForList("""
-                select k.id, k.title,
+                select c.id,
+                       c.id as "nodeId",
+                       c.parent_id as "sectionId",
+                       coalesce(c.code || ' ', '') || c.name as "title",
+                       count(*) filter (where not pa.is_correct) as "wrongCount",
+                       count(*) as "totalCount",
                        count(*) as "total",
                        count(*) filter (where pa.is_correct) as "correct",
+                       round(100.0 * count(*) filter (where pa.is_correct) / count(*)) as "accuracy",
                        round(100.0 * count(*) filter (where pa.is_correct) / count(*)) as "rate"
                   from practice_answer pa
-                  join t_question_kp x on x.question_id = pa.question_id
-                  join t_knowledge_point k on k.id = x.kp_id and not k.deleted
+                  join t_question q on q.id = pa.question_id and not q.deleted
+                  join t_chapter c on c.id = q.chapter_id and c.level = 3 and not c.deleted
                  where pa.user_id = ? and pa.deleted_at is null
-                 group by k.id, k.title
+                 group by c.id, c.parent_id, c.code, c.name
                 having count(*) >= 2
-                 order by count(*) desc, k.id
+                 order by count(*) filter (where not pa.is_correct) desc, count(*) desc, c.id
                  limit 20
                 """, uid);
 

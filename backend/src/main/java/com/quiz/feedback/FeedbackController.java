@@ -62,31 +62,19 @@ public class FeedbackController {
         }
     }
 
-    /** 同一知识点优先、没有知识点时退化为同章节同题型，供“举一反三”提示 */
+    /** 同章节同题型统计相似题数，供“举一反三”提示 */
     private Integer similarCount(Integer questionId) {
         Integer count = jdbc.queryForObject("""
                 with target as (
                   select question_type, chapter_id from t_question where id = ? and not deleted
-                ), kps as (
-                  select kp_id from t_question_kp where question_id = ?
-                ), has_kp as (
-                  select exists(select 1 from kps) as ok
                 )
-                select count(distinct q.id)
+                select count(*)
                   from t_question q
                  where q.id <> ?
                    and not q.deleted and q.review_status = 'ok'
+                   and q.chapter_id = (select chapter_id from target)
                    and q.question_type = (select question_type from target)
-                   and (
-                     ((select ok from has_kp)
-                       and exists (select 1 from t_question_kp x
-                                    where x.question_id = q.id
-                                      and x.kp_id in (select kp_id from kps)))
-                     or
-                     ((not (select ok from has_kp))
-                       and q.chapter_id = (select chapter_id from target))
-                   )
-                """, Integer.class, questionId, questionId, questionId);
+                """, Integer.class, questionId, questionId);
         return count == null ? 0 : count;
     }
 }

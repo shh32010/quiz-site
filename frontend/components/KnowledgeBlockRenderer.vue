@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// 结构化讲义块渲染器：支持列表、段落、自适应表格、代码卡片、可折叠树图与易错提示框
+// 结构化讲义块渲染器：支持列表、段落、自适应表格、代码卡片、可折叠树图、配图与易错提示框
 import { filterKbBlocks, importanceBadgeMeta, renderInlineMarkup, type KbBlock } from '~/utils/knowledge'
 
 const props = withDefaults(defineProps<{
@@ -12,11 +12,21 @@ const props = withDefaults(defineProps<{
 })
 
 const copiedId = ref<string | null>(null)
+const lightboxOpen = ref(false)
+const lightboxImages = ref<string[]>([])
+const lightboxStartIndex = ref(0)
 
 const visibleBlocks = computed(() => filterKbBlocks(props.blocks ?? [], props.coreOnly))
 
 function inlineHtml(text?: string): string {
   return renderInlineMarkup(text ?? '', props.highlightKeyword)
+}
+
+function openImage(src?: string) {
+  if (!src) return
+  lightboxImages.value = [src]
+  lightboxStartIndex.value = 0
+  lightboxOpen.value = true
 }
 
 function calloutLabel(kind?: string): string {
@@ -120,7 +130,7 @@ async function copyCode(blockId: string, code?: string) {
         <pre class="overflow-x-auto p-3 font-mono text-xs leading-6 text-fg-primary sm:text-sm"><code>{{ block.code }}</code></pre>
       </div>
 
-      <!-- 5. 树状思维导图块 (tree)：可折叠树形组件，取代易折行错位的 ASCII 树 -->
+      <!-- 5. 树状思维导图块 (tree)：可折叠树形组件，支持 4 层结构 -->
       <div v-else-if="block.t === 'tree' && block.root" class="rounded-lg border border-line-subtle bg-surface-muted/40 p-3">
         <details open class="kb-tree">
           <summary class="cursor-pointer select-none text-sm font-semibold text-fg-primary">
@@ -133,9 +143,19 @@ async function copyCode(blockId: string, code?: string) {
                   <span v-html="inlineHtml(branch.label)" />
                 </summary>
                 <ul class="mt-1.5 space-y-1 border-l border-line-strong pl-3.5 text-xs text-fg-secondary sm:text-sm">
-                  <li v-for="(leaf, lIdx) in branch.children" :key="lIdx"
-                      class="leading-6"
-                      v-html="inlineHtml(leaf.label)" />
+                  <li v-for="(leaf, lIdx) in branch.children" :key="lIdx" class="leading-6">
+                    <details v-if="leaf.children?.length" open>
+                      <summary class="cursor-pointer select-none font-medium text-fg-primary">
+                        <span v-html="inlineHtml(leaf.label)" />
+                      </summary>
+                      <ul class="mt-1 space-y-1 border-l border-line-subtle pl-3 text-xs text-fg-secondary">
+                        <li v-for="(sub, sIdx) in leaf.children" :key="sIdx"
+                            class="leading-6"
+                            v-html="inlineHtml(sub.label)" />
+                      </ul>
+                    </details>
+                    <span v-else v-html="inlineHtml(leaf.label)" />
+                  </li>
                 </ul>
               </details>
               <p v-else class="text-xs leading-6 text-fg-secondary sm:text-sm" v-html="inlineHtml(branch.label)" />
@@ -151,7 +171,20 @@ async function copyCode(blockId: string, code?: string) {
         <p class="font-semibold">{{ calloutLabel(block.kind) }}</p>
         <p class="mt-1 text-fg-secondary" v-html="inlineHtml(block.text)" />
       </div>
+
+      <!-- 7. 配图块 (img) -->
+      <figure v-else-if="block.t === 'img' && block.src" class="my-2 flex flex-col items-center">
+        <img :src="block.src"
+             :alt="block.alt || block.title || '讲义配图'"
+             loading="lazy"
+             class="max-h-96 max-w-full cursor-zoom-in rounded-lg border border-line-subtle bg-white object-contain p-1"
+             @click="openImage(block.src)" />
+        <figcaption v-if="block.caption" class="mt-1.5 text-center text-xs text-fg-muted" v-html="inlineHtml(block.caption)" />
+      </figure>
     </div>
+
+    <!-- 图片灯箱放大查看 -->
+    <UiImageLightbox v-model="lightboxOpen" :images="lightboxImages" :start-index="lightboxStartIndex" />
   </div>
 </template>
 
@@ -159,6 +192,7 @@ async function copyCode(blockId: string, code?: string) {
 .kb-prose {
   font-size: var(--reader-fs, 1rem);
   line-height: 1.75;
+  white-space: pre-line;
   overflow-wrap: anywhere;
 }
 .kb-block :deep(code) {
@@ -170,6 +204,23 @@ async function copyCode(blockId: string, code?: string) {
   color: rgb(var(--fg-primary));
 }
 .kb-block :deep(mark.kb-mark) {
+  border-radius: 0.25rem;
+  background: rgb(var(--danger-bg));
+  padding: 0.05rem 0.3rem;
+  font-weight: 600;
+  color: rgb(var(--danger-fg));
+}
+.kb-block :deep(mark.kb-imp) {
+  border-radius: 0.25rem;
+  background: rgb(var(--success-bg));
+  padding: 0.05rem 0.3rem;
+  font-weight: 600;
+  color: rgb(var(--success-fg));
+  text-decoration: underline;
+  text-decoration-color: rgb(var(--success-fg));
+  text-underline-offset: 3px;
+}
+.kb-block :deep(mark.kb-hard) {
   border-radius: 0.25rem;
   background: rgb(var(--warn-bg));
   padding: 0.05rem 0.3rem;

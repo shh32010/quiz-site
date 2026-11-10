@@ -684,9 +684,10 @@ onUnmounted(() => {
 
           <div v-if="relatedKps.length" class="mt-3 flex flex-wrap items-center gap-1.5">
             <span class="text-xs text-fg-muted">相关知识点：</span>
-            <NuxtLink v-for="k in relatedKps" :key="k.id" :to="`/knowledge?kp=${k.id}`"
+            <NuxtLink v-for="k in relatedKps" :key="k.id"
+                      :to="k.sectionId && k.nodeId ? `/knowledge/section/${k.sectionId}#group-${k.nodeId}` : `/knowledge?kp=${k.id}`"
                       class="rounded bg-surface-muted px-1.5 py-0.5 text-xs text-fg-secondary hover:bg-brand-soft hover:text-brand"
-                      :title="k.nodeName">{{ k.title }}</NuxtLink>
+                      :title="k.nodeName || k.title">{{ k.title }}</NuxtLink>
           </div>
 
           <PracticeOptionGroup v-model:multi="multi" v-model:fill="fill"

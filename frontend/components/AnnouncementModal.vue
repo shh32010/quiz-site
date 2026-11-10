@@ -15,7 +15,6 @@ let autoTimer: ReturnType<typeof setTimeout> | null = null
 const QUIET_PREFIXES = [
   '/practice',
   '/knowledge/section/',
-  '/knowledge/outline-preview',
   '/login',
   '/forgot',
   '/reset',

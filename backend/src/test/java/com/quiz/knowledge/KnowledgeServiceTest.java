@@ -31,11 +31,7 @@ class KnowledgeServiceTest {
 
         when(jdbc.queryForList(contains("from t_chapter c"), eq(238)))
                 .thenReturn(List.of(Map.of("id", 238, "code", "S1-1", "name", "C 语言程序的结构")));
-        when(jdbc.queryForObject(contains("select count(*) from t_knowledge_point"), eq(Integer.class), eq(238)))
-                .thenReturn(55);
-        when(jdbc.queryForList(contains("select k.id, k.node_id"), eq(238), eq(60), eq(0)))
-                .thenReturn(List.of());
-        when(jdbc.queryForList(contains("select k.id as \"kpId\""), eq(238), eq(60), eq(0)))
+        when(jdbc.queryForList(contains("select id, node_id as \"nodeId\""), eq(238)))
                 .thenReturn(List.of());
         when(jdbc.queryForList(contains("join kb_entry e"), eq(238)))
                 .thenReturn(List.of(Map.of(
@@ -74,5 +70,60 @@ class KnowledgeServiceTest {
         assertThat(res.get("progressPct")).isEqualTo(85);
         assertThat(res.get("learned")).isEqualTo(true);
         verify(jdbc).update(contains("insert into user_knowledge_progress"), any(Object[].class));
+    }
+
+    @Test
+    void detailResolvesChapterFirstThenFallsBackToLegacyKp() {
+        ChapterRepository chapterRepo = mock(ChapterRepository.class);
+        JdbcTemplate jdbc = mock(JdbcTemplate.class);
+
+        // 1. 传入三级章节 ID
+        when(jdbc.queryForList(contains("from t_chapter c"), eq(239)))
+                .thenReturn(List.of(Map.of("id", 239, "nodeId", 239, "sectionId", 238,
+                        "nodeCode", "S1-1.1", "nodeName", "程序的构成", "title", "程序的构成", "section", "C 语言程序的结构")));
+
+        // 2. 传入旧 kp ID（在 t_chapter 查不到）
+        when(jdbc.queryForList(contains("from t_chapter c"), eq(9999)))
+                .thenReturn(List.of());
+        when(jdbc.queryForList(contains("from t_knowledge_point k"), eq(9999)))
+                .thenReturn(List.of(Map.of("id", 9999, "nodeId", 239, "sectionId", 238,
+                        "nodeCode", "S1-1.1", "nodeName", "程序的构成", "title", "main 函数", "importance", "core")));
+
+        KnowledgeService service = new KnowledgeService(chapterRepo, jdbc, new ObjectMapper());
+
+        Map<String, Object> chapterRes = service.detail(239);
+        assertThat(chapterRes).isNotNull();
+        assertThat(chapterRes.get("nodeId")).isEqualTo(239);
+        assertThat(chapterRes.get("sectionId")).isEqualTo(238);
+
+        Map<String, Object> kpRes = service.detail(9999);
+        assertThat(kpRes).isNotNull();
+        assertThat(kpRes.get("nodeId")).isEqualTo(239);
+        assertThat(kpRes.get("sectionId")).isEqualTo(238);
+        assertThat(kpRes.get("title")).isEqualTo("main 函数");
+    }
+
+    @Test
+    void searchSearchesPublishedRevisionSearchText() {
+        ChapterRepository chapterRepo = mock(ChapterRepository.class);
+        JdbcTemplate jdbc = mock(JdbcTemplate.class);
+
+        when(jdbc.queryForObject(contains("from kb_entry e"), eq(Integer.class), eq("main"), eq("%main%"), eq("%main%"), eq("%main%")))
+                .thenReturn(1);
+        when(jdbc.queryForList(contains("select c.id, c.id as \"nodeId\""), eq("main"), eq("%main%"), eq("%main%"), eq("%main%"), eq(20), eq(0)))
+                .thenReturn(List.of(Map.of(
+                        "id", 239, "nodeId", 239, "sectionId", 238,
+                        "nodeCode", "S1-1.1", "nodeName", "程序的构成",
+                        "title", "程序的构成", "section", "C 语言程序的结构",
+                        "content", "main 函数是唯一入口", "importance", "必记",
+                        "questionCount", 5
+                )));
+
+        KnowledgeService service = new KnowledgeService(chapterRepo, jdbc, new ObjectMapper());
+        Map<String, Object> res = service.search("main", 1, 20);
+
+        assertThat(res.get("total")).isEqualTo(1);
+        List<?> rows = (List<?>) res.get("rows");
+        assertThat(rows).hasSize(1);
     }
 }

@@ -29,7 +29,7 @@ export interface KbTreeNode {
 
 export interface KbBlock {
   id: string
-  t: 'p' | 'list' | 'table' | 'code' | 'tree' | 'callout' | 'media'
+  t: 'p' | 'list' | 'table' | 'code' | 'tree' | 'callout' | 'img'
   imp?: 'core' | 'important' | 'hard' | 'normal'
   title?: string
   text?: string
@@ -41,6 +41,11 @@ export interface KbBlock {
   code?: string
   root?: KbTreeNode
   kind?: 'tip' | 'warn' | 'trap'
+  src?: string
+  alt?: string
+  caption?: string
+  w?: number
+  h?: number
 }
 
 export interface KbEntry {
@@ -130,17 +135,30 @@ function escapeHtml(text: string): string {
 
 /**
  * 渲染讲义块内的行内标记：
- * - 转义原始 HTML（如 `<stdio.h>`）
- * - `` `code` `` -> `<code>code</code>`
- * - `==必记==` -> `<mark class="kb-mark">必记</mark>`
- * - `**重点**` -> `<strong>重点</strong>`
- * - 可选搜索关键词高亮 `?hl=` -> `<mark class="kb-hl">...</mark>`
+ * - 第一步：转义 HTML 并提取反引号代码放入占位符，保护代码内部原本的 ==、* 等符号
+ * - 第二步：转换三色行内标记与加粗：
+ *   ==必记==（红）、^^重点^^（绿）、@@难点@@（黄）、**粗体**
+ * - 第三步：还原行内代码占位符
+ * - 第四步：可选搜索关键词高亮 ?hl= -> <mark class="kb-hl">...</mark>
  */
 export function renderInlineMarkup(text: string, highlightKeyword = ''): string {
-  let html = escapeHtml(text)
-    .replace(/`([^`]+)`/g, '<code>$1</code>')
-    .replace(/==([^=]+)==/g, '<mark class="kb-mark">$1</mark>')
-    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+  const codes: string[] = []
+  let html = escapeHtml(text).replace(/`([^`]+)`/g, (_m, codeContent) => {
+    const idx = codes.length
+    codes.push(codeContent)
+    return `\u0000CODE_${idx}\u0000`
+  })
+
+  html = html
+    .replace(/==(.+?)==/g, '<mark class="kb-mark">$1</mark>')
+    .replace(/\^\^(.+?)\^\^/g, '<mark class="kb-imp">$1</mark>')
+    .replace(/@@(.+?)@@/g, '<mark class="kb-hard">$1</mark>')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+
+  html = html.replace(/\u0000CODE_(\d+)\u0000/g, (_m, idxStr) => {
+    const codeContent = codes[Number(idxStr)] ?? ''
+    return `<code>${codeContent}</code>`
+  })
 
   const kw = (highlightKeyword ?? '').trim()
   if (kw) {
@@ -161,7 +179,8 @@ export function filterKbBlocks(blocks: KbBlock[], coreOnly: boolean): KbBlock[] 
     block.imp === 'core'
     || block.t === 'callout'
     || (block.text ?? '').includes('==')
-    || (block.items ?? []).some(item => item.includes('==')),
+    || (block.items ?? []).some(item => item.includes('=='))
+    || (block.rows ?? []).some(row => row.some(cell => cell.includes('=='))),
   )
 }
 

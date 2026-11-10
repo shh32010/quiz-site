@@ -20,14 +20,19 @@ function findSection(nodes: KNode[], target: number, parentL2: number | null = n
 }
 
 const sectionId = computed(() => {
+  if (kp.value?.sectionId) return Number(kp.value.sectionId)
   if (!kp.value?.nodeId) return null
   return findSection(tree.value ?? [], Number(kp.value.nodeId))
+})
+
+const targetNodeId = computed(() => {
+  return kp.value?.nodeId ?? id.value
 })
 
 if (sectionId.value) {
   const hl = String(route.query.hl ?? '').trim()
   const qs = hl ? `?hl=${encodeURIComponent(hl)}` : ''
-  await navigateTo(`/knowledge/section/${sectionId.value}${qs}#kp-${id.value}`, {
+  await navigateTo(`/knowledge/section/${sectionId.value}${qs}#group-${targetNodeId.value}`, {
     replace: true,
     redirectCode: 302,
   })

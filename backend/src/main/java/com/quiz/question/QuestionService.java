@@ -52,10 +52,13 @@ public class QuestionService {
         }
         int offset = Math.max(0, (page - 1) * size);
         String like = "%" + kw + "%";
-        String kpFilter = kpId == null ? "" : " and id in (select question_id from t_question_kp where kp_id = ?)";
+        String kpFilter = kpId == null ? "" : " and (chapter_id = ? or id in (select question_id from t_question_kp where kp_id = ?))";
         List<Object> args = new ArrayList<>();
         args.add(like);
-        if (kpId != null) args.add(kpId);
+        if (kpId != null) {
+            args.add(kpId);
+            args.add(kpId);
+        }
 
         Integer total = jdbc.queryForObject(
                 "select count(*) from t_question where not deleted and review_status = 'ok' and stem ilike ?" + kpFilter,
@@ -97,7 +100,8 @@ public class QuestionService {
             args.add(paperId);
         }
         if (kpId != null) {
-            where += " and id in (select question_id from t_question_kp where kp_id = ?)";
+            where += " and (chapter_id = ? or id in (select question_id from t_question_kp where kp_id = ?))";
+            args.add(kpId);
             args.add(kpId);
         }
         if (questionId != null) {
@@ -135,17 +139,17 @@ public class QuestionService {
                 "rows", rows, "typeCounts", typeCounts);
     }
 
-    /** 一道题关联的知识点（最多 10 条，高置信度优先） */
+    /** 一道题关联的考纲三级讲义节点 */
     public List<Map<String, Object>> kps(int questionId) {
         return jdbc.queryForList("""
-                select k.id, k.title, k.section,
+                select c.id, c.id as "nodeId", c.parent_id as "sectionId",
+                       coalesce(c.code || ' ', '') || c.name as "title",
+                       p.name as "section",
                        c.code as "nodeCode", c.name as "nodeName"
-                  from t_question_kp x
-                  join t_knowledge_point k on k.id = x.kp_id and not k.deleted
-                  left join t_chapter c on c.id = k.node_id
-                 where x.question_id = ?
-                 order by case x.confidence when '高' then 0 when '中' then 1 else 2 end, k.id
-                 limit 10
+                  from t_question q
+                  join t_chapter c on c.id = q.chapter_id and not c.deleted
+                  left join t_chapter p on p.id = c.parent_id
+                 where q.id = ?
                 """, questionId);
     }
 }

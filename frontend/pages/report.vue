@@ -141,7 +141,7 @@ async function loadWeekly() {
           <ul class="mt-3 space-y-3">
             <li v-for="k in kpsSorted" :key="k.id">
               <div class="flex items-center justify-between gap-2 text-xs">
-                <NuxtLink :to="`/knowledge?kp=${k.id}`" class="min-w-0 truncate text-fg-secondary hover:text-brand">
+                <NuxtLink :to="k.sectionId && k.nodeId ? `/knowledge/section/${k.sectionId}#group-${k.nodeId}` : `/knowledge?kp=${k.id}`" class="min-w-0 truncate text-fg-secondary hover:text-brand">
                   {{ k.title }}
                 </NuxtLink>
                 <span class="shrink-0 tabular-nums text-fg-muted">{{ k.correct }}/{{ k.total }}（{{ k.rate }}%）</span>

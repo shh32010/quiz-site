@@ -56,14 +56,26 @@ describe('knowledge tree utils', () => {
     expect(html).toContain('<mark class="kb-mark">唯一<mark class="kb-hl">入口</mark></mark>')
   })
 
+  it('renderInlineMarkup 支持公式含单个 =、代码含 ==、绿色重点与黄色难点', () => {
+    const input = '计算公式：==容量 = 长 × 宽==，在 C 语言中使用 `a == b` 进行判断，^^重点语法^^ 与 @@难点分析@@'
+    const html = renderInlineMarkup(input)
+    expect(html).toContain('<mark class="kb-mark">容量 = 长 × 宽</mark>')
+    expect(html).toContain('<code>a == b</code>')
+    expect(html).not.toContain('<mark class="kb-mark">b`')
+    expect(html).toContain('<mark class="kb-imp">重点语法</mark>')
+    expect(html).toContain('<mark class="kb-hard">难点分析</mark>')
+  })
+
   it('filterKbBlocks 支持只看必记过滤', () => {
     const blocks: KbBlock[] = [
       { id: 'b1', t: 'list', imp: 'core', items: ['必记要点'] },
       { id: 'b2', t: 'code', imp: 'important', code: 'int main(void) { return 0; }' },
       { id: 'b3', t: 'callout', kind: 'trap', text: '易错陷阱' },
+      { id: 'b4', t: 'table', imp: 'normal', headers: ['名称', '公式'], rows: [['面积', '==S = a * b==']] },
+      { id: 'b5', t: 'table', imp: 'normal', headers: ['名称', '说明'], rows: [['常规', '普通内容']] },
     ]
-    expect(filterKbBlocks(blocks, false)).toHaveLength(3)
-    expect(filterKbBlocks(blocks, true).map(b => b.id)).toEqual(['b1', 'b3'])
+    expect(filterKbBlocks(blocks, false)).toHaveLength(5)
+    expect(filterKbBlocks(blocks, true).map(b => b.id)).toEqual(['b1', 'b3', 'b4'])
   })
 
   it('importanceBadgeMeta 返回等级标签与左边框样式', () => {
