@@ -637,7 +637,7 @@ onUnmounted(() => {
                     @exit="exit" @open-sheet="openSheet" />
 
     <main class="mx-auto max-w-3xl px-3 pb-28 pt-4 sm:max-w-4xl sm:px-4">
-      <div v-if="error" class="mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+      <div v-if="error" class="mb-3 rounded-lg border border-danger-border bg-danger-bg px-3 py-2 text-sm text-danger-fg">
         <p>{{ error }}</p>
         <button v-if="quotaExceeded" type="button"
                 class="mt-2 min-h-10 rounded-lg bg-brand px-3 text-xs font-medium text-white hover:bg-brand-hover"
@@ -645,9 +645,9 @@ onUnmounted(() => {
           联系作者申请免限
         </button>
       </div>
-      <p v-if="notice" class="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">{{ notice }}</p>
+      <p v-if="notice" class="mb-3 rounded-lg border border-warn-border bg-warn-bg px-3 py-2 text-sm text-warn-fg">{{ notice }}</p>
 
-      <div v-if="guest" class="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+      <div v-if="guest" class="mb-3 rounded-lg border border-warn-border bg-warn-bg px-3 py-2 text-xs text-warn-fg">
         游客模式：可以试做，但进度不会保存。
         <button type="button" class="font-medium underline" @click="showGuestSavePrompt">登录保存进度</button>
         后可记录错题与学习报告。
@@ -740,7 +740,7 @@ onUnmounted(() => {
                   class="block min-h-11 rounded-lg bg-brand px-4 py-2.5 text-center text-sm font-medium text-white hover:bg-brand-hover"
                   @click="guestSaveOpen = false">去登录 / 注册</NuxtLink>
         <button type="button"
-                class="min-h-11 w-full rounded-lg border border-line-strong text-sm text-fg-secondary hover:border-brand hover:text-brand"
+                class="min-h-11 w-full rounded-lg border border-line-strong bg-surface-card text-fg-primary outline-none focus:border-brand text-sm text-fg-secondary hover:border-brand hover:text-brand"
                 @click="guestSaveOpen = false">先不登录，继续试做</button>
         <button type="button" class="w-full py-1 text-xs text-fg-muted hover:text-fg-primary"
                 @click="exitWithoutSaving">不保存，直接退出</button>

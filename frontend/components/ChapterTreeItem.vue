@@ -28,8 +28,8 @@ const emit = defineEmits<{ (e: 'toggle', id: number): void }>()
 const isLeaf = computed(() => !props.node.children?.length)
 const pad = computed(() => (props.depth === 0 ? 'pl-5' : props.depth === 1 ? 'pl-12' : 'pl-20'))
 const nameClass = computed(() =>
-  props.depth === 0 ? 'text-sm text-slate-800'
-    : props.depth === 1 ? 'text-xs text-slate-600' : 'text-xs text-slate-500')
+  props.depth === 0 ? 'text-sm text-fg-primary'
+    : props.depth === 1 ? 'text-xs text-fg-secondary' : 'text-xs text-fg-secondary')
 
 /** 从 code 取标题序号：A1-1.1 → 1.1；S1-3 → 3 */
 function num(code: string | null): string {
@@ -44,13 +44,13 @@ function num(code: string | null): string {
     <div class="flex items-center justify-between py-1 pr-5" :class="pad">
       <button class="flex min-h-11 min-w-0 items-center gap-2 text-left" :disabled="isLeaf"
               @click="emit('toggle', node.id)">
-        <span class="w-4 shrink-0 text-slate-400">{{ isLeaf ? '' : (open[node.id] ? '−' : '+') }}</span>
-        <span v-if="label" class="shrink-0 rounded bg-blue-50 px-1.5 py-0.5 text-xs text-blue-600">{{ label }}</span>
-        <span v-if="depth === 0" class="shrink-0 rounded bg-slate-100 px-1.5 py-0.5 text-xs text-slate-600">{{ node.code }}</span>
-        <span v-else-if="num(node.code)" class="shrink-0 font-mono text-xs text-slate-400">{{ num(node.code) }}</span>
+        <span class="w-4 shrink-0 text-fg-muted">{{ isLeaf ? '' : (open[node.id] ? '−' : '+') }}</span>
+        <span v-if="label" class="shrink-0 rounded bg-brand-soft px-1.5 py-0.5 text-xs text-brand">{{ label }}</span>
+        <span v-if="depth === 0" class="shrink-0 rounded bg-surface-muted px-1.5 py-0.5 text-xs text-fg-secondary">{{ node.code }}</span>
+        <span v-else-if="num(node.code)" class="shrink-0 font-mono text-xs text-fg-muted">{{ num(node.code) }}</span>
         <span class="truncate" :class="nameClass">{{ displayName ?? node.name }}</span>
       </button>
-      <NuxtLink :to="`/chapters/${node.id}`" class="inline-flex min-h-11 shrink-0 items-center px-1 text-xs text-blue-600 hover:underline">
+      <NuxtLink :to="`/chapters/${node.id}`" class="inline-flex min-h-11 shrink-0 items-center px-1 text-xs text-brand hover:underline">
         {{ node.questionCount.toLocaleString() }} 题 ›
       </NuxtLink>
     </div>
@@ -66,7 +66,7 @@ function num(code: string | null): string {
       </span>
     </div>
 
-    <ul v-if="!isLeaf && open[node.id]" class="bg-slate-50/60">
+    <ul v-if="!isLeaf && open[node.id]" class="bg-surface-muted/60">
       <ChapterTreeItem v-for="child in node.children" :key="child.id"
                        :node="child" :open="open" :depth="depth + 1"
                        @toggle="emit('toggle', $event)" />

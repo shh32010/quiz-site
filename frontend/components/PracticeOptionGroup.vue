@@ -26,8 +26,8 @@ function optionIsCorrect(key: string) {
 
 function optionClass(key: string) {
   if (props.hasFeedback) {
-    if (optionIsCorrect(key)) return 'border-green-400 bg-green-50 text-green-900'
-    if (optionSelected(key)) return 'border-red-400 bg-red-50 text-red-900'
+    if (optionIsCorrect(key)) return 'border-success-border bg-success-bg text-success-fg'
+    if (optionSelected(key)) return 'border-danger-border bg-danger-bg text-danger-fg'
     return 'border-line-subtle bg-surface-card text-fg-muted'
   }
   return optionSelected(key)
@@ -52,8 +52,8 @@ function toggleMulti(key: string) {
       <input :checked="answer === k" type="radio" :value="k" :disabled="hasFeedback"
              class="mt-1" @change="emit('select-option', k)" />
       <span class="min-w-0 flex-1"><b class="mr-1">{{ k }}.</b>{{ v }}</span>
-      <span v-if="optionIsCorrect(k)" class="text-green-600">✓</span>
-      <span v-else-if="hasFeedback && optionSelected(k)" class="text-red-600">✗</span>
+      <span v-if="optionIsCorrect(k)" class="text-success-fg">✓</span>
+      <span v-else-if="hasFeedback && optionSelected(k)" class="text-danger-fg">✗</span>
     </label>
   </div>
 
@@ -64,8 +64,8 @@ function toggleMulti(key: string) {
       <input :checked="multi.includes(k)" type="checkbox" :value="k" :disabled="hasFeedback"
              class="mt-1" @change="toggleMulti(k)" />
       <span class="min-w-0 flex-1"><b class="mr-1">{{ k }}.</b>{{ v }}</span>
-      <span v-if="optionIsCorrect(k)" class="text-green-600">✓</span>
-      <span v-else-if="hasFeedback && optionSelected(k)" class="text-red-600">✗</span>
+      <span v-if="optionIsCorrect(k)" class="text-success-fg">✓</span>
+      <span v-else-if="hasFeedback && optionSelected(k)" class="text-danger-fg">✗</span>
     </label>
   </div>
 

@@ -162,7 +162,7 @@ async function composeChapter() {
           <UiBadge v-if="wrongMap[q.id]" :tone="wrongMap[q.id].resolved ? 'green' : 'red'" class="shrink-0">
             {{ wrongMap[q.id].resolved ? '错题已掌握' : `错 ${wrongMap[q.id].wrongCount} 次` }}
           </UiBadge>
-          <span v-if="favMap[q.id]" class="shrink-0 text-xs font-medium text-amber-500" title="已收藏">★</span>
+          <span v-if="favMap[q.id]" class="shrink-0 text-xs font-medium text-warn-fg" title="已收藏">★</span>
           <span v-if="q.hasImage" class="shrink-0 text-xs text-fg-muted">含图</span>
           <span class="shrink-0 text-xs font-medium text-brand">做这题 →</span>
         </NuxtLink>
@@ -174,10 +174,10 @@ async function composeChapter() {
 
     <div v-if="totalPages > 1" class="flex items-center justify-center gap-2 text-sm">
       <NuxtLink v-if="page > 1" :to="{ query: { ...route.query, page: page - 1 } }"
-                class="inline-flex min-h-11 items-center rounded-lg border border-line-strong px-4">上一页</NuxtLink>
+                class="inline-flex min-h-11 items-center rounded-lg border border-line-strong bg-surface-card text-fg-primary outline-none focus:border-brand px-4">上一页</NuxtLink>
       <span class="tabular-nums text-fg-muted">{{ page }} / {{ totalPages }}</span>
       <NuxtLink v-if="page < totalPages" :to="{ query: { ...route.query, page: page + 1 } }"
-                class="inline-flex min-h-11 items-center rounded-lg border border-line-strong px-4">下一页</NuxtLink>
+                class="inline-flex min-h-11 items-center rounded-lg border border-line-strong bg-surface-card text-fg-primary outline-none focus:border-brand px-4">下一页</NuxtLink>
     </div>
   </section>
 </template>

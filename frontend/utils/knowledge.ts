@@ -68,6 +68,13 @@ export function stripLeadingNumber(title: string): string {
   return title.replace(/^\s*\d+(?:\.\d+)+[.．、]?\s+/, '').trim()
 }
 
+/** 提取去掉章前缀后的层级序号：A1-1.1 -> 1.1，B6-6.3.1 -> 6.3.1，S1-1.1 -> 1.1 */
+export function shortNodeCode(code: string | null | undefined): string {
+  if (!code) return ''
+  const idx = code.indexOf('-')
+  return idx >= 0 ? code.slice(idx + 1).trim() : code.trim()
+}
+
 export function hasOwnNumbering(title: string): boolean {
   return /^\s*(?:\d+(?:[.．、]|\.\d+)|[一二三四五六七八九十]+[、.．]|第\s*[一二三四五六七八九十百0-9]+\s*[章节部分])/.test(title)
 }

@@ -48,7 +48,7 @@ if (sectionId.value) {
       </p>
     </template>
     <template v-else-if="!sectionId">
-      <p class="rounded-xl border border-amber-200 bg-amber-50 px-5 py-8 text-sm text-amber-800">
+      <p class="rounded-xl border border-warn-border bg-warn-bg px-5 py-8 text-sm text-warn-fg">
         这个知识点暂未归入标准章节，无法定位到节阅读页。
         <NuxtLink to="/knowledge" class="underline">返回知识点首页</NuxtLink>
       </p>

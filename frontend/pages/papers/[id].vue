@@ -31,7 +31,7 @@ useHead(() => ({
         </template>
       </p>
       <p v-if="(data.paper.availableCount ?? data.paper.questionCount) < data.paper.questionCount"
-         class="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+         class="rounded-lg border border-warn-border bg-warn-bg px-3 py-2 text-xs text-warn-fg">
         原卷有 {{ data.paper.questionCount - data.paper.availableCount }} 题暂不可练，进入练习后按可练题数计分；答题卡会显示实际题位。
       </p>
       <NuxtLink v-if="data.paper.availableCount !== 0" :to="`/practice?mode=paper&target=${id}`"
@@ -45,7 +45,7 @@ useHead(() => ({
           <span class="text-sm text-fg-primary">{{ s.sectionName }}</span>
           <span class="text-xs text-fg-secondary">
             可练 {{ s.available ?? (s.items - s.missing) }} / {{ s.items }} 题 · {{ s.score }} 分
-            <span v-if="s.missing" class="ml-2 text-amber-600">（{{ s.missing }} 题暂不可练）</span>
+            <span v-if="s.missing" class="ml-2 text-warn-fg">（{{ s.missing }} 题暂不可练）</span>
           </span>
         </li>
       </ul>

@@ -135,39 +135,39 @@ onMounted(load)
 
 <template>
   <section class="mx-auto max-w-md space-y-4">
-    <h1 class="text-2xl font-bold text-slate-900">账号设置</h1>
+    <h1 class="text-2xl font-bold text-fg-primary">账号设置</h1>
 
-    <p v-if="error && !me" class="text-sm text-red-600">
-      {{ error }} <NuxtLink to="/login" class="ml-2 text-blue-600 hover:underline">去登录</NuxtLink>
+    <p v-if="error && !me" class="text-sm text-danger-fg">
+      {{ error }} <NuxtLink to="/login" class="ml-2 text-brand hover:underline">去登录</NuxtLink>
     </p>
 
     <template v-if="me">
       <p v-if="remind && (me.pendingEmail || (me.email && !me.emailVerified))"
-         class="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+         class="rounded-lg border border-warn-border bg-warn-bg px-3 py-2 text-sm text-warn-fg">
         验证邮件已发送到 {{ me.pendingEmail || me.email }}，请查收并点击链接完成验证。
       </p>
       <p v-else-if="remind && !me.email"
-         class="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+         class="rounded-lg border border-warn-border bg-warn-bg px-3 py-2 text-sm text-warn-fg">
         注册成功！建议现在绑定邮箱：忘记密码时可以自助重置，否则只能联系管理员。
       </p>
 
-      <div class="rounded-xl border border-slate-200 p-4 text-sm">
-        <p class="text-slate-500">用户名</p>
-        <p class="mt-0.5 font-medium text-slate-800">{{ me.username }}</p>
-        <p class="mt-3 text-slate-500">邮箱</p>
-        <p v-if="me.email" class="mt-0.5 font-medium text-slate-800">
+      <div class="rounded-xl border border-line-subtle bg-surface-card p-4 text-sm">
+        <p class="text-fg-secondary">用户名</p>
+        <p class="mt-0.5 font-medium text-fg-primary">{{ me.username }}</p>
+        <p class="mt-3 text-fg-secondary">邮箱</p>
+        <p v-if="me.email" class="mt-0.5 font-medium text-fg-primary">
           {{ me.email }}
           <span class="ml-2 rounded px-1.5 py-0.5 text-xs"
-                :class="me.emailVerified ? 'bg-green-50 text-green-700' : 'bg-amber-50 text-amber-700'">
+                :class="me.emailVerified ? 'bg-success-bg text-success-fg' : 'bg-warn-bg text-warn-fg'">
             {{ me.emailVerified ? '已验证' : '未验证' }}
           </span>
         </p>
-        <p v-else class="mt-0.5 text-slate-500">未绑定</p>
-        <p v-if="me.pendingEmail" class="mt-1 text-xs text-amber-700">
+        <p v-else class="mt-0.5 text-fg-secondary">未绑定</p>
+        <p v-if="me.pendingEmail" class="mt-1 text-xs text-warn-fg">
           待验证新邮箱：{{ me.pendingEmail }}
         </p>
         <button v-if="me.pendingEmail || (me.email && !me.emailVerified)" type="button"
-                class="mt-2 min-h-11 rounded-lg border border-amber-300 px-3 text-xs text-amber-800 hover:bg-amber-50 disabled:opacity-50"
+                class="mt-2 min-h-11 rounded-lg border border-warn-border px-3 text-xs text-warn-fg hover:bg-warn-bg disabled:opacity-50"
                 :disabled="resending" @click="resend">
           {{ resending ? '发送中…' : '重新发送验证邮件' }}
         </button>
@@ -175,36 +175,36 @@ onMounted(load)
 
       <form class="space-y-3" @submit.prevent="save">
         <div>
-          <label class="text-sm text-slate-600">绑定 / 修改邮箱</label>
+          <label class="text-sm text-fg-secondary">绑定 / 修改邮箱</label>
           <input v-model="email" type="email" placeholder="name@example.com" autocomplete="email"
-                 class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
-          <p class="mt-1 text-xs text-slate-400">
+                 class="mt-1 w-full rounded-lg border border-line-strong bg-surface-card text-fg-primary outline-none focus:border-brand px-3 py-2 text-sm" />
+          <p class="mt-1 text-xs text-fg-muted">
             新邮箱需点击验证邮件中的链接后生效；验证前仍可使用用户名登录。
           </p>
         </div>
         <input v-model="password" type="password" placeholder="当前密码（确认修改）" autocomplete="current-password"
-               class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
-        <p v-if="error" class="text-sm text-red-600">{{ error }}</p>
-        <p v-if="msg" class="rounded-lg border border-green-300 bg-green-50 px-3 py-2 text-sm text-green-700">{{ msg }}</p>
+               class="w-full rounded-lg border border-line-strong bg-surface-card text-fg-primary outline-none focus:border-brand px-3 py-2 text-sm" />
+        <p v-if="error" class="text-sm text-danger-fg">{{ error }}</p>
+        <p v-if="msg" class="rounded-lg border border-success-border bg-success-bg px-3 py-2 text-sm text-success-fg">{{ msg }}</p>
         <button type="submit" :disabled="loading"
-                class="w-full rounded-lg bg-blue-600 py-2 text-sm font-medium text-white disabled:opacity-50">
+                class="w-full rounded-lg bg-brand py-2 text-sm font-medium text-white disabled:opacity-50">
           {{ loading ? '保存中…' : '保存' }}
         </button>
       </form>
 
-      <div class="rounded-xl border border-slate-200 p-4">
-        <h2 class="text-sm font-semibold text-slate-700">修改密码</h2>
+      <div class="rounded-xl border border-line-subtle bg-surface-card p-4">
+        <h2 class="text-sm font-semibold text-fg-primary">修改密码</h2>
         <form class="mt-2 space-y-3" @submit.prevent="changePassword">
           <input v-model="oldPwd" type="password" placeholder="当前密码" autocomplete="current-password"
-                 class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
+                 class="w-full rounded-lg border border-line-strong bg-surface-card text-fg-primary outline-none focus:border-brand px-3 py-2 text-sm" />
           <input v-model="newPwd" type="password" placeholder="新密码（至少 6 位）" autocomplete="new-password"
-                 class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
+                 class="w-full rounded-lg border border-line-strong bg-surface-card text-fg-primary outline-none focus:border-brand px-3 py-2 text-sm" />
           <input v-model="newPwd2" type="password" placeholder="再次输入新密码" autocomplete="new-password"
-                 class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
-          <p v-if="pwdError" class="text-sm text-red-600">{{ pwdError }}</p>
-          <p v-if="pwdMsg" class="rounded-lg border border-green-300 bg-green-50 px-3 py-2 text-sm text-green-700">{{ pwdMsg }}</p>
+                 class="w-full rounded-lg border border-line-strong bg-surface-card text-fg-primary outline-none focus:border-brand px-3 py-2 text-sm" />
+          <p v-if="pwdError" class="text-sm text-danger-fg">{{ pwdError }}</p>
+          <p v-if="pwdMsg" class="rounded-lg border border-success-border bg-success-bg px-3 py-2 text-sm text-success-fg">{{ pwdMsg }}</p>
           <button type="submit" :disabled="pwdLoading"
-                  class="w-full rounded-lg bg-slate-800 py-2 text-sm font-medium text-white disabled:opacity-50">
+                  class="w-full rounded-lg bg-brand hover:bg-brand-hover py-2 text-sm font-medium text-white disabled:opacity-50">
             {{ pwdLoading ? '提交中…' : '修改密码' }}
           </button>
         </form>

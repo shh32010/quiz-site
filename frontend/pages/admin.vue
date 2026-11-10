@@ -179,83 +179,83 @@ onMounted(load)
 
 <template>
   <section class="space-y-5">
-    <h1 class="text-2xl font-bold text-slate-900">管理后台</h1>
-    <p v-if="error" class="text-sm text-red-600">{{ error }}</p>
+    <h1 class="text-2xl font-bold text-fg-primary">管理后台</h1>
+    <p v-if="error" class="text-sm text-danger-fg">{{ error }}</p>
 
     <div v-if="stats" class="grid grid-cols-2 gap-3 sm:grid-cols-5">
-      <div v-for="(v, k) in stats" :key="k" class="rounded-xl border border-slate-200 p-4">
-        <p class="text-xs text-slate-500">{{ k }}</p>
-        <p class="mt-1 text-xl font-bold text-slate-800">{{ v }}</p>
+      <div v-for="(v, k) in stats" :key="k" class="rounded-xl border border-line-subtle bg-surface-card p-4">
+        <p class="text-xs text-fg-secondary">{{ k }}</p>
+        <p class="mt-1 text-xl font-bold text-fg-primary">{{ v }}</p>
       </div>
     </div>
 
-    <details class="group rounded-xl border border-slate-200 p-4">
+    <details class="group rounded-xl border border-line-subtle bg-surface-card p-4">
       <summary class="flex cursor-pointer list-none items-center justify-between gap-2 [&::-webkit-details-marker]:hidden">
         <div>
-          <h2 class="text-sm font-semibold text-slate-700">站内公告配置（免发版热更新）</h2>
-          <p class="mt-0.5 text-xs text-slate-400">当前生效版本：{{ announcement.version }} · 修改版本号后用户会重新弹出一次</p>
+          <h2 class="text-sm font-semibold text-fg-primary">站内公告配置（免发版热更新）</h2>
+          <p class="mt-0.5 text-xs text-fg-muted">当前生效版本：{{ announcement.version }} · 修改版本号后用户会重新弹出一次</p>
         </div>
-        <span class="rounded-lg border border-slate-200 px-2.5 py-1 text-xs text-slate-600 group-open:bg-slate-100">
+        <span class="rounded-lg border border-line-subtle px-2.5 py-1 text-xs text-fg-secondary group-open:bg-surface-muted">
           展开编辑
         </span>
       </summary>
 
-      <div class="mt-4 space-y-3 border-t border-slate-100 pt-4 text-xs">
+      <div class="mt-4 space-y-3 border-t border-line-subtle pt-4 text-xs">
         <div class="grid gap-3 sm:grid-cols-3">
           <label class="block">
-            <span class="text-slate-500">版本号（version）</span>
+            <span class="text-fg-secondary">版本号（version）</span>
             <div class="mt-1 flex gap-1.5">
-              <input v-model="annForm.version" class="min-w-0 flex-1 rounded-lg border border-slate-300 px-2.5 py-1.5" />
-              <button type="button" class="shrink-0 rounded-lg border border-slate-300 px-2.5 py-1.5 text-slate-700 hover:border-blue-600 hover:text-blue-600"
+              <input v-model="annForm.version" class="min-w-0 flex-1 rounded-lg border border-line-strong bg-surface-card text-fg-primary outline-none focus:border-brand px-2.5 py-1.5" />
+              <button type="button" class="shrink-0 rounded-lg border border-line-strong bg-surface-card text-fg-primary outline-none focus:border-brand px-2.5 py-1.5 text-fg-primary hover:border-brand hover:text-brand"
                       @click="bumpAnnVersion">递增今日号</button>
             </div>
           </label>
           <label class="block">
-            <span class="text-slate-500">展示日期</span>
-            <input v-model="annForm.date" class="mt-1 w-full rounded-lg border border-slate-300 px-2.5 py-1.5" />
+            <span class="text-fg-secondary">展示日期</span>
+            <input v-model="annForm.date" class="mt-1 w-full rounded-lg border border-line-strong bg-surface-card text-fg-primary outline-none focus:border-brand px-2.5 py-1.5" />
           </label>
           <label class="block">
-            <span class="text-slate-500">主标题</span>
-            <input v-model="annForm.title" class="mt-1 w-full rounded-lg border border-slate-300 px-2.5 py-1.5" />
+            <span class="text-fg-secondary">主标题</span>
+            <input v-model="annForm.title" class="mt-1 w-full rounded-lg border border-line-strong bg-surface-card text-fg-primary outline-none focus:border-brand px-2.5 py-1.5" />
           </label>
         </div>
 
         <div class="grid gap-3 sm:grid-cols-2">
           <label class="block">
-            <span class="text-slate-500">副标题</span>
-            <input v-model="annForm.subtitle" class="mt-1 w-full rounded-lg border border-slate-300 px-2.5 py-1.5" />
+            <span class="text-fg-secondary">副标题</span>
+            <input v-model="annForm.subtitle" class="mt-1 w-full rounded-lg border border-line-strong bg-surface-card text-fg-primary outline-none focus:border-brand px-2.5 py-1.5" />
           </label>
           <label class="block">
-            <span class="text-slate-500">底部说明（footnote）</span>
-            <input v-model="annForm.footnote" class="mt-1 w-full rounded-lg border border-slate-300 px-2.5 py-1.5" />
+            <span class="text-fg-secondary">底部说明（footnote）</span>
+            <input v-model="annForm.footnote" class="mt-1 w-full rounded-lg border border-line-strong bg-surface-card text-fg-primary outline-none focus:border-brand px-2.5 py-1.5" />
           </label>
         </div>
 
         <div>
-          <span class="font-medium text-slate-600">公告条目（{{ annForm.items?.length ?? 0 }} 条）</span>
+          <span class="font-medium text-fg-secondary">公告条目（{{ annForm.items?.length ?? 0 }} 条）</span>
           <div class="mt-2 max-h-56 space-y-2 overflow-y-auto pr-1">
-            <div v-for="(it, idx) in annForm.items" :key="idx" class="space-y-1.5 rounded-lg border border-slate-200 p-2">
+            <div v-for="(it, idx) in annForm.items" :key="idx" class="space-y-1.5 rounded-lg border border-line-subtle p-2">
               <div class="flex flex-wrap items-center gap-1.5">
-                <input v-model="it.tag" placeholder="标签" class="w-16 shrink-0 rounded border border-slate-300 px-2 py-1" />
-                <input v-model="it.date" placeholder="YYYY-MM-DD" class="w-28 shrink-0 rounded border border-slate-300 px-2 py-1 font-mono" />
-                <input v-model="it.title" placeholder="条目标题" class="min-w-0 flex-1 rounded border border-slate-300 px-2 py-1 font-medium" />
+                <input v-model="it.tag" placeholder="标签" class="w-16 shrink-0 rounded border border-line-strong bg-surface-card text-fg-primary outline-none focus:border-brand px-2 py-1" />
+                <input v-model="it.date" placeholder="YYYY-MM-DD" class="w-28 shrink-0 rounded border border-line-strong bg-surface-card text-fg-primary outline-none focus:border-brand px-2 py-1 font-mono" />
+                <input v-model="it.title" placeholder="条目标题" class="min-w-0 flex-1 rounded border border-line-strong bg-surface-card text-fg-primary outline-none focus:border-brand px-2 py-1 font-medium" />
               </div>
-              <input v-model="it.desc" placeholder="条目说明" class="w-full rounded border border-slate-300 px-2 py-1 text-slate-600" />
+              <input v-model="it.desc" placeholder="条目说明" class="w-full rounded border border-line-strong bg-surface-card text-fg-primary outline-none focus:border-brand px-2 py-1 text-fg-secondary" />
             </div>
           </div>
         </div>
 
         <div>
           <div class="flex items-center justify-between">
-            <span class="font-medium text-slate-600">更新历史（{{ annForm.history?.length ?? 0 }} 条）</span>
-            <button type="button" class="rounded border border-slate-300 px-2 py-1 text-slate-700 hover:border-blue-600 hover:text-blue-600"
+            <span class="font-medium text-fg-secondary">更新历史（{{ annForm.history?.length ?? 0 }} 条）</span>
+            <button type="button" class="rounded border border-line-strong bg-surface-card text-fg-primary outline-none focus:border-brand px-2 py-1 text-fg-primary hover:border-brand hover:text-brand"
                     @click="addAnnHistory">+ 新增一条更新记录</button>
           </div>
           <div class="mt-2 max-h-56 space-y-1.5 overflow-y-auto pr-1">
             <div v-for="(h, idx) in annForm.history" :key="idx" class="flex items-center gap-1.5">
-              <input v-model="h.date" placeholder="YYYY-MM-DD" class="w-28 shrink-0 rounded border border-slate-300 px-2 py-1 font-mono" />
-              <input v-model="h.text" placeholder="一句话说明本次对用户有感知的更新" class="min-w-0 flex-1 rounded border border-slate-300 px-2 py-1" />
-              <button type="button" class="shrink-0 rounded border border-slate-200 px-2 py-1 text-slate-400 hover:text-red-600"
+              <input v-model="h.date" placeholder="YYYY-MM-DD" class="w-28 shrink-0 rounded border border-line-strong bg-surface-card text-fg-primary outline-none focus:border-brand px-2 py-1 font-mono" />
+              <input v-model="h.text" placeholder="一句话说明本次对用户有感知的更新" class="min-w-0 flex-1 rounded border border-line-strong bg-surface-card text-fg-primary outline-none focus:border-brand px-2 py-1" />
+              <button type="button" class="shrink-0 rounded border border-line-subtle px-2 py-1 text-fg-muted hover:text-danger-fg"
                       @click="removeAnnHistory(idx)">删除</button>
             </div>
           </div>
@@ -263,24 +263,24 @@ onMounted(load)
 
         <div class="flex flex-wrap items-center gap-3 pt-1">
           <button type="button" :disabled="annSaving"
-                  class="rounded-lg bg-blue-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+                  class="rounded-lg bg-brand px-4 py-1.5 text-sm font-medium text-white hover:bg-brand-hover disabled:opacity-50"
                   @click="saveAnnouncement">
             {{ annSaving ? '保存中…' : '保存并立即生效' }}
           </button>
-          <span v-if="annMessage" class="text-green-700">{{ annMessage }}</span>
-          <span v-if="annError" class="text-red-600">{{ annError }}</span>
+          <span v-if="annMessage" class="text-success-fg">{{ annMessage }}</span>
+          <span v-if="annError" class="text-danger-fg">{{ annError }}</span>
         </div>
       </div>
     </details>
 
-    <div class="rounded-xl border border-slate-200 p-4">
+    <div class="rounded-xl border border-line-subtle bg-surface-card p-4">
       <div class="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h2 class="text-sm font-semibold text-slate-700">访问统计</h2>
-          <p class="mt-0.5 text-xs text-slate-400">匿名 PV / UV，不记录 IP 与原始 UA</p>
+          <h2 class="text-sm font-semibold text-fg-primary">访问统计</h2>
+          <p class="mt-0.5 text-xs text-fg-muted">匿名 PV / UV，不记录 IP 与原始 UA</p>
         </div>
         <select v-model.number="visitDays"
-                class="rounded-lg border border-slate-300 px-2 py-1.5 text-xs"
+                class="rounded-lg border border-line-strong bg-surface-card text-fg-primary outline-none focus:border-brand px-2 py-1.5 text-xs"
                 @change="loadVisits">
           <option :value="7">近 7 天</option>
           <option :value="30">近 30 天</option>
@@ -288,73 +288,73 @@ onMounted(load)
         </select>
       </div>
 
-      <p v-if="visitError" class="mt-2 text-sm text-red-600">{{ visitError }}</p>
+      <p v-if="visitError" class="mt-2 text-sm text-danger-fg">{{ visitError }}</p>
 
       <template v-if="visits">
         <div class="mt-3 grid grid-cols-3 gap-3">
-          <div class="rounded-lg border border-slate-200 p-3">
-            <p class="text-xs text-slate-500">PV</p>
-            <p class="mt-1 text-xl font-bold tabular-nums text-slate-800">{{ visits.summary.pv }}</p>
+          <div class="rounded-lg border border-line-subtle p-3">
+            <p class="text-xs text-fg-secondary">PV</p>
+            <p class="mt-1 text-xl font-bold tabular-nums text-fg-primary">{{ visits.summary.pv }}</p>
           </div>
-          <div class="rounded-lg border border-slate-200 p-3">
-            <p class="text-xs text-slate-500">UV</p>
-            <p class="mt-1 text-xl font-bold tabular-nums text-slate-800">{{ visits.summary.uv }}</p>
+          <div class="rounded-lg border border-line-subtle p-3">
+            <p class="text-xs text-fg-secondary">UV</p>
+            <p class="mt-1 text-xl font-bold tabular-nums text-fg-primary">{{ visits.summary.uv }}</p>
           </div>
-          <div class="rounded-lg border border-slate-200 p-3">
-            <p class="text-xs text-slate-500">移动端 PV</p>
-            <p class="mt-1 text-xl font-bold tabular-nums text-slate-800">{{ visits.summary.mobilePv }}</p>
+          <div class="rounded-lg border border-line-subtle p-3">
+            <p class="text-xs text-fg-secondary">移动端 PV</p>
+            <p class="mt-1 text-xl font-bold tabular-nums text-fg-primary">{{ visits.summary.mobilePv }}</p>
           </div>
         </div>
 
         <div class="mt-4 grid gap-4 lg:grid-cols-2">
           <div>
-            <p class="text-xs text-slate-400">每日 PV / UV</p>
+            <p class="text-xs text-fg-muted">每日 PV / UV</p>
             <div class="mt-2 overflow-x-auto">
               <div class="flex h-32 min-w-[520px] items-end gap-1">
                 <div v-for="d in visits.daily" :key="d.day" class="flex h-full min-w-0 flex-1 flex-col items-center gap-1">
                   <div class="flex w-full flex-1 items-end">
-                    <div class="w-full rounded-t bg-blue-500/70"
+                    <div class="w-full rounded-t bg-brand/70"
                          :style="{ height: `${Number(d.pv) ? Math.max(2, Math.round(Number(d.pv) / maxDailyPv * 100)) : 0}%` }"
                          :title="`${d.day}：PV ${d.pv} / UV ${d.uv}`" />
                   </div>
-                  <span class="text-[10px] text-slate-400">{{ d.day }}</span>
+                  <span class="text-[10px] text-fg-muted">{{ d.day }}</span>
                 </div>
               </div>
             </div>
           </div>
           <div>
-            <p class="text-xs text-slate-400">热门页面</p>
+            <p class="text-xs text-fg-muted">热门页面</p>
             <ul class="mt-2 space-y-1 text-xs">
               <li v-for="p in visits.top" :key="p.path" class="flex items-center justify-between gap-2">
-                <span class="truncate font-mono text-slate-600">{{ p.path }}</span>
-                <span class="shrink-0 tabular-nums text-slate-400">{{ p.pv }} PV / {{ p.uv }} UV</span>
+                <span class="truncate font-mono text-fg-secondary">{{ p.path }}</span>
+                <span class="shrink-0 tabular-nums text-fg-muted">{{ p.pv }} PV / {{ p.uv }} UV</span>
               </li>
-              <li v-if="!visits.top.length" class="text-slate-400">暂无访问数据。</li>
+              <li v-if="!visits.top.length" class="text-fg-muted">暂无访问数据。</li>
             </ul>
           </div>
         </div>
       </template>
     </div>
 
-    <div class="rounded-xl border border-slate-200 p-4">
-      <h2 class="text-sm font-semibold text-slate-700">用户（{{ users.length }}）</h2>
+    <div class="rounded-xl border border-line-subtle bg-surface-card p-4">
+      <h2 class="text-sm font-semibold text-fg-primary">用户（{{ users.length }}）</h2>
 
       <!-- 移动端用户卡片 -->
       <div class="mt-2 space-y-2 sm:hidden">
-        <div v-for="u in users" :key="u.id" class="rounded-lg border border-slate-200 p-3 text-xs">
+        <div v-for="u in users" :key="u.id" class="rounded-lg border border-line-subtle p-3 text-xs">
           <div class="flex items-center justify-between gap-2">
-            <b class="truncate text-slate-800">{{ u.username }}</b>
-            <span class="shrink-0 rounded bg-slate-100 px-1.5 py-0.5 text-slate-600">{{ roleLabel(u.role) }}</span>
+            <b class="truncate text-fg-primary">{{ u.username }}</b>
+            <span class="shrink-0 rounded bg-surface-muted px-1.5 py-0.5 text-fg-secondary">{{ roleLabel(u.role) }}</span>
           </div>
-          <p class="mt-1 truncate text-slate-500">{{ u.email || '未绑定邮箱' }}</p>
-          <p class="mt-1 text-slate-400">注册 {{ fmtTime(u.createdAt) }} · 最近 {{ fmtTime(u.lastLoginAt) }}</p>
-          <p class="mt-1 text-slate-400">练习 {{ u.sessions }} / 作答 {{ u.answers }}</p>
+          <p class="mt-1 truncate text-fg-secondary">{{ u.email || '未绑定邮箱' }}</p>
+          <p class="mt-1 text-fg-muted">注册 {{ fmtTime(u.createdAt) }} · 最近 {{ fmtTime(u.lastLoginAt) }}</p>
+          <p class="mt-1 text-fg-muted">练习 {{ u.sessions }} / 作答 {{ u.answers }}</p>
         </div>
       </div>
 
       <div class="mt-2 hidden overflow-x-auto sm:block">
         <table class="min-w-full whitespace-nowrap text-left text-xs">
-          <thead class="text-slate-400">
+          <thead class="text-fg-muted">
             <tr>
               <th class="py-1 pr-4 font-normal">账号</th>
               <th class="pr-4 font-normal">角色</th>
@@ -365,9 +365,9 @@ onMounted(load)
               <th class="font-normal">练习 / 作答</th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-slate-100 text-slate-600">
+          <tbody class="divide-y divide-line-subtle text-fg-secondary">
             <tr v-for="u in users" :key="u.id">
-              <td class="py-1.5 pr-4 font-medium text-slate-800">{{ u.username }}</td>
+              <td class="py-1.5 pr-4 font-medium text-fg-primary">{{ u.username }}</td>
               <td class="pr-4">{{ roleLabel(u.role) }}</td>
               <td class="pr-4">{{ u.email || '—' }}</td>
               <td class="pr-4">{{ fmtTime(u.createdAt) }}</td>
@@ -380,34 +380,34 @@ onMounted(load)
       </div>
     </div>
 
-    <div class="rounded-xl border border-slate-200 p-4">
-      <h2 class="text-sm font-semibold text-slate-700">密码重置</h2>
-      <p class="mt-0.5 text-xs text-slate-400">生成临时密码，只显示一次；请通过用户留下的联系方式发送。</p>
+    <div class="rounded-xl border border-line-subtle bg-surface-card p-4">
+      <h2 class="text-sm font-semibold text-fg-primary">密码重置</h2>
+      <p class="mt-0.5 text-xs text-fg-muted">生成临时密码，只显示一次；请通过用户留下的联系方式发送。</p>
       <div class="mt-2 flex flex-wrap gap-2">
         <input v-model="resetUser" placeholder="用户名"
-               class="min-w-0 flex-1 rounded-lg border border-slate-300 px-3 py-1.5 text-sm sm:max-w-xs" />
-        <button class="rounded-lg bg-slate-800 px-4 py-1.5 text-sm text-white" @click="resetByName">
+               class="min-w-0 flex-1 rounded-lg border border-line-strong bg-surface-card text-fg-primary outline-none focus:border-brand px-3 py-1.5 text-sm sm:max-w-xs" />
+        <button class="rounded-lg bg-brand hover:bg-brand-hover px-4 py-1.5 text-sm text-white" @click="resetByName">
           生成临时密码
         </button>
       </div>
-      <p v-if="resetError" class="mt-2 text-sm text-red-600">{{ resetError }}</p>
-      <p v-if="resetResult" class="mt-2 rounded-lg border border-green-300 bg-green-50 px-3 py-2 text-sm text-green-700">
+      <p v-if="resetError" class="mt-2 text-sm text-danger-fg">{{ resetError }}</p>
+      <p v-if="resetResult" class="mt-2 rounded-lg border border-success-border bg-success-bg px-3 py-2 text-sm text-success-fg">
         用户 <b>{{ resetResult.username }}</b> 的临时密码：
-        <code class="rounded bg-white px-1.5 py-0.5 font-mono">{{ resetResult.password }}</code>
+        <code class="rounded bg-surface-card px-1.5 py-0.5 font-mono">{{ resetResult.password }}</code>
         （只显示这一次）
       </p>
     </div>
 
     <div v-if="resets.length">
-      <h2 class="mb-2 text-sm font-semibold text-slate-700">找回密码申请</h2>
-      <ul class="divide-y divide-slate-100 rounded-xl border border-slate-200">
+      <h2 class="mb-2 text-sm font-semibold text-fg-primary">找回密码申请</h2>
+      <ul class="divide-y divide-line-subtle rounded-xl border border-line-subtle bg-surface-card">
         <li v-for="r in resets" :key="r.id" class="space-y-2 px-5 py-3 text-sm">
           <div class="flex items-center justify-between">
-            <span class="text-slate-700"><b>{{ r.username }}</b> · {{ r.contact }}</span>
-            <span class="text-xs text-slate-400">{{ (r.createdAt || '').slice(0, 16).replace('T', ' ') }}</span>
+            <span class="text-fg-primary"><b>{{ r.username }}</b> · {{ r.contact }}</span>
+            <span class="text-xs text-fg-muted">{{ (r.createdAt || '').slice(0, 16).replace('T', ' ') }}</span>
           </div>
-          <p v-if="r.note" class="text-xs text-slate-500">{{ r.note }}</p>
-          <button class="rounded bg-slate-700 px-3 py-1 text-xs text-white" @click="resetRequest(r.id)">
+          <p v-if="r.note" class="text-xs text-fg-secondary">{{ r.note }}</p>
+          <button class="rounded bg-brand hover:bg-brand-hover px-3 py-1 text-xs text-white" @click="resetRequest(r.id)">
             重置并生成临时密码
           </button>
         </li>
@@ -416,44 +416,44 @@ onMounted(load)
 
     <div>
       <div class="mb-2 flex items-center justify-between gap-2">
-        <h2 class="text-sm font-semibold text-slate-700">
+        <h2 class="text-sm font-semibold text-fg-primary">
           {{ feedbackFilter === 'pending' ? '待处理反馈' : '全部反馈' }}（{{ feedback.length }}）
         </h2>
         <div class="flex gap-1 text-xs">
           <button type="button" class="rounded-lg border px-2.5 py-1"
-                  :class="feedbackFilter === 'pending' ? 'border-blue-600 bg-blue-50 text-blue-700' : 'border-slate-200 text-slate-600'"
+                  :class="feedbackFilter === 'pending' ? 'border-brand bg-brand-soft text-brand-on-soft' : 'border-line-subtle text-fg-secondary'"
                   @click="feedbackFilter = 'pending'; loadFeedback()">待处理</button>
           <button type="button" class="rounded-lg border px-2.5 py-1"
-                  :class="feedbackFilter === 'all' ? 'border-blue-600 bg-blue-50 text-blue-700' : 'border-slate-200 text-slate-600'"
+                  :class="feedbackFilter === 'all' ? 'border-brand bg-brand-soft text-brand-on-soft' : 'border-line-subtle text-fg-secondary'"
                   @click="feedbackFilter = 'all'; loadFeedback()">全部</button>
         </div>
       </div>
-      <ul class="divide-y divide-slate-100 rounded-xl border border-slate-200">
+      <ul class="divide-y divide-line-subtle rounded-xl border border-line-subtle bg-surface-card">
         <li v-for="f in feedback" :key="f.id" class="space-y-2 px-5 py-3 text-sm">
           <div class="flex flex-wrap items-center justify-between gap-2">
-            <span class="flex flex-wrap items-center gap-1.5 text-slate-700">
+            <span class="flex flex-wrap items-center gap-1.5 text-fg-primary">
               <b v-if="f.questionId">#{{ f.questionId }}</b>
-              <b v-else class="text-blue-700">联系作者</b>
+              <b v-else class="text-brand-on-soft">联系作者</b>
               <span>· {{ f.type }} · {{ f.username ?? '匿名' }}</span>
               <span v-if="f.questionId && Number(f.questionFeedbackCount) > 1"
-                    class="rounded bg-amber-50 px-1.5 py-0.5 text-xs text-amber-700">
+                    class="rounded bg-warn-bg px-1.5 py-0.5 text-xs text-warn-fg">
                 同题 {{ f.questionFeedbackCount }} 条
               </span>
-              <span v-if="f.status === 'handled'" class="rounded bg-green-50 px-1.5 py-0.5 text-xs text-green-700">
+              <span v-if="f.status === 'handled'" class="rounded bg-success-bg px-1.5 py-0.5 text-xs text-success-fg">
                 已处理
               </span>
             </span>
-            <span class="text-xs text-slate-400">{{ (f.createdAt || '').slice(0, 16).replace('T', ' ') }}</span>
+            <span class="text-xs text-fg-muted">{{ (f.createdAt || '').slice(0, 16).replace('T', ' ') }}</span>
           </div>
-          <p class="whitespace-pre-wrap text-slate-600">{{ f.content }}</p>
-          <p v-if="f.stemPreview" class="text-xs text-slate-400">题干：{{ formatText(f.stemPreview) }}</p>
-          <p v-if="f.adminNote && f.status === 'handled'" class="text-xs text-slate-500">处理备注：{{ f.adminNote }}</p>
+          <p class="whitespace-pre-wrap text-fg-secondary">{{ f.content }}</p>
+          <p v-if="f.stemPreview" class="text-xs text-fg-muted">题干：{{ formatText(f.stemPreview) }}</p>
+          <p v-if="f.adminNote && f.status === 'handled'" class="text-xs text-fg-secondary">处理备注：{{ f.adminNote }}</p>
           <div v-if="f.status !== 'handled'" class="flex gap-2">
             <input v-model="note[f.id]" placeholder="处理备注（用户可在「我的反馈」中看到）" class="flex-1 rounded border px-2 py-1 text-xs" />
-            <button class="rounded bg-slate-700 px-3 py-1 text-xs text-white" @click="resolve(f.id)">标记已处理</button>
+            <button class="rounded bg-brand hover:bg-brand-hover px-3 py-1 text-xs text-white" @click="resolve(f.id)">标记已处理</button>
           </div>
         </li>
-        <li v-if="!feedback.length" class="px-5 py-6 text-sm text-slate-500">
+        <li v-if="!feedback.length" class="px-5 py-6 text-sm text-fg-secondary">
           {{ feedbackFilter === 'pending' ? '暂无待处理反馈。' : '暂无反馈记录。' }}
         </li>
       </ul>

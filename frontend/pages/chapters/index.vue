@@ -129,25 +129,25 @@ watch(() => route.query.course, focusFromQuery)
                   subtitle="理论按课程 A/B 分组，实操按技能一~六；数字为可练习题数。">
       <template #actions>
         <button type="button"
-                class="inline-flex min-h-11 items-center rounded-lg border border-slate-300 px-3 text-sm text-slate-600 hover:border-blue-400 hover:text-blue-600"
+                class="inline-flex min-h-11 items-center rounded-lg border border-line-strong bg-surface-card text-fg-primary outline-none focus:border-brand px-3 text-sm text-fg-secondary hover:border-brand hover:text-brand"
                 @click="toggleAll">
           {{ allExpanded ? '收起全部' : '展开全部' }}
         </button>
       </template>
     </UiPageHeader>
 
-    <div class="overflow-hidden rounded-xl border border-slate-200">
-      <h2 class="border-b border-slate-200 px-5 py-3 text-sm font-semibold text-slate-700">理论题库</h2>
+    <div class="overflow-hidden rounded-xl border border-line-subtle bg-surface-card">
+      <h2 class="border-b border-line-subtle px-5 py-3 text-sm font-semibold text-fg-primary">理论题库</h2>
       <div v-for="course in theoryCourses" :key="course.code" :id="`course-${course.code}`"
-           class="scroll-mt-20 border-b border-slate-100 last:border-b-0">
-        <div class="flex items-center justify-between bg-slate-50 px-5 py-2.5">
+           class="scroll-mt-20 border-b border-line-subtle last:border-b-0">
+        <div class="flex items-center justify-between bg-surface-muted px-5 py-2.5">
           <div class="flex items-center gap-2">
-            <span class="rounded bg-white px-1.5 py-0.5 text-xs text-slate-500">课程 {{ course.code }}</span>
-            <span class="text-sm font-semibold text-slate-800">{{ course.name }}</span>
+            <span class="rounded bg-surface-card px-1.5 py-0.5 text-xs text-fg-secondary">课程 {{ course.code }}</span>
+            <span class="text-sm font-semibold text-fg-primary">{{ course.name }}</span>
           </div>
-          <span class="text-xs text-slate-400">{{ course.total.toLocaleString() }} 题</span>
+          <span class="text-xs text-fg-muted">{{ course.total.toLocaleString() }} 题</span>
         </div>
-        <ul class="divide-y divide-slate-100">
+        <ul class="divide-y divide-line-subtle">
           <ChapterTreeItem v-for="node in course.nodes" :key="node.id"
                            :node="node" :open="open" :depth="0" :progress="progressOf(node.code)"
                            @toggle="toggle" />
@@ -155,9 +155,9 @@ watch(() => route.query.course, focusFromQuery)
       </div>
     </div>
 
-    <div class="overflow-hidden rounded-xl border border-slate-200">
-      <h2 class="border-b border-slate-200 px-5 py-3 text-sm font-semibold text-slate-700">实操题库</h2>
-      <ul class="divide-y divide-slate-100">
+    <div class="overflow-hidden rounded-xl border border-line-subtle bg-surface-card">
+      <h2 class="border-b border-line-subtle px-5 py-3 text-sm font-semibold text-fg-primary">实操题库</h2>
+      <ul class="divide-y divide-line-subtle">
         <template v-for="s in skills" :key="s.code">
           <ChapterTreeItem v-if="s.node" :node="s.node" :open="open" :depth="0"
                            :label="s.label" :display-name="s.name" :anchor-id="`course-${s.code}`"
@@ -166,15 +166,15 @@ watch(() => route.query.course, focusFromQuery)
       </ul>
     </div>
 
-    <details v-if="otherTotal > 0" class="overflow-hidden rounded-xl border border-slate-200">
-      <summary class="cursor-pointer px-5 py-3 text-sm font-semibold text-slate-700">
+    <details v-if="otherTotal > 0" class="overflow-hidden rounded-xl border border-line-subtle bg-surface-card">
+      <summary class="cursor-pointer px-5 py-3 text-sm font-semibold text-fg-primary">
         其他题目（未归入课程 A/B 或技能一~六）
-        <span class="ml-1 font-normal text-slate-400">共 {{ otherTotal.toLocaleString() }} 题</span>
+        <span class="ml-1 font-normal text-fg-muted">共 {{ otherTotal.toLocaleString() }} 题</span>
       </summary>
-      <p class="border-t border-slate-100 px-5 py-2 text-xs text-slate-400">
+      <p class="border-t border-line-subtle px-5 py-2 text-xs text-fg-muted">
         这些题目暂未归入标准章节，按原有分类保留，可正常练习。
       </p>
-      <ul class="divide-y divide-slate-100 border-t border-slate-100">
+      <ul class="divide-y divide-line-subtle border-t border-line-subtle">
         <ChapterTreeItem v-for="n in otherNodes" :key="`${n.bank}-${n.id}`"
                          :node="n" :open="open" :depth="0" :label="n.bank"
                          :progress="progressOf(n.code)" @toggle="toggle" />

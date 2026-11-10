@@ -4,6 +4,7 @@ import { ALL_COURSES } from '~/utils/constants'
 import {
   courseOf,
   flattenSections,
+  shortNodeCode,
   stripLeadingNumber,
   type KbEntry,
   type KNode,
@@ -80,19 +81,17 @@ interface TocRow {
   key: string
   nodeId: number
   count: number
-  number: string
   code: string | null
   name: string
 }
 
 const tocRows = computed<TocRow[]>(() => {
-  return entries.value.map((entry, idx) => ({
+  return entries.value.map(entry => ({
     kind: 'group',
     key: `group-${entry.nodeId}`,
     nodeId: entry.nodeId,
     count: entry.blocks?.length ?? 0,
-    number: `1.${idx + 1}`,
-    code: entry.nodeCode ?? section.value?.code ?? '',
+    code: shortNodeCode(entry.nodeCode ?? section.value?.code ?? ''),
     name: stripLeadingNumber(entry.nodeName ?? ''),
   }))
 })
@@ -265,9 +264,9 @@ watch(section, (value) => {
             <span v-if="learned" class="text-success-fg">· 已学</span>
           </p>
         </div>
-        <button type="button" class="min-h-11 rounded-lg border border-line-strong px-2 text-xs text-fg-secondary"
+        <button type="button" class="min-h-11 rounded-lg border border-line-strong bg-surface-card text-fg-primary outline-none focus:border-brand px-2 text-xs text-fg-secondary"
                 aria-label="调整字号" @click="cycleFont">Aa {{ readerFont }}</button>
-        <button type="button" class="min-h-11 rounded-lg border border-line-strong px-3 text-xs text-fg-secondary"
+        <button type="button" class="min-h-11 rounded-lg border border-line-strong bg-surface-card text-fg-primary outline-none focus:border-brand px-3 text-xs text-fg-secondary"
                 @click="tocOpen = true">目录</button>
       </div>
     </header>
@@ -286,7 +285,7 @@ watch(section, (value) => {
             <NuxtLink v-for="item in chapter.items" :key="item.id" :to="`/knowledge/section/${item.id}`"
                       class="block rounded-lg px-2 py-1.5 text-xs leading-5"
                       :class="item.id === id ? 'bg-brand-soft font-medium text-brand-on-soft' : 'text-fg-secondary hover:bg-surface-muted'">
-              <span v-if="isLearned(item.id)" class="mr-1 text-success-fg">●</span>{{ item.name }}
+              <span v-if="isLearned(item.id)" class="mr-1 text-success-fg">●</span><span v-if="shortNodeCode(item.code)" class="mr-1 font-mono">{{ shortNodeCode(item.code) }}</span>{{ item.name }}
             </NuxtLink>
           </div>
         </div>
@@ -312,7 +311,7 @@ watch(section, (value) => {
               <UiBadge tone="blue">结构化讲义</UiBadge>
             </div>
             <p class="mt-1 text-sm text-fg-secondary">
-              {{ section.code }} · {{ entries.length }} 个大纲考点讲义 · 已精编
+              {{ shortNodeCode(section.code) }} · {{ entries.length }} 个大纲考点讲义 · 已精编
             </p>
 
             <!-- 搜索高亮提示条 -->
@@ -382,7 +381,7 @@ watch(section, (value) => {
                      class="scroll-mt-28 rounded-2xl border border-line-subtle bg-surface-card/60 p-4 sm:p-6">
               <div class="flex flex-wrap items-start justify-between gap-2 border-b border-line-subtle pb-3">
                 <div class="min-w-0">
-                  <p v-if="entry.nodeCode" class="font-mono text-xs font-semibold text-brand">{{ entry.nodeCode }}</p>
+                  <p v-if="entry.nodeCode" class="font-mono text-xs font-semibold text-brand">{{ shortNodeCode(entry.nodeCode) }}</p>
                   <h2 class="mt-0.5 text-lg font-bold text-fg-primary sm:text-xl">{{ entry.nodeName }}</h2>
                 </div>
                 <div class="flex shrink-0 items-center gap-1.5">
@@ -431,12 +430,12 @@ watch(section, (value) => {
             <NuxtLink v-if="prev" :to="`/knowledge/section/${prev.id}`"
                       class="rounded-xl border border-line-subtle bg-surface-card px-4 py-3 hover:border-brand">
               <span class="text-xs text-fg-muted">← 上一节</span>
-              <span class="mt-0.5 block truncate text-sm font-medium text-fg-primary">{{ prev.name }}</span>
+              <span class="mt-0.5 block truncate text-sm font-medium text-fg-primary">{{ shortNodeCode(prev.code) }} {{ prev.name }}</span>
             </NuxtLink>
             <NuxtLink v-if="next" :to="`/knowledge/section/${next.id}`"
                       class="rounded-xl border border-line-subtle bg-surface-card px-4 py-3 text-right hover:border-brand sm:col-start-2">
               <span class="text-xs text-fg-muted">下一节 →</span>
-              <span class="mt-0.5 block truncate text-sm font-medium text-fg-primary">{{ next.name }}</span>
+              <span class="mt-0.5 block truncate text-sm font-medium text-fg-primary">{{ shortNodeCode(next.code) }} {{ next.name }}</span>
             </NuxtLink>
           </nav>
         </template>
@@ -452,7 +451,7 @@ watch(section, (value) => {
                :class="activeGroupId === row.nodeId
                  ? 'border-brand text-brand'
                  : 'border-line-subtle text-fg-muted hover:text-fg-secondary'">
-              <span class="block font-mono text-[10px]">{{ row.number }} · {{ row.code }}</span>
+              <span v-if="row.code" class="block font-mono text-[10px]">{{ row.code }}</span>
               <span class="block text-xs font-medium leading-5">{{ row.name }}</span>
             </a>
           </template>
@@ -465,13 +464,13 @@ watch(section, (value) => {
     <nav class="fixed inset-x-0 bottom-0 z-30 border-t border-line-subtle bg-surface-glass backdrop-blur lg:hidden">
       <div class="mx-auto flex max-w-3xl items-center gap-2 px-3 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
         <NuxtLink v-if="prev" :to="`/knowledge/section/${prev.id}`"
-                  class="flex min-h-11 items-center rounded-lg border border-line-strong px-3 text-xs text-fg-secondary">
+                  class="flex min-h-11 items-center rounded-lg border border-line-strong bg-surface-card text-fg-primary outline-none focus:border-brand px-3 text-xs text-fg-secondary">
           ← 上一节
         </NuxtLink>
         <span v-else class="w-20" />
         <span class="flex-1 text-center text-xs tabular-nums text-fg-muted">阅读 {{ progress }}%</span>
         <NuxtLink v-if="next" :to="`/knowledge/section/${next.id}`"
-                  class="flex min-h-11 items-center rounded-lg border border-line-strong px-3 text-xs text-fg-secondary">
+                  class="flex min-h-11 items-center rounded-lg border border-line-strong bg-surface-card text-fg-primary outline-none focus:border-brand px-3 text-xs text-fg-secondary">
           下一节 →
         </NuxtLink>
         <span v-else class="w-20" />
@@ -486,9 +485,8 @@ watch(section, (value) => {
              class="flex min-h-11 items-start gap-2 rounded-lg px-2 py-2"
              :class="activeGroupId === row.nodeId ? 'bg-brand-soft text-brand-on-soft' : 'text-fg-secondary hover:bg-surface-muted'"
              @click.prevent="jumpToGroup(row.nodeId)">
-            <span class="mt-0.5 w-8 shrink-0 font-mono text-[11px] tabular-nums">{{ row.number }}</span>
             <span class="min-w-0">
-              <span class="block font-mono text-[10px] text-fg-muted">{{ row.code }}</span>
+              <span v-if="row.code" class="block font-mono text-[10px] text-fg-muted">{{ row.code }}</span>
               <span class="block text-sm font-medium">{{ row.name }}</span>
             </span>
           </a>

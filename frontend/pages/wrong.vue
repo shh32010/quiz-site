@@ -103,7 +103,7 @@ async function printPage() {
         </NuxtLink>
         <NuxtLink v-if="data && (data.total - (data.unavailable ?? 0)) > 0"
                   :to="buildWrongPracticeUrl(selectedType, statusFilter, 20)"
-                  class="print:hidden inline-flex min-h-11 items-center rounded-lg border border-line-strong px-4 text-sm font-medium text-fg-secondary hover:border-brand hover:text-brand">
+                  class="print:hidden inline-flex min-h-11 items-center rounded-lg border border-line-strong bg-surface-card text-fg-primary outline-none focus:border-brand px-4 text-sm font-medium text-fg-secondary hover:border-brand hover:text-brand">
           抽测 20 题
         </NuxtLink>
         <UiButton v-if="data" class="print:hidden" variant="secondary" size="md"
@@ -172,7 +172,7 @@ async function printPage() {
     <!-- 打印视图：只在浏览器打印/导出 PDF 时显示 -->
     <div v-if="filteredPrintRows.length" class="hidden print:block">
       <h1 class="text-lg font-bold">错题本</h1>
-      <p class="mt-1 text-xs text-slate-500">共 {{ filteredPrintRows.length }} 题</p>
+      <p class="mt-1 text-xs text-fg-secondary">共 {{ filteredPrintRows.length }} 题</p>
       <ol class="mt-4 space-y-4">
         <li v-for="(row, i) in filteredPrintRows" :key="row.questionId" class="break-inside-avoid">
           <p class="whitespace-pre-wrap text-sm font-medium">{{ i + 1 }}. {{ formatText(row.stem) }}</p>
@@ -180,7 +180,7 @@ async function printPage() {
             {{ k }}. {{ formatText(v) }}
           </p>
           <p class="mt-1 text-sm"><b>正确答案：</b>{{ formatText(row.correct) }}</p>
-          <p v-if="row.analysis" class="mt-1 whitespace-pre-wrap text-sm text-slate-600">
+          <p v-if="row.analysis" class="mt-1 whitespace-pre-wrap text-sm text-fg-secondary">
             <b>解析：</b>{{ formatText(row.analysis) }}
           </p>
         </li>

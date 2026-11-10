@@ -16,8 +16,8 @@ const emit = defineEmits<{
 <template>
   <UiModal :model-value="modelValue" title="确认交卷" size="sm"
            @update:model-value="emit('update:modelValue', $event)">
-    <p class="text-sm leading-6 text-slate-600">
-      <template v-if="info.unanswered">还有 <b class="text-red-600">{{ info.unanswered }}</b> 题未答，未答题按 0 分计入总分。</template>
+    <p class="text-sm leading-6 text-fg-secondary">
+      <template v-if="info.unanswered">还有 <b class="text-danger-fg">{{ info.unanswered }}</b> 题未答，未答题按 0 分计入总分。</template>
       <template v-else>所有题目都已作答，确认交卷？</template>
     </p>
     <template #footer>

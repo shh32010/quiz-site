@@ -33,23 +33,23 @@ onMounted(async () => {
       正在验证…
     </p>
 
-    <div v-else-if="status === 'ok'" class="space-y-3 rounded-xl border border-green-300 bg-green-50 px-4 py-5 text-sm text-green-800">
+    <div v-else-if="status === 'ok'" class="space-y-3 rounded-xl border border-success-border bg-success-bg px-4 py-5 text-sm text-success-fg">
       <p class="font-medium">{{ message }}</p>
       <p>现在可以使用该邮箱登录，也可以在忘记密码时接收重置链接。</p>
       <div class="flex flex-wrap gap-2">
-        <NuxtLink to="/account" class="inline-flex min-h-11 items-center rounded-lg bg-green-700 px-4 text-white">
+        <NuxtLink to="/account" class="inline-flex min-h-11 items-center rounded-lg bg-brand px-4 text-white">
           返回账号设置
         </NuxtLink>
-        <NuxtLink to="/login" class="inline-flex min-h-11 items-center rounded-lg border border-green-300 px-4">
+        <NuxtLink to="/login" class="inline-flex min-h-11 items-center rounded-lg border border-success-border px-4">
           去登录
         </NuxtLink>
       </div>
     </div>
 
-    <div v-else class="space-y-3 rounded-xl border border-red-200 bg-red-50 px-4 py-5 text-sm text-red-700">
+    <div v-else class="space-y-3 rounded-xl border border-danger-border bg-danger-bg px-4 py-5 text-sm text-danger-fg">
       <p class="font-medium">{{ message }}</p>
       <p>如果链接已过期，请到账号设置页重新发送验证邮件。</p>
-      <NuxtLink to="/account" class="inline-flex min-h-11 items-center rounded-lg border border-red-300 px-4">
+      <NuxtLink to="/account" class="inline-flex min-h-11 items-center rounded-lg border border-danger-border px-4">
         返回账号设置
       </NuxtLink>
     </div>

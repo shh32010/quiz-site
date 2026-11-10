@@ -77,51 +77,51 @@ async function submit() {
 
 <template>
   <section class="mx-auto max-w-sm space-y-5">
-    <h1 class="text-2xl font-bold text-slate-900">{{ mode === 'login' ? '登录' : '注册' }}</h1>
+    <h1 class="text-2xl font-bold text-fg-primary">{{ mode === 'login' ? '登录' : '注册' }}</h1>
 
     <p v-if="insecure"
-       class="rounded-lg border border-amber-300 bg-amber-50 px-4 py-2 text-xs text-amber-800">
+       class="rounded-lg border border-warn-border bg-warn-bg px-4 py-2 text-xs text-warn-fg">
        HTTP 明文传输，请不要使用常用密码。
     </p>
 
     <form class="space-y-3" @submit.prevent="submit">
       <input v-model="username" :placeholder="mode === 'login' ? '用户名或邮箱' : '用户名（3-32 位字母数字下划线）'"
              autocomplete="username"
-             class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
+             class="w-full rounded-lg border border-line-strong bg-surface-card text-fg-primary outline-none focus:border-brand px-3 py-2 text-sm" />
 
       <div v-if="mode === 'register'">
         <input v-model="email" type="email" placeholder="邮箱（建议填写，用于找回密码）"
                autocomplete="email"
-               class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
-        <p class="mt-1 text-xs text-slate-400">
+               class="w-full rounded-lg border border-line-strong bg-surface-card text-fg-primary outline-none focus:border-brand px-3 py-2 text-sm" />
+        <p class="mt-1 text-xs text-fg-muted">
           绑定邮箱后，忘记密码可自助重置；也可以稍后在「账号」页绑定。
         </p>
       </div>
 
       <input v-model="password" type="password" placeholder="密码（至少 6 位）"
              :autocomplete="mode === 'login' ? 'current-password' : 'new-password'"
-             class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
+             class="w-full rounded-lg border border-line-strong bg-surface-card text-fg-primary outline-none focus:border-brand px-3 py-2 text-sm" />
 
       <input v-if="mode === 'register'" v-model="confirmPassword" type="password" placeholder="确认密码"
              autocomplete="new-password"
-             class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
+             class="w-full rounded-lg border border-line-strong bg-surface-card text-fg-primary outline-none focus:border-brand px-3 py-2 text-sm" />
 
       <p v-if="warnNoEmail"
-         class="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+         class="rounded-lg border border-warn-border bg-warn-bg px-3 py-2 text-xs text-warn-fg">
         未填写邮箱：忘记密码将无法自助找回，只能联系管理员。确定继续注册吗？
       </p>
-      <p v-if="error" class="text-sm text-red-600">{{ error }}</p>
+      <p v-if="error" class="text-sm text-danger-fg">{{ error }}</p>
 
       <button type="submit" :disabled="loading"
-              class="w-full rounded-lg bg-blue-600 py-2 text-sm font-medium text-white disabled:opacity-50">
+              class="w-full rounded-lg bg-brand py-2 text-sm font-medium text-white disabled:opacity-50">
         {{ loading ? '处理中…' : mode === 'login' ? '登录' : (warnNoEmail ? '不填邮箱，继续注册' : '注册') }}
       </button>
     </form>
 
     <div class="flex items-center justify-between text-sm">
-      <NuxtLink v-if="mode === 'login'" to="/forgot" class="text-slate-500 hover:text-blue-600">忘记密码？</NuxtLink>
+      <NuxtLink v-if="mode === 'login'" to="/forgot" class="text-fg-secondary hover:text-brand">忘记密码？</NuxtLink>
       <span v-else></span>
-      <button class="text-blue-600 hover:underline" @click="mode = mode === 'login' ? 'register' : 'login'">
+      <button class="text-brand hover:underline" @click="mode = mode === 'login' ? 'register' : 'login'">
         {{ mode === 'login' ? '没有账号？去注册' : '已有账号？去登录' }}
       </button>
     </div>

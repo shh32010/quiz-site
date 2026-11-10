@@ -1,6 +1,7 @@
 <script setup lang="ts">
 // 知识点搜索：标题/内容关键词，结果跳到所在节锚点并携带 ?hl= 搜索词高亮
 import { formatText } from '~/composables/format'
+import { shortNodeCode } from '~/utils/knowledge'
 import { highlightText, plainSnippet } from '~/utils/markdown'
 
 useHead({ title: '搜索知识点' })
@@ -28,7 +29,7 @@ const groups = computed(() => {
     if (!map.has(key)) {
       map.set(key, {
         key,
-        label: [row.nodeCode, row.nodeName].filter(Boolean).join(' ') || '其他知识点',
+        label: [shortNodeCode(row.nodeCode), row.nodeName].filter(Boolean).join(' ') || '其他知识点',
         rows: [],
       })
     }
@@ -94,7 +95,7 @@ function searchResultLink(row: any) {
             <li v-for="row in group.rows" :key="row.id">
               <NuxtLink :to="searchResultLink(row)" class="block px-4 py-3 hover:bg-surface-muted">
                 <div class="flex flex-wrap items-center gap-2">
-                  <span v-if="row.nodeCode" class="rounded bg-surface-muted px-1.5 py-0.5 font-mono text-xs text-fg-muted">{{ row.nodeCode }}</span>
+                  <span v-if="row.nodeCode" class="rounded bg-surface-muted px-1.5 py-0.5 font-mono text-xs text-fg-muted">{{ shortNodeCode(row.nodeCode) }}</span>
                   <span class="text-sm font-medium text-fg-primary" v-html="highlightText(formatText(row.title), q)"></span>
                   <span v-if="row.nodeName" class="truncate text-xs text-fg-muted">{{ formatText(row.nodeName) }}</span>
                 </div>
@@ -115,11 +116,11 @@ function searchResultLink(row: any) {
       <div v-if="totalPages > 1" class="flex items-center justify-center gap-2 text-sm">
         <NuxtLink v-if="page > 1"
                   :to="{ path: '/knowledge/search', query: { q, page: page - 1 } }"
-                  class="inline-flex min-h-11 items-center rounded-lg border border-line-strong px-4">上一页</NuxtLink>
+                  class="inline-flex min-h-11 items-center rounded-lg border border-line-strong bg-surface-card text-fg-primary outline-none focus:border-brand px-4">上一页</NuxtLink>
         <span class="text-fg-muted">{{ page }} / {{ totalPages }}</span>
         <NuxtLink v-if="page < totalPages"
                   :to="{ path: '/knowledge/search', query: { q, page: page + 1 } }"
-                  class="inline-flex min-h-11 items-center rounded-lg border border-line-strong px-4">下一页</NuxtLink>
+                  class="inline-flex min-h-11 items-center rounded-lg border border-line-strong bg-surface-card text-fg-primary outline-none focus:border-brand px-4">下一页</NuxtLink>
       </div>
     </template>
   </section>

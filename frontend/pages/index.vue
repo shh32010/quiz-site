@@ -89,11 +89,11 @@ const entries = [
             开始刷题
           </NuxtLink>
           <NuxtLink v-if="!loggedIn" to="/login"
-                    class="inline-flex min-h-11 items-center rounded-lg border border-line-strong px-4 text-sm text-fg-primary hover:border-brand">
+                    class="inline-flex min-h-11 items-center rounded-lg border border-line-strong bg-surface-card text-fg-primary outline-none focus:border-brand px-4 text-sm text-fg-primary hover:border-brand">
             登录 / 注册
           </NuxtLink>
           <NuxtLink v-else to="/report"
-                    class="inline-flex min-h-11 items-center rounded-lg border border-line-strong px-4 text-sm text-fg-primary hover:border-brand">
+                    class="inline-flex min-h-11 items-center rounded-lg border border-line-strong bg-surface-card text-fg-primary outline-none focus:border-brand px-4 text-sm text-fg-primary hover:border-brand">
             我的学习报告
           </NuxtLink>
         </div>

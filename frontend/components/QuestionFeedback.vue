@@ -116,7 +116,7 @@ watch(content, () => {
             已收到，作者会核实处理，感谢你的反馈。
             <span v-if="similarCount > 0">同类题还有 {{ similarCount }} 道，会一并检查。</span>
           </p>
-          <button type="button" class="rounded-lg border border-line-strong px-2.5 py-1 text-xs text-fg-secondary hover:border-brand hover:text-brand"
+          <button type="button" class="rounded-lg border border-line-strong bg-surface-card text-fg-primary outline-none focus:border-brand px-2.5 py-1 text-xs text-fg-secondary hover:border-brand hover:text-brand"
                   @click="again">再反馈一条</button>
           <button type="button" class="rounded-lg px-2.5 py-1 text-xs text-fg-muted hover:text-fg-primary" @click="reset">收起</button>
         </div>

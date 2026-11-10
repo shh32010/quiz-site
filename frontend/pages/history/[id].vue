@@ -54,92 +54,92 @@ onMounted(() => load(1))
 
 <template>
   <section class="space-y-4">
-    <NuxtLink to="/history" class="inline-flex min-h-11 items-center text-sm text-blue-600 hover:underline">← 返回做题历史</NuxtLink>
+    <NuxtLink to="/history" class="inline-flex min-h-11 items-center text-sm text-brand hover:underline">← 返回做题历史</NuxtLink>
 
-    <p v-if="error" class="text-sm text-red-600">{{ error }}</p>
-    <p v-if="loading" class="text-sm text-slate-500">加载中…</p>
+    <p v-if="error" class="text-sm text-danger-fg">{{ error }}</p>
+    <p v-if="loading" class="text-sm text-fg-secondary">加载中…</p>
 
     <template v-if="session">
-      <div class="rounded-xl border border-slate-200 p-4 sm:p-5">
-        <h1 class="break-words text-lg font-bold text-slate-900">
+      <div class="rounded-xl border border-line-subtle bg-surface-card p-4 sm:p-5">
+        <h1 class="break-words text-lg font-bold text-fg-primary">
           {{ MODE_LABEL[session.mode] ?? session.mode }}
-          <span v-if="session.targetName" class="text-slate-500">· {{ session.targetName }}</span>
+          <span v-if="session.targetName" class="text-fg-secondary">· {{ session.targetName }}</span>
         </h1>
-        <p class="mt-1 text-xs text-slate-400">
+        <p class="mt-1 text-xs text-fg-muted">
           {{ fmtTime(session.startedAt) }} · 用时 {{ fmtDur(session.elapsedSec) }}
           · 作答 {{ total }} / {{ session.questionCount }} 题
         </p>
-        <p v-if="session.finishedAt" class="mt-2 text-sm text-slate-700">
-          得分 <b class="text-blue-600">{{ session.score }}</b> / {{ session.totalScore }}
+        <p v-if="session.finishedAt" class="mt-2 text-sm text-fg-primary">
+          得分 <b class="text-brand">{{ session.score }}</b> / {{ session.totalScore }}
         </p>
-        <p v-if="session.paperScore != null" class="mt-1 text-xs text-amber-700">
+        <p v-if="session.paperScore != null" class="mt-1 text-xs text-warn-fg">
           可练满分 {{ session.totalScore }} 分；原卷 {{ session.paperScore }} 分，
           {{ Math.max(0, (session.paperQuestionCount ?? session.questionCount) - session.questionCount) }} 题暂不可练、不计入总分。
         </p>
         <div v-if="!session.finishedAt" class="mt-2 flex items-center gap-3">
-          <p class="text-sm text-amber-600">本次练习尚未结束</p>
+          <p class="text-sm text-warn-fg">本次练习尚未结束</p>
           <NuxtLink :to="`/practice?session=${session.id}`"
-                    class="inline-flex min-h-11 items-center rounded-lg bg-blue-600 px-3.5 text-xs font-medium text-white hover:bg-blue-700">
+                    class="inline-flex min-h-11 items-center rounded-lg bg-brand px-3.5 text-xs font-medium text-white hover:bg-brand-hover">
             继续练习
           </NuxtLink>
         </div>
       </div>
 
       <ul v-if="rows.length" class="space-y-3">
-        <li v-for="a in rows" :key="a.questionId" class="rounded-xl border border-slate-200 p-4">
+        <li v-for="a in rows" :key="a.questionId" class="rounded-xl border border-line-subtle bg-surface-card p-4">
           <div class="flex flex-wrap items-center gap-2 text-xs">
-            <span class="rounded bg-slate-100 px-1.5 py-0.5 text-slate-600">
+            <span class="rounded bg-surface-muted px-1.5 py-0.5 text-fg-secondary">
               {{ TYPE_LABEL[a.questionType] ?? a.questionType }}
             </span>
             <span class="rounded px-1.5 py-0.5"
-                  :class="a.isCorrect ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-600'">
+                  :class="a.isCorrect ? 'bg-success-bg text-success-fg' : 'bg-danger-bg text-danger-fg'">
               {{ a.isCorrect ? '✓ 答对' : '✗ 答错' }}
             </span>
-            <span class="text-slate-400">{{ fmtTime(a.answeredAt) }}</span>
-            <span class="text-slate-400">得分 {{ a.scoreGot }} / {{ a.score }}</span>
+            <span class="text-fg-muted">{{ fmtTime(a.answeredAt) }}</span>
+            <span class="text-fg-muted">得分 {{ a.scoreGot }} / {{ a.score }}</span>
           </div>
 
-          <p class="mt-2 whitespace-pre-wrap break-words text-sm leading-6 text-slate-800">{{ formatText(a.stem) }}</p>
+          <p class="mt-2 whitespace-pre-wrap break-words text-sm leading-6 text-fg-primary">{{ formatText(a.stem) }}</p>
           <div v-if="a.images.length" class="mt-2 flex flex-wrap items-start gap-2">
             <button v-for="(src, i) in a.images" :key="i" type="button"
                     class="cursor-zoom-in" :aria-label="`放大第 ${i + 1} 张题目配图`"
                     @click="openLightbox(a, i)">
               <img :src="src" alt="题目配图"
-                   class="max-h-60 w-auto rounded-lg border border-slate-200 object-contain" />
+                   class="max-h-60 w-auto rounded-lg border border-line-subtle object-contain" />
             </button>
           </div>
 
           <div class="mt-3 grid gap-2 text-sm sm:grid-cols-2">
-            <p class="rounded-lg bg-slate-50 px-3 py-2 break-words text-slate-600">
-              <span class="text-xs text-slate-400">你的答案：</span>
-              <span :class="a.isCorrect ? 'text-green-700' : 'text-red-600'">
+            <p class="rounded-lg bg-surface-muted px-3 py-2 break-words text-fg-secondary">
+              <span class="text-xs text-fg-muted">你的答案：</span>
+              <span :class="a.isCorrect ? 'text-success-fg' : 'text-danger-fg'">
                 {{ formatText(a.userAnswer || '未作答') }}
               </span>
             </p>
-            <p class="rounded-lg bg-green-50 px-3 py-2 break-words text-slate-600">
-              <span class="text-xs text-slate-400">正确答案：</span>
+            <p class="rounded-lg bg-success-bg px-3 py-2 break-words text-fg-secondary">
+              <span class="text-xs text-fg-muted">正确答案：</span>
               {{ formatText(a.correct) }}
             </p>
           </div>
 
           <p v-if="a.qcGrade === 'error'"
-             class="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+             class="mt-2 rounded-lg border border-warn-border bg-warn-bg px-3 py-2 text-xs text-warn-fg">
             本题解析可能不准确，建议结合 AI 讲解或提交报错。
           </p>
           <details v-if="a.analysis" class="mt-2 text-sm">
-            <summary class="cursor-pointer text-xs text-slate-500">查看解析</summary>
-            <p class="mt-2 whitespace-pre-wrap leading-6 text-slate-600">{{ formatText(a.analysis) }}</p>
+            <summary class="cursor-pointer text-xs text-fg-secondary">查看解析</summary>
+            <p class="mt-2 whitespace-pre-wrap leading-6 text-fg-secondary">{{ formatText(a.analysis) }}</p>
           </details>
         </li>
       </ul>
 
-      <p v-else class="rounded-xl border border-slate-200 px-5 py-8 text-center text-sm text-slate-500">
+      <p v-else class="rounded-xl border border-line-subtle bg-surface-card px-5 py-8 text-center text-sm text-fg-secondary">
         本次练习还没有作答记录。
       </p>
 
       <div v-if="totalPages > 1" class="flex items-center justify-center gap-2 text-sm">
         <button v-if="page > 1" class="min-h-11 rounded border px-4 py-1" @click="load(page - 1)">上一页</button>
-        <span class="text-slate-500">{{ page }} / {{ totalPages }}</span>
+        <span class="text-fg-secondary">{{ page }} / {{ totalPages }}</span>
         <button v-if="page < totalPages" class="min-h-11 rounded border px-4 py-1" @click="load(page + 1)">下一页</button>
       </div>
     </template>

@@ -65,9 +65,9 @@ const links = [
         <p class="mt-1 text-sm text-fg-secondary">{{ l.desc }}</p>
       </NuxtLink>
       <NuxtLink v-if="user?.role === 'admin'" to="/admin"
-                class="rounded-xl border border-amber-200 bg-amber-50 p-4 transition hover:border-amber-400">
-        <p class="font-medium text-amber-900">管理后台</p>
-        <p class="mt-1 text-sm text-amber-700">用户、反馈、重置申请</p>
+                class="rounded-xl border border-warn-border bg-warn-bg p-4 transition hover:border-brand">
+        <p class="font-medium text-warn-fg">管理后台</p>
+        <p class="mt-1 text-sm text-fg-secondary">用户、反馈、重置申请</p>
       </NuxtLink>
     </div>
 

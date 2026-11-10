@@ -41,27 +41,27 @@ async function submit() {
 
 <template>
   <section class="mx-auto max-w-md space-y-4">
-    <h1 class="text-2xl font-bold text-slate-900">重置密码</h1>
-    <p v-if="!token" class="rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700">
+    <h1 class="text-2xl font-bold text-fg-primary">重置密码</h1>
+    <p v-if="!token" class="rounded-lg border border-danger-border bg-danger-bg px-3 py-2 text-sm text-danger-fg">
       链接无效：缺少重置令牌。请回到「找回密码」重新申请。
     </p>
 
     <form v-else class="space-y-3" @submit.prevent="submit">
       <input v-model="password" type="password" placeholder="新密码（至少 6 位）" autocomplete="new-password"
-             class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
+             class="w-full rounded-lg border border-line-strong bg-surface-card text-fg-primary outline-none focus:border-brand px-3 py-2 text-sm" />
       <input v-model="confirm" type="password" placeholder="再次输入新密码" autocomplete="new-password"
-             class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
-      <p v-if="error" class="text-sm text-red-600">{{ error }}</p>
-      <p v-if="msg" class="rounded-lg border border-green-300 bg-green-50 px-3 py-2 text-sm text-green-700">{{ msg }}</p>
+             class="w-full rounded-lg border border-line-strong bg-surface-card text-fg-primary outline-none focus:border-brand px-3 py-2 text-sm" />
+      <p v-if="error" class="text-sm text-danger-fg">{{ error }}</p>
+      <p v-if="msg" class="rounded-lg border border-success-border bg-success-bg px-3 py-2 text-sm text-success-fg">{{ msg }}</p>
       <button v-if="!done" type="submit" :disabled="loading"
-              class="w-full rounded-lg bg-blue-600 py-2 text-sm font-medium text-white disabled:opacity-50">
+              class="w-full rounded-lg bg-brand py-2 text-sm font-medium text-white disabled:opacity-50">
         {{ loading ? '提交中…' : '设置新密码' }}
       </button>
-      <NuxtLink v-else to="/login" class="block w-full rounded-lg bg-blue-600 py-2 text-center text-sm font-medium text-white">
+      <NuxtLink v-else to="/login" class="block w-full rounded-lg bg-brand py-2 text-center text-sm font-medium text-white">
         去登录
       </NuxtLink>
     </form>
 
-    <NuxtLink to="/login" class="text-sm text-blue-600 hover:underline">← 返回登录</NuxtLink>
+    <NuxtLink to="/login" class="text-sm text-brand hover:underline">← 返回登录</NuxtLink>
   </section>
 </template>

@@ -17,15 +17,15 @@ const emit = defineEmits<{ exit: []; openSheet: [] }>()
 <template>
   <header class="sticky top-0 z-30 border-b border-line-subtle bg-surface-glass backdrop-blur">
     <div class="mx-auto flex max-w-3xl items-center gap-2 px-3 py-2 sm:max-w-4xl sm:px-4">
-      <button type="button" class="inline-flex min-h-11 shrink-0 items-center rounded-lg px-2.5 py-1.5 text-sm text-slate-500 hover:bg-slate-100 hover:text-slate-800"
+      <button type="button" class="inline-flex min-h-11 shrink-0 items-center rounded-lg px-2.5 py-1.5 text-sm text-fg-secondary hover:bg-surface-muted hover:text-fg-primary"
               @click="emit('exit')">← 退出</button>
       <div class="min-w-0 flex-1">
-        <div class="flex items-center justify-between gap-2 text-xs text-slate-500">
+        <div class="flex items-center justify-between gap-2 text-xs text-fg-secondary">
           <span class="truncate">{{ modeLabel }}</span>
           <span class="shrink-0 tabular-nums">{{ hasQuestion ? currentOrder : 0 }} / {{ total || '—' }}</span>
         </div>
-        <div class="mt-1 h-1 overflow-hidden rounded-full bg-slate-100">
-          <div class="h-full rounded-full bg-blue-600 transition-all" :style="{ width: `${progressPercent}%` }" />
+        <div class="mt-1 h-1 overflow-hidden rounded-full bg-surface-muted">
+          <div class="h-full rounded-full bg-brand transition-all" :style="{ width: `${progressPercent}%` }" />
         </div>
       </div>
       <UiThemeToggle class="shrink-0" />

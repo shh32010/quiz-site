@@ -124,7 +124,7 @@ function reset() {
         {{ loading ? '判分中…' : '提交自测' }}
       </button>
       <button v-else type="button"
-              class="min-h-11 rounded-lg border border-line-strong px-3 text-xs text-fg-secondary hover:border-brand hover:text-brand"
+              class="min-h-11 rounded-lg border border-line-strong bg-surface-card text-fg-primary outline-none focus:border-brand px-3 text-xs text-fg-secondary hover:border-brand hover:text-brand"
               @click="reset">
         重做
       </button>
