@@ -119,7 +119,7 @@ async function loadWeekly() {
               <div class="flex items-center justify-between gap-2 text-xs">
                 <span class="min-w-0 truncate text-fg-secondary">
                   <span class="mr-1 rounded bg-surface-muted px-1 py-0.5 text-fg-muted">{{ s.chapterCode }}</span>
-                  {{ s.sectionCode }} {{ s.sectionName }}
+                  {{ s.sectionCode?.split('-').pop() ?? s.sectionCode }} {{ s.sectionName }}
                 </span>
                 <span class="shrink-0 tabular-nums text-fg-muted">{{ s.correct }}/{{ s.total }}（{{ s.rate }}%）</span>
               </div>
