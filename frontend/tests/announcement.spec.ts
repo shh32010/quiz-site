@@ -26,7 +26,14 @@ describe('announcement daily marker', () => {
     expect(v1).not.toBe(v2)
   })
 
-  it('更新历史条目包含日期和说明', () => {
+  it('公告主条目与更新历史条目均包含日期和说明', () => {
+    expect(ANNOUNCEMENT.date.trim().length).toBeGreaterThan(0)
+    expect(ANNOUNCEMENT.items.length).toBeGreaterThan(0)
+    for (const item of ANNOUNCEMENT.items) {
+      expect(item.date).toMatch(/^\d{4}-\d{2}-\d{2}$/)
+      expect(item.title.trim().length).toBeGreaterThan(0)
+      expect(item.desc.trim().length).toBeGreaterThan(0)
+    }
     expect(ANNOUNCEMENT.history?.length ?? 0).toBeGreaterThan(0)
     for (const item of ANNOUNCEMENT.history ?? []) {
       expect(item.date).toMatch(/^\d{4}-\d{2}-\d{2}$/)

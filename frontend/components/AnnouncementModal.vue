@@ -146,9 +146,10 @@ function onHistoryToggle(event: Event) {
               <span class="mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-lg bg-brand-soft text-[11px] font-bold text-brand-on-soft">
                 {{ index + 1 }}
               </span>
-              <div class="min-w-0">
+              <div class="min-w-0 flex-1">
                 <div class="flex flex-wrap items-center gap-1.5">
                   <span class="rounded bg-surface-muted px-1.5 py-0.5 text-[10px] font-semibold text-fg-muted">{{ item.tag }}</span>
+                  <span v-if="item.date" class="rounded bg-brand-soft/60 px-1.5 py-0.5 font-mono text-[10px] tabular-nums text-brand">{{ item.date }}</span>
                   <p class="text-sm font-semibold text-fg-primary">{{ item.title }}</p>
                 </div>
                 <p class="mt-1 text-xs leading-5 text-fg-secondary">{{ item.desc }}</p>

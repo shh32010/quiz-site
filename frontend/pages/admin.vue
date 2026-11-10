@@ -232,6 +232,20 @@ onMounted(load)
         </div>
 
         <div>
+          <span class="font-medium text-slate-600">公告条目（{{ annForm.items?.length ?? 0 }} 条）</span>
+          <div class="mt-2 max-h-56 space-y-2 overflow-y-auto pr-1">
+            <div v-for="(it, idx) in annForm.items" :key="idx" class="space-y-1.5 rounded-lg border border-slate-200 p-2">
+              <div class="flex flex-wrap items-center gap-1.5">
+                <input v-model="it.tag" placeholder="标签" class="w-16 shrink-0 rounded border border-slate-300 px-2 py-1" />
+                <input v-model="it.date" placeholder="YYYY-MM-DD" class="w-28 shrink-0 rounded border border-slate-300 px-2 py-1 font-mono" />
+                <input v-model="it.title" placeholder="条目标题" class="min-w-0 flex-1 rounded border border-slate-300 px-2 py-1 font-medium" />
+              </div>
+              <input v-model="it.desc" placeholder="条目说明" class="w-full rounded border border-slate-300 px-2 py-1 text-slate-600" />
+            </div>
+          </div>
+        </div>
+
+        <div>
           <div class="flex items-center justify-between">
             <span class="font-medium text-slate-600">更新历史（{{ annForm.history?.length ?? 0 }} 条）</span>
             <button type="button" class="rounded border border-slate-300 px-2 py-1 text-slate-700 hover:border-blue-600 hover:text-blue-600"
