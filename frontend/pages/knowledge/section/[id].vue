@@ -28,7 +28,6 @@ const activeEntryNode = ref<number | null>(null)
 const coreOnly = ref(false)
 const learned = computed(() => learnedSections.value.includes(id.value))
 const highlightKeyword = computed(() => String(route.query.hl ?? '').trim())
-let spy: IntersectionObserver | null = null
 let lastProgressSave = 0
 let lastRemoteSync = 0
 
@@ -62,11 +61,24 @@ const chapters = computed(() => {
 
 useHead(() => ({ title: section.value?.name ? `${section.value.name} · 知识点讲义` : '知识点阅读' }))
 
+let isClickScrolling = false
+let clickScrollTimer: ReturnType<typeof setTimeout> | null = null
+
 function jumpToGroup(nodeId?: number) {
   if (!nodeId) return
   tocOpen.value = false
+  activeEntryNode.value = nodeId
+  isClickScrolling = true
+  if (clickScrollTimer) clearTimeout(clickScrollTimer)
+  clickScrollTimer = setTimeout(() => {
+    isClickScrolling = false
+  }, 800)
+
   nextTick(() => {
-    document.getElementById(`group-${nodeId}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    const el = document.getElementById(`group-${nodeId}`)
+    if (!el) return
+    const top = el.getBoundingClientRect().top + window.scrollY - 85
+    window.scrollTo({ top, behavior: 'smooth' })
   })
 }
 
@@ -96,7 +108,12 @@ const tocRows = computed<TocRow[]>(() => {
   }))
 })
 
-const activeGroupId = computed(() => activeEntryNode.value ?? entries.value[0]?.nodeId ?? null)
+const activeGroupId = computed(() => {
+  if (activeEntryNode.value && tocRows.value.some(r => r.nodeId === activeEntryNode.value)) {
+    return activeEntryNode.value
+  }
+  return tocRows.value[0]?.nodeId ?? null
+})
 
 function readerPath(nodeId?: number) {
   return `/knowledge/section/${id.value}${nodeId ? `#group-${nodeId}` : ''}`
@@ -166,19 +183,44 @@ async function loadPreferences() {
   }
 }
 
-function setupSpy() {
+function updateActiveSection() {
+  if (isClickScrolling) return
   if (typeof window === 'undefined') return
-  spy?.disconnect()
   const elements = [...document.querySelectorAll<HTMLElement>('section[id^="group-"]')]
   if (!elements.length) return
-  activeEntryNode.value = Number(elements[0]!.id.slice(6)) || null
-  spy = new IntersectionObserver((obsEntries) => {
-    const visible = obsEntries
-      .filter(entry => entry.isIntersecting)
-      .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)
-    if (visible[0]) activeEntryNode.value = Number(visible[0].target.id.slice(6)) || null
-  }, { rootMargin: '-100px 0px -60% 0px', threshold: [0, 1] })
-  elements.forEach(element => spy!.observe(element))
+
+  const scrollY = window.scrollY
+  const maxScroll = document.documentElement.scrollHeight - window.innerHeight
+
+  // 1. 靠近页面顶端 (< 90px)，锁定首个考点
+  if (scrollY < 90) {
+    activeEntryNode.value = Number(elements[0]!.id.slice(6)) || null
+    return
+  }
+
+  // 2. 到达页面底端 (< 80px)，锁定最后一个考点
+  if (maxScroll > 0 && scrollY >= maxScroll - 80) {
+    const lastEl = elements[elements.length - 1]!
+    activeEntryNode.value = Number(lastEl.id.slice(6)) || null
+    return
+  }
+
+  // 3. 常规滚动：以视口黄金阅读线 (scrollY + 130px) 检测当前正处于阅读视口的考点
+  const readingLine = scrollY + 130
+  let currentId: number | null = null
+  for (const el of elements) {
+    if (el.offsetTop <= readingLine) {
+      currentId = Number(el.id.slice(6)) || null
+    } else {
+      break
+    }
+  }
+
+  if (currentId) {
+    activeEntryNode.value = currentId
+  } else {
+    activeEntryNode.value = Number(elements[0]!.id.slice(6)) || null
+  }
 }
 
 /** 兼容旧版 #kp-123 锚点：自动定位到所属考纲讲义条目 #group-{nodeId} */
@@ -199,9 +241,13 @@ function resolveLegacyHashInStructuredMode() {
   })
 }
 
+watch(id, () => {
+  activeEntryNode.value = null
+})
+
 watch(entries, async () => {
   await nextTick()
-  setupSpy()
+  updateActiveSection()
   resolveLegacyHashInStructuredMode()
 }, { immediate: true })
 
@@ -209,6 +255,7 @@ function onScroll() {
   const el = document.documentElement
   const max = el.scrollHeight - el.clientHeight
   progress.value = max > 0 ? Math.min(100, Math.round((window.scrollY / max) * 100)) : 0
+  updateActiveSection()
   const now = Date.now()
   if (now - lastProgressSave > 800) {
     lastProgressSave = now
@@ -227,12 +274,14 @@ function onScroll() {
 
 onMounted(() => {
   window.addEventListener('scroll', onScroll, { passive: true })
+  window.addEventListener('resize', updateActiveSection, { passive: true })
   loadPreferences()
   onScroll()
 })
 onUnmounted(() => {
   window.removeEventListener('scroll', onScroll)
-  spy?.disconnect()
+  window.removeEventListener('resize', updateActiveSection)
+  if (clickScrollTimer) clearTimeout(clickScrollTimer)
 })
 
 watch(section, (value) => {
@@ -447,12 +496,13 @@ watch(section, (value) => {
           <p class="mb-2 text-xs font-medium text-fg-muted">本节目录</p>
           <template v-for="row in tocRows" :key="row.key">
             <a :href="`#group-${row.nodeId}`"
-               class="block border-l-2 py-1.5 pl-2"
+               class="block border-l-2 py-1.5 pl-2 transition-all duration-150"
                :class="activeGroupId === row.nodeId
-                 ? 'border-brand text-brand'
-                 : 'border-line-subtle text-fg-muted hover:text-fg-secondary'">
+                 ? 'border-brand font-semibold text-brand bg-brand-soft/20 rounded-r'
+                 : 'border-line-subtle text-fg-muted hover:border-line-strong hover:text-fg-secondary'"
+               @click.prevent="jumpToGroup(row.nodeId)">
               <span v-if="row.code" class="block font-mono text-[10px]">{{ row.code }}</span>
-              <span class="block text-xs font-medium leading-5">{{ row.name }}</span>
+              <span class="block text-xs leading-5">{{ row.name }}</span>
             </a>
           </template>
           <p v-if="!entries.length" class="text-xs text-fg-muted">暂无考点讲义</p>
