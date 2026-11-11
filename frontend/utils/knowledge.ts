@@ -144,7 +144,7 @@ function escapeHtml(text: string): string {
  * 渲染讲义块内的行内标记：
  * - 第一步：转义 HTML 并提取反引号代码放入占位符，保护代码内部原本的 ==、* 等符号
  * - 第二步：转换三色行内标记与加粗：
- *   ==必记==（红）、^^重点^^（绿）、@@难点@@（黄）、**粗体**
+ *   ==核心==（红）、^^重点^^（绿）、@@难点@@（黄）、**粗体**
  * - 第三步：还原行内代码占位符
  * - 第四步：可选搜索关键词高亮 ?hl= -> <mark class="kb-hl">...</mark>
  */
@@ -179,7 +179,7 @@ export function renderInlineMarkup(text: string, highlightKeyword = ''): string 
   return html
 }
 
-/** “只看必记”过滤：保留必记块、提示框（易错陷阱）以及含 `==...==` 必记标记的块 */
+/** “只看核心”过滤：保留核心块、提示框（易错陷阱）以及含 `==...==` 核心标记的块 */
 export function filterKbBlocks(blocks: KbBlock[], coreOnly: boolean): KbBlock[] {
   if (!coreOnly) return blocks
   return (blocks ?? []).filter(block =>
@@ -198,8 +198,8 @@ export function importanceBadgeMeta(imp?: string): {
   borderClass: string
 } {
   const v = (imp ?? '').trim().toLowerCase()
-  if (v === 'core' || v === '必记') {
-    return { label: '必记', tone: 'red', borderClass: 'border-l-danger-fg' }
+  if (v === 'core' || v === '核心') {
+    return { label: '', tone: 'red', borderClass: 'border-l-danger-fg' }
   }
   if (v === 'important' || v === '重点') {
     return { label: '重点', tone: 'amber', borderClass: 'border-l-warn-fg' }

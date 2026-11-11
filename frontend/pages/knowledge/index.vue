@@ -127,7 +127,7 @@ function search() {
     </div>
 
     <p class="text-xs leading-5 text-fg-muted">
-      知识点内容来自考试大纲讲义与题库整理，支持“只看必记”背诵模式；如发现内容缺失或错误，可在刷题页提交题目反馈。
+      知识点内容来自考试大纲讲义与题库整理，如发现内容缺失或错误，可在刷题页提交题目反馈。
     </p>
   </section>
 </template>

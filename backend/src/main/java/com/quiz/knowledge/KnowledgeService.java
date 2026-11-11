@@ -131,7 +131,7 @@ public class KnowledgeService {
                        c.name as "title",
                        p.name as "section",
                        left(r.search_text, 160) as "content",
-                       '必记' as "importance",
+                       '' as "importance",
                        (select count(*)
                           from t_question q
                          where not q.deleted and q.review_status = 'ok' and q.chapter_id = c.id) as "questionCount"
@@ -318,7 +318,7 @@ public class KnowledgeService {
                        c.name as "title",
                        p.name as "section",
                        left(r.search_text, 160) as "content",
-                       '必记' as "importance",
+                       '' as "importance",
                        (select count(*)
                           from t_question q
                          where not q.deleted and q.review_status = 'ok' and q.chapter_id = c.id) as "questionCount"

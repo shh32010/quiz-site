@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// 节阅读器：新版结构化讲义（kb_entry + kb_revision）阅读、三色标记与图例、只看必记、搜索高亮及跨端进度同步
+// 节阅读器：新版结构化讲义（kb_entry + kb_revision）阅读、三色标记与图例、搜索高亮及跨端进度同步
 import { ALL_COURSES } from '~/utils/constants'
 import {
   courseOf,
@@ -25,7 +25,6 @@ const readerFont = ref(17)
 const fontOptions = [15, 17, 19]
 const learnedSections = ref<number[]>([])
 const activeEntryNode = ref<number | null>(null)
-const coreOnly = ref(false)
 const learned = computed(() => learnedSections.value.includes(id.value))
 const highlightKeyword = computed(() => String(route.query.hl ?? '').trim())
 let lastProgressSave = 0
@@ -543,13 +542,6 @@ watch(section, (value) => {
                       @click="toggleLearned">
                 {{ learned ? '✓ 已学' : '标记本节已学' }}
               </button>
-              <button type="button"
-                      class="inline-flex min-h-11 items-center rounded-lg border px-3 transition"
-                      :class="coreOnly ? 'border-danger-border bg-danger-bg text-danger-fg font-medium' : 'border-line-strong text-fg-secondary hover:border-brand hover:text-brand'"
-                      :aria-pressed="coreOnly"
-                      @click="coreOnly = !coreOnly">
-                {{ coreOnly ? '★ 只看必记（已开启）' : '☆ 只看必记' }}
-              </button>
               <NuxtLink :to="practiceReturn()"
                         class="inline-flex min-h-11 items-center rounded-lg border border-brand/30 px-3 text-brand hover:bg-brand-soft">
                 练本节题目
@@ -571,8 +563,8 @@ watch(section, (value) => {
             <div class="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-lg border border-line-subtle bg-surface-muted/50 px-3 py-1.5 text-xs">
               <span class="font-medium text-fg-muted">图例：</span>
               <span class="inline-flex items-center gap-1">
-                <mark class="rounded bg-danger-bg px-1.5 py-0.5 text-[11px] font-semibold text-danger-fg">必记</mark>
-                <span class="text-fg-muted">（核心高频）</span>
+                <mark class="rounded bg-danger-bg px-1.5 py-0.5 text-[11px] font-semibold text-danger-fg">核心</mark>
+                <span class="text-fg-muted">（高频考点）</span>
               </span>
               <span class="inline-flex items-center gap-1">
                 <mark class="rounded bg-success-bg px-1.5 py-0.5 text-[11px] font-semibold text-success-fg underline decoration-success-fg">重点</mark>
@@ -640,7 +632,6 @@ watch(section, (value) => {
               <div class="mt-4">
                 <KnowledgeBlockRenderer
                   :blocks="entry.blocks ?? []"
-                  :core-only="coreOnly"
                   :highlight-keyword="highlightKeyword"
                 />
               </div>
@@ -659,16 +650,10 @@ watch(section, (value) => {
           </article>
 
           <div v-else class="mt-6 rounded-xl border border-line-subtle bg-surface-card px-5 py-8 text-center text-sm text-fg-secondary">
-            <template v-if="coreOnly">
-              本节暂未标记“必记”块。
-              <button type="button" class="ml-1 text-brand hover:underline" @click="coreOnly = false">显示全部内容</button>
-            </template>
-            <template v-else>
-              本节讲义整理中。
-              <NuxtLink :to="`/practice?mode=chapter&target=${section.id}`" class="ml-1 text-brand hover:underline">
-                直接练本节题目
-              </NuxtLink>
-            </template>
+            本节讲义整理中。
+            <NuxtLink :to="`/practice?mode=chapter&target=${section.id}`" class="ml-1 text-brand hover:underline">
+              直接练本节题目
+            </NuxtLink>
           </div>
 
           <nav class="mt-8 grid gap-3 border-t border-line-subtle pt-5 sm:grid-cols-2">

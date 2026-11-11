@@ -49,7 +49,7 @@ describe('knowledge tree utils', () => {
     expect(rootsFor(tree, 'B').map(n => n.code)).toEqual(['B1', 'B3', 'B4'])
   })
 
-  it('renderInlineMarkup 转义 HTML 并渲染必记高亮、行内代码、粗体与搜索词', () => {
+  it('renderInlineMarkup 转义 HTML 并渲染核心高亮、行内代码、粗体与搜索词', () => {
     const html = renderInlineMarkup('包含 `<stdio.h>` 时，**主函数** 是 ==唯一入口==', '入口')
     expect(html).toContain('<code>&lt;stdio.h&gt;</code>')
     expect(html).toContain('<strong>主函数</strong>')
@@ -66,9 +66,9 @@ describe('knowledge tree utils', () => {
     expect(html).toContain('<mark class="kb-hard">难点分析</mark>')
   })
 
-  it('filterKbBlocks 支持只看必记过滤', () => {
+  it('filterKbBlocks 支持只看核心过滤', () => {
     const blocks: KbBlock[] = [
-      { id: 'b1', t: 'list', imp: 'core', items: ['必记要点'] },
+      { id: 'b1', t: 'list', imp: 'core', items: ['核心要点'] },
       { id: 'b2', t: 'code', imp: 'important', code: 'int main(void) { return 0; }' },
       { id: 'b3', t: 'callout', kind: 'trap', text: '易错陷阱' },
       { id: 'b4', t: 'table', imp: 'normal', headers: ['名称', '公式'], rows: [['面积', '==S = a * b==']] },
@@ -79,7 +79,7 @@ describe('knowledge tree utils', () => {
   })
 
   it('importanceBadgeMeta 返回等级标签与左边框样式', () => {
-    expect(importanceBadgeMeta('core').label).toBe('必记')
+    expect(importanceBadgeMeta('core').label).toBe('')
     expect(importanceBadgeMeta('important').label).toBe('重点')
     expect(importanceBadgeMeta('hard').label).toBe('难点')
     expect(importanceBadgeMeta('normal').label).toBe('')

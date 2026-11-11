@@ -141,7 +141,7 @@ test.describe('刷题站核心链路 E2E', () => {
     await expect(page.getByRole('dialog')).toBeVisible()
   })
 
-  test('结构化讲义页 S1-1：统一新版视图、四色图例、只看必记、搜索高亮与移动端无横向溢出', async ({ page }) => {
+  test('结构化讲义页 S1-1：统一新版视图、四色图例、搜索高亮与移动端无横向溢出', async ({ page }) => {
     await page.goto('/knowledge/section/238?hl=main')
     await expect(page.getByText('结构化讲义')).toBeVisible()
     await expect(page.getByText('精编讲义 v2').first()).toBeVisible()
@@ -149,16 +149,6 @@ test.describe('刷题站核心链路 E2E', () => {
     await expect(page.getByText('查看旧版卡片')).toHaveCount(0)
     await expect(page.getByText('已高亮搜索词')).toBeVisible()
 
-    // 验证只看必记切换（expect.toPass 避免 SSR 水合未完成时的点击竞态）
-    const coreBtn = page.getByRole('button', { name: /只看必记/ })
-    await expect(coreBtn).toBeVisible()
-    await expect(async () => {
-      const active = await page.getByRole('button', { name: /只看必记（已开启）/ }).isVisible()
-      if (!active) {
-        await coreBtn.click()
-      }
-      expect(active).toBe(true)
-    }).toPass({ timeout: 5000 })
 
     // 验证全页无横向溢出（360px 移动端宽表自动转为纵向卡片）
     const overflow = await page.evaluate(() =>
