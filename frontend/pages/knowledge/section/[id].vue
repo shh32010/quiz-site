@@ -594,10 +594,6 @@ watch(section, (value) => {
                    id="group-chapter-intro"
                    class="scroll-mt-28 mb-8 rounded-2xl border border-line-subtle bg-surface-card/60 p-4 sm:p-6 shadow-sm">
             <div class="rounded-xl border border-line-subtle border-l-4 border-l-danger bg-surface-card p-3.5 sm:p-4">
-              <div class="mb-2.5 flex flex-wrap items-center justify-between gap-2">
-                <span />
-                <UiBadge tone="red">必记</UiBadge>
-              </div>
               <ul class="kb-prose space-y-2 pl-5 text-fg-secondary list-disc">
                 <li class="font-medium text-fg-primary">
                   {{ currentChapterIntro.courseTitle }}
