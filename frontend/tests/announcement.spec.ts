@@ -39,7 +39,7 @@ describe('announcement daily marker', () => {
       }
     }
     const history = ANNOUNCEMENT.history ?? []
-    expect(history.length).toBe(14)
+    expect(history.length).toBe(15)
     const seenDates = new Set<string>()
     for (let i = 0; i < history.length; i++) {
       const item = history[i]
