@@ -57,14 +57,28 @@ async function copyCode(blockId: string, code?: string) {
   <div class="kb-blocks space-y-4">
     <div v-for="block in visibleBlocks" :key="block.id"
          :id="block.id"
-         class="kb-block rounded-xl border border-line-subtle border-l-4 bg-surface-card p-3.5 sm:p-4"
-         :class="importanceBadgeMeta(block.imp).borderClass">
+         class="kb-block rounded-xl border border-line-subtle border-l-4 bg-surface-card p-3.5 sm:p-4 transition-all"
+         :class="[
+           block.t === 'callout' && block.kind === 'trap'
+             ? 'border-l-danger bg-danger-bg/20 border-danger-border/40'
+             : block.t === 'callout' && block.kind === 'tip'
+               ? 'border-l-brand bg-brand-soft/20 border-brand/30'
+               : importanceBadgeMeta(block.imp).borderClass
+         ]">
       <!-- 块头部：标题与重要度徽标 -->
       <div v-if="block.title || importanceBadgeMeta(block.imp).label"
            class="mb-2.5 flex flex-wrap items-center justify-between gap-2">
-        <h4 v-if="block.title" class="text-sm font-semibold text-fg-primary" v-html="inlineHtml(block.title)" />
+        <h4 v-if="block.title" class="flex items-center gap-1.5 text-sm font-semibold text-fg-primary">
+          <span v-if="block.t === 'callout' && block.kind === 'trap'" class="text-base leading-none">⚠️</span>
+          <span v-else-if="block.t === 'callout' && block.kind === 'tip'" class="text-base leading-none">💡</span>
+          <span v-else-if="block.t === 'callout'" class="text-base leading-none">📌</span>
+          <span v-html="inlineHtml(block.title)" />
+        </h4>
         <span v-else />
-        <UiBadge v-if="importanceBadgeMeta(block.imp).label" :tone="importanceBadgeMeta(block.imp).tone">
+        <UiBadge v-if="block.t === 'callout'" :tone="block.kind === 'trap' ? 'red' : 'blue'">
+          {{ block.kind === 'trap' ? '易错陷阱' : '复习提示' }}
+        </UiBadge>
+        <UiBadge v-else-if="importanceBadgeMeta(block.imp).label" :tone="importanceBadgeMeta(block.imp).tone">
           {{ importanceBadgeMeta(block.imp).label }}
         </UiBadge>
       </div>
@@ -165,11 +179,8 @@ async function copyCode(blockId: string, code?: string) {
       </div>
 
       <!-- 6. 易错/注意提示框 (callout) -->
-      <div v-else-if="block.t === 'callout'"
-           class="rounded-lg border px-3.5 py-2.5 text-xs leading-6 sm:text-sm"
-           :class="calloutClass(block.kind)">
-        <p class="font-semibold">{{ calloutLabel(block.kind) }}</p>
-        <p class="mt-1 text-fg-secondary" v-html="inlineHtml(block.text)" />
+      <div v-else-if="block.t === 'callout'" class="kb-prose text-fg-secondary">
+        <p v-html="inlineHtml(block.text)" />
       </div>
 
       <!-- 7. 配图块 (img) -->
