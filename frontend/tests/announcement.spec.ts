@@ -28,7 +28,9 @@ describe('announcement daily marker', () => {
 
   it('公告主条目与更新历史条目均包含日期和说明，且严格按日期倒序、历史无重复日期', () => {
     expect(ANNOUNCEMENT.date.trim().length).toBeGreaterThan(0)
-    expect(ANNOUNCEMENT.items.length).toBeGreaterThan(0)
+    expect(ANNOUNCEMENT.items.length).toBe(4)
+    expect(ANNOUNCEMENT.items.some(item => item.date === '2026-11-02' && item.title.includes('部署'))).toBe(true)
+    expect(ANNOUNCEMENT.items.some(item => item.date === '2026-10-29' && item.tag === '题库')).toBe(true)
     for (let i = 0; i < ANNOUNCEMENT.items.length; i++) {
       const item = ANNOUNCEMENT.items[i]
       expect(item.date).toMatch(/^\d{4}-\d{2}-\d{2}$/)

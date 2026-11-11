@@ -1,6 +1,6 @@
 # `docs/` 目录索引
 
-**最后整理**：2026-11-10
+**最后整理**：2026-11-11
 
 ---
 
@@ -77,6 +77,7 @@ docs/
 ## 5. 历史一次性数据修复归档（`docs/archive/`）
 
 - **[`archive/20261102-data-fixes/data_write_audit_fix_20261102.sql`](archive/20261102-data-fixes/data_write_audit_fix_20261102.sql)**：2026-11-02 题库四大专项治理（22 组重复题复核合并、229 道题型错标恢复、S1 C 语言 48 `error` + 16 `quarantined` 深复核、X9 47 题与 18 知识点清零）。
+- **[`archive/20261111-announcement/data_write_announcement_20261111.sql`](archive/20261111-announcement/data_write_announcement_20261111.sql)**：2026-11-11 公告卡片固定为 4 条（最新两条 + 部署/题库两条常驻），其余更新只保留在更新历史。
 - **[`archive/20261028-knowledge/`](archive/20261028-knowledge/)**：2026-10-28 全站 124 个章节知识点首轮文本清洗 SQL。
 - **[`archive/202610-data-fixes/`](archive/202610-data-fixes/)**：2026-10-20 至 10-30 期间所有已执行完毕的一次性题目归位、反馈修复、探测账号清理 SQL 与过程目录。
 

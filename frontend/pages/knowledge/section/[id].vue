@@ -480,7 +480,6 @@ watch(section, (value) => {
         </div>
         <button type="button" class="min-h-11 rounded-lg border border-line-strong bg-surface-card text-fg-primary outline-none focus:border-brand px-2 text-xs text-fg-secondary"
                 aria-label="调整字号" @click="cycleFont">Aa {{ readerFont }}</button>
-        <UiThemeToggle class="h-11 w-11 shrink-0 rounded-lg border border-line-strong bg-surface-card text-fg-secondary hover:border-brand hover:text-brand" />
         <button type="button" class="min-h-11 rounded-lg border border-line-strong bg-surface-card text-fg-primary outline-none focus:border-brand px-3 text-xs text-fg-secondary"
                 @click="tocOpen = true">目录</button>
       </div>
@@ -566,7 +565,6 @@ watch(section, (value) => {
                   {{ fontSize }}
                 </button>
               </span>
-              <UiThemeToggle class="min-h-11 min-w-11 shrink-0 rounded-lg border border-line-strong bg-surface-card text-fg-secondary hover:border-brand hover:text-brand" />
             </div>
 
             <!-- 四色图例说明条 -->
