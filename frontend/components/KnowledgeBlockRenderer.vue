@@ -25,6 +25,19 @@ function inlineHtml(text?: string): string {
   return renderInlineMarkup(text ?? '', props.highlightKeyword)
 }
 
+/** 顶层编号缓存：把“1、”与正文拆开，便于只加粗序号 */
+const itemNoCache = new Map<string, { no: string; rest: string } | null>()
+
+/** 拆分顶层“1、”序号；子项（（1）、①、）返回 null */
+function itemParts(item: string): { no: string; rest: string } | null {
+  const key = item ?? ''
+  if (itemNoCache.has(key)) return itemNoCache.get(key) ?? null
+  const m = /^(\d+、)\s*/.exec(key)
+  const parts = m ? { no: m[1], rest: key.slice(m[0].length) } : null
+  itemNoCache.set(key, parts)
+  return parts
+}
+
 function openImage(src?: string) {
   if (!src) return
   lightboxImages.value = [src]
@@ -126,7 +139,13 @@ async function copyCode(blockId: string, code?: string) {
                    v-else-if="block.t === 'list'"
                    class="kb-prose space-y-1.5 pl-5 text-fg-secondary"
                    :class="block.ordered ? 'list-decimal' : 'list-disc'">
-          <li v-for="(item, idx) in block.items ?? []" :key="idx" v-html="inlineHtml(item)" />
+          <li v-for="(item, idx) in block.items ?? []" :key="idx">
+            <!-- 顶层“1、”序号统一加粗，其余内容按原有行内标记渲染 -->
+            <template v-if="itemParts(item)">
+              <strong class="kb-item-no">{{ itemParts(item)!.no }}</strong><span v-html="inlineHtml(itemParts(item)!.rest)" />
+            </template>
+            <span v-else v-html="inlineHtml(item)" />
+          </li>
         </component>
 
         <!-- 3. 表格块 (table)：宽表在 <640px 自动转为纵向堆叠卡片，消除横向滚动 -->
