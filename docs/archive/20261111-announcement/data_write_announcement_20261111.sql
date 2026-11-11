@@ -31,6 +31,7 @@ update site_announcement
     "desc": "题库与讲义来源于公开复习资料 PDF，经 MinerU 与 PyMuPDF 提取后，由多模型协同完成精读、清洗、去重与编译校验，并补全答案解析与结构化排版。"
   }
 ]$json$::jsonb,
+       footnote = '本站内容仅用于学习交流。如涉及版权或题目勘误，可通过「我的 → 联系作者」反馈。公告仅在版本更新时提示一次；关闭后可从页脚「站内公告」再次查看。',
        updated_at = now()
  where id = 1;
 
