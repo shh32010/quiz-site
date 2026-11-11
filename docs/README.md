@@ -80,6 +80,7 @@ docs/
 - **[`archive/20261111-announcement/data_write_announcement_20261111.sql`](archive/20261111-announcement/data_write_announcement_20261111.sql)**：2026-11-11 公告卡片固定为 4 条（最新两条 + 部署/题库两条常驻），其余更新只保留在更新历史。
 - **[`archive/20261111-renumber/data_write_kb_renumber_20261111.sql`](archive/20261111-renumber/data_write_kb_renumber_20261111.sql)**：2026-11-11 知识库 92 篇首号非 1 的讲义按“目”重排顶层序号；旧 revision 保留。
 - **[`archive/20261111-kb-image-position/data_write_kb_image_position_20261111.sql`](archive/20261111-kb-image-position/data_write_kb_image_position_20261111.sql)**：2026-11-11 node 40（A1-1.1.1）第 7 项“如下图所示：”后紧接配图，后续编号项移到图片下方。
+- **[`archive/20261111-kb-move-items/data_write_kb_move_items_20261111.sql`](archive/20261111-kb-move-items/data_write_kb_move_items_20261111.sql)**：2026-11-11 A1-1.1.2 保留第 1–7 项；第 8 项总线（改写通顺）及第 9–14 项移到 A1-1.1.3，并与总线子项合并。
 - **[`archive/20261028-knowledge/`](archive/20261028-knowledge/)**：2026-10-28 全站 124 个章节知识点首轮文本清洗 SQL。
 - **[`archive/202610-data-fixes/`](archive/202610-data-fixes/)**：2026-10-20 至 10-30 期间所有已执行完毕的一次性题目归位、反馈修复、探测账号清理 SQL 与过程目录。
 
