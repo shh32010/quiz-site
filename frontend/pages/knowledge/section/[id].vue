@@ -59,13 +59,71 @@ const chapters = computed(() => {
   return [...groups.values()]
 })
 
+interface ChapterIntroConfig {
+  title: string
+  score: string
+  scoreHighlight: string
+  chapterName: string
+}
+
+const CHAPTER_INTRO_MAP: Record<string, ChapterIntroConfig> = {
+  S1: { title: '技能一：C 语言程序设计', score: '考试分值约占 30%（24 分）', scoreHighlight: '24 分', chapterName: 'C 语言程序设计' },
+  S2: { title: '技能二：数据库（MySQL）', score: '考试分值约占 20%（16 分）', scoreHighlight: '16 分', chapterName: '数据库（MySQL）' },
+  S3: { title: '技能三：UML 建模', score: '考试分值约占 10%（8 分）', scoreHighlight: '8 分', chapterName: 'UML 建模' },
+  S4: { title: '技能四：局域网搭建（局域网组建）', score: '考试分值约占 10%（8 分）', scoreHighlight: '8 分', chapterName: '局域网搭建' },
+  S5: { title: '技能五：操作系统配置与管理（Windows 10）', score: '考试分值约占 15%（12 分）', scoreHighlight: '12 分', chapterName: '操作系统配置与管理（Windows 10）' },
+  S6: { title: '技能六：Linux 配置与管理（CentOS7）', score: '考试分值约占 15%（12 分）', scoreHighlight: '12 分', chapterName: 'Linux 配置与管理（CentOS7）' },
+  A1: { title: '课程A：计算机应用基础（理论考试约占 60%，90 分）', score: '第一章 计算机硬件基础', scoreHighlight: '90 分', chapterName: '第一章 计算机硬件' },
+  A2: { title: '课程A：计算机应用基础（理论考试约占 60%，90 分）', score: '第二章 计算机软件与操作系统', scoreHighlight: '90 分', chapterName: '第二章 计算机软件' },
+  A3: { title: '课程A：计算机应用基础（理论考试约占 60%，90 分）', score: '第三章 计算机网络与互联网', scoreHighlight: '90 分', chapterName: '第三章 计算机网络与互联网' },
+  A4: { title: '课程A：计算机应用基础（理论考试约占 60%，90 分）', score: '第四章 数字媒体与多媒体技术', scoreHighlight: '90 分', chapterName: '第四章 多媒体技术' },
+  B1: { title: '课程B：信息技术导论（理论考试约占 40%，60 分）', score: '第一章 信息和信息系统', scoreHighlight: '60 分', chapterName: '第一章 信息和信息系统' },
+  B2: { title: '课程B：信息技术导论（理论考试约占 40%，60 分）', score: '第二章 物联网技术', scoreHighlight: '60 分', chapterName: '第二章 物联网技术' },
+  B3: { title: '课程B：信息技术导论（理论考试约占 40%，60 分）', score: '第三章 移动互联网技术', scoreHighlight: '60 分', chapterName: '第三章 移动互联网技术' },
+  B4: { title: '课程B：信息技术导论（理论考试约占 40%，60 分）', score: '第四章 云计算技术', scoreHighlight: '60 分', chapterName: '第四章 云计算技术' },
+  B5: { title: '课程B：信息技术导论（理论考试约占 40%，60 分）', score: '第五章 大数据技术', scoreHighlight: '60 分', chapterName: '第五章 大数据技术' },
+  B6: { title: '课程B：信息技术导论（理论考试约占 40%，60 分）', score: '第六章 人工智能技术', scoreHighlight: '60 分', chapterName: '第六章 人工智能技术' },
+  B7: { title: '课程B：信息技术导论（理论考试约占 40%，60 分）', score: '第七章 区块链技术', scoreHighlight: '60 分', chapterName: '第七章 区块链技术' },
+}
+
+const chapterPrefix = computed<string>(() => {
+  const code = String(section.value?.code ?? '')
+  const m = code.match(/^([AB]\d|S\d)/)
+  if (m) return m[1]
+  const chCode = String(section.value?.chapterCode ?? '')
+  const m2 = chCode.match(/^([AB]\d|S\d)/)
+  return m2 ? m2[1] : chCode
+})
+
+const isChapterFirstSection = computed<boolean>(() => {
+  if (!section.value) return false
+  const curChId = section.value.chapterId
+  const curChCode = section.value.chapterCode
+  const secs = courseSections.value.filter(s => s.chapterId === curChId || s.chapterCode === curChCode)
+  if (secs.length > 0 && secs[0].id === id.value) {
+    return true
+  }
+  const firstSectionCodes = [
+    'A1-1.1', 'A2-2.1', 'A3-3.1', 'A4-4.1',
+    'B1-1.1', 'B2-2.1', 'B3-3.1', 'B4-4.1', 'B5-5.1', 'B6-6.1', 'B7-7.1',
+    'S1-1', 'S2-1', 'S3-1', 'S4-1', 'S5-1', 'S6-1'
+  ]
+  return firstSectionCodes.includes(section.value.code)
+})
+
+const currentChapterIntro = computed(() => {
+  if (!isChapterFirstSection.value) return null
+  return CHAPTER_INTRO_MAP[chapterPrefix.value] ?? null
+})
+
+
 useHead(() => ({ title: section.value?.name ? `${section.value.name} · 知识点讲义` : '知识点阅读' }))
 
 let isClickScrolling = false
 let clickScrollTimer: ReturnType<typeof setTimeout> | null = null
 
 function jumpToGroup(nodeId?: number) {
-  if (!nodeId) return
+  if (nodeId === undefined || nodeId === null) return
   tocOpen.value = false
   activeEntryNode.value = nodeId
   isClickScrolling = true
@@ -75,7 +133,8 @@ function jumpToGroup(nodeId?: number) {
   }, 800)
 
   nextTick(() => {
-    const el = document.getElementById(`group-${nodeId}`)
+    const targetId = nodeId === -999 ? 'group-chapter-intro' : `group-${nodeId}`
+    const el = document.getElementById(targetId)
     if (!el) return
     const top = el.getBoundingClientRect().top + window.scrollY - 85
     window.scrollTo({ top, behavior: 'smooth' })
@@ -98,14 +157,28 @@ interface TocRow {
 }
 
 const tocRows = computed<TocRow[]>(() => {
-  return entries.value.map(entry => ({
-    kind: 'group',
-    key: `group-${entry.nodeId}`,
-    nodeId: entry.nodeId,
-    count: entry.blocks?.length ?? 0,
-    code: shortNodeCode(entry.nodeCode ?? section.value?.code ?? ''),
-    name: stripLeadingNumber(entry.nodeName ?? ''),
-  }))
+  const rows: TocRow[] = []
+  if (currentChapterIntro.value) {
+    rows.push({
+      kind: 'group',
+      key: 'group-chapter-intro',
+      nodeId: -999,
+      count: 1,
+      code: '导读',
+      name: '本章考情与教程说明',
+    })
+  }
+  for (const entry of entries.value) {
+    rows.push({
+      kind: 'group',
+      key: `group-${entry.nodeId}`,
+      nodeId: entry.nodeId,
+      count: entry.blocks?.length ?? 0,
+      code: shortNodeCode(entry.nodeCode ?? section.value?.code ?? ''),
+      name: stripLeadingNumber(entry.nodeName ?? ''),
+    })
+  }
+  return rows
 })
 
 const activeGroupId = computed(() => {
@@ -192,16 +265,17 @@ function updateActiveSection() {
   const scrollY = window.scrollY
   const maxScroll = document.documentElement.scrollHeight - window.innerHeight
 
-  // 1. 靠近页面顶端 (< 90px)，锁定首个考点
+  // 1. 靠近页面顶端 (< 90px)，锁定首个条目（导读卡片或首个考点）
   if (scrollY < 90) {
-    activeEntryNode.value = Number(elements[0]!.id.slice(6)) || null
+    const firstEl = elements[0]!
+    activeEntryNode.value = firstEl.id === 'group-chapter-intro' ? -999 : (Number(firstEl.id.slice(6)) || null)
     return
   }
 
   // 2. 到达页面底端 (< 80px)，锁定最后一个考点
   if (maxScroll > 0 && scrollY >= maxScroll - 80) {
     const lastEl = elements[elements.length - 1]!
-    activeEntryNode.value = Number(lastEl.id.slice(6)) || null
+    activeEntryNode.value = lastEl.id === 'group-chapter-intro' ? -999 : (Number(lastEl.id.slice(6)) || null)
     return
   }
 
@@ -210,16 +284,17 @@ function updateActiveSection() {
   let currentId: number | null = null
   for (const el of elements) {
     if (el.offsetTop <= readingLine) {
-      currentId = Number(el.id.slice(6)) || null
+      currentId = el.id === 'group-chapter-intro' ? -999 : (Number(el.id.slice(6)) || null)
     } else {
       break
     }
   }
 
-  if (currentId) {
+  if (currentId !== null) {
     activeEntryNode.value = currentId
   } else {
-    activeEntryNode.value = Number(elements[0]!.id.slice(6)) || null
+    const firstEl = elements[0]!
+    activeEntryNode.value = firstEl.id === 'group-chapter-intro' ? -999 : (Number(firstEl.id.slice(6)) || null)
   }
 }
 
@@ -424,7 +499,39 @@ watch(section, (value) => {
             </div>
           </header>
 
-          <!-- 结构化讲义阅读器 -->
+          <!-- 独立置顶：本章官方考情分值与教程说明（在考点标题之上，独立一块） -->
+          <section v-if="currentChapterIntro"
+                   id="group-chapter-intro"
+                   class="scroll-mt-28 mb-8 rounded-2xl border border-line-subtle bg-surface-card/60 p-4 sm:p-6 shadow-sm">
+            <div class="rounded-xl border border-line-subtle border-l-4 border-l-danger bg-surface-card p-3.5 sm:p-4">
+              <div class="mb-2.5 flex flex-wrap items-center justify-between gap-2">
+                <span />
+                <UiBadge tone="red">必记</UiBadge>
+              </div>
+              <ul class="kb-prose space-y-1.5 pl-5 text-fg-secondary list-disc">
+                <li class="font-medium text-fg-primary">{{ currentChapterIntro.title }}</li>
+                <li>
+                  {{ currentChapterIntro.score.split(currentChapterIntro.scoreHighlight)[0] }}
+                  <span class="rounded bg-danger-bg px-1.5 py-0.5 font-semibold text-danger-fg">
+                    {{ currentChapterIntro.scoreHighlight }}
+                  </span>
+                  {{ currentChapterIntro.score.split(currentChapterIntro.scoreHighlight)[1] || '' }}
+                </li>
+                <li class="font-medium text-fg-primary">教程说明：</li>
+                <li class="list-none pl-1">
+                  <ul class="space-y-1.5 pl-4 list-disc">
+                    <li><span class="rounded bg-danger-bg px-1.5 py-0.5 text-xs font-semibold text-danger-fg">红色字体：核心高频（必需熟记）</span></li>
+                    <li><span class="rounded bg-success-bg px-1.5 py-0.5 text-xs font-semibold text-success-fg underline decoration-success-fg">绿色字体：重点内容（必需熟悉）</span></li>
+                    <li><span class="rounded bg-warn-bg px-1.5 py-0.5 text-xs font-semibold text-warn-fg">黄色字体：难点内容（尽量掌握）</span></li>
+                    <li>黑色字体：常规内容（必需了解）</li>
+                    <li>蓝等字体：代码关键字等相关内容</li>
+                  </ul>
+                </li>
+              </ul>
+            </div>
+          </section>
+
+          <!-- 结构化讲义阅读器（各考点标题在独立卡片下方） -->
           <article v-if="entries.length" class="mt-4 space-y-8" :style="{ '--reader-fs': `${readerFont}px` }">
             <section v-for="entry in entries" :id="`group-${entry.nodeId}`" :key="entry.nodeId"
                      class="scroll-mt-28 rounded-2xl border border-line-subtle bg-surface-card/60 p-4 sm:p-6">
