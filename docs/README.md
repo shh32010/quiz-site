@@ -82,6 +82,7 @@ docs/
 - **[`archive/20261111-kb-image-position/data_write_kb_image_position_20261111.sql`](archive/20261111-kb-image-position/data_write_kb_image_position_20261111.sql)**：2026-11-11 node 40（A1-1.1.1）第 7 项“如下图所示：”后紧接配图，后续编号项移到图片下方。
 - **[`archive/20261111-kb-move-items/data_write_kb_move_items_20261111.sql`](archive/20261111-kb-move-items/data_write_kb_move_items_20261111.sql)**：2026-11-11 A1-1.1.2 保留第 1–7 项；第 8 项总线（按 PDF 原文）及第 9–14 项移到 A1-1.1.3，并与总线子项合并。
 - **[`archive/20261111-kb-address-bus/data_write_kb_address_bus_20261111.sql`](archive/20261111-kb-address-bus/data_write_kb_address_bus_20261111.sql)**：2026-11-11 恢复第 8 项总线原文，合并地址总线 2^16/2^20 示例并删除 OCR 残片。
+- **[`archive/20261111-kb-reclass/`](archive/20261111-kb-reclass/)**：2026-11-11 知识点 1.1–1.3 精修：1.1.2/1.1.3/1.1.4 与 1.2.1/1.2.2 按节标题重新归类去重，1.3.1–1.3.4 重建并校正配图位置；含各类分行与标记修正 SQL 及回滚说明。
 - **[`archive/20261028-knowledge/`](archive/20261028-knowledge/)**：2026-10-28 全站 124 个章节知识点首轮文本清洗 SQL。
 - **[`archive/202610-data-fixes/`](archive/202610-data-fixes/)**：2026-10-20 至 10-30 期间所有已执行完毕的一次性题目归位、反馈修复、探测账号清理 SQL 与过程目录。
 
