@@ -173,6 +173,8 @@ const MATH_COMMANDS: Record<string, { text: string; kind: 'op' | 'delim' | 'bin'
   neq: { text: '≠', kind: 'bin' },
   approx: { text: '≈', kind: 'bin' },
   equiv: { text: '≡', kind: 'bin' },
+  sim: { text: '~', kind: 'bin' },
+  bmod: { text: 'mod', kind: 'bin' },
   to: { text: '→', kind: 'bin' },
   rightarrow: { text: '→', kind: 'bin' },
   Rightarrow: { text: '⇒', kind: 'bin' },
@@ -312,6 +314,9 @@ export function formatMathExpression(escapedExpr: string): string {
           nextUnary: MATH_OPEN_DELIMS.has(escapedChar),
         }
       }
+      if (escapedChar === '%') {
+        return { html: '<span class="kb-math-bin">%</span>', nextUnary: true }
+      }
       return { html: escapedChar, nextUnary: false }
     }
 
@@ -319,7 +324,7 @@ export function formatMathExpression(escapedExpr: string): string {
     const numMatch = src.slice(pos).match(/^[0-9]+(?:\.[0-9]+)?/)
     if (numMatch) {
       pos += numMatch[0].length
-      return { html: numMatch[0], nextUnary: false }
+      return { html: `<span class="kb-math-num">${numMatch[0]}</span>`, nextUnary: false }
     }
 
     // 英文字母：已知函数名（如无反斜杠的 log）保持正体，其余按数学变量斜体渲染
@@ -349,8 +354,8 @@ export function formatMathExpression(escapedExpr: string): string {
       const cls = expectUnary ? 'kb-math-unary' : 'kb-math-bin'
       return { html: `<span class="${cls}">${glyph}</span>`, nextUnary: true }
     }
-    if (ch === '=' || ch === '/' || ch === '×' || ch === '÷' || ch === '≤' || ch === '≥' || ch === '≠') {
-      return { html: `<span class="kb-math-bin">${ch}</span>`, nextUnary: true }
+    if (ch === '=' || ch === '/' || ch === '×' || ch === '÷' || ch === '≤' || ch === '≥' || ch === '≠' || ch === '~' || ch === '～') {
+      return { html: `<span class="kb-math-bin">${ch === '～' ? '~' : ch}</span>`, nextUnary: true }
     }
     if (ch === ',' || ch === ';' || ch === ':') {
       return { html: `<span class="kb-math-punct">${ch}</span>`, nextUnary: true }

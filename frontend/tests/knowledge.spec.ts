@@ -71,6 +71,14 @@ describe('knowledge tree utils', () => {
     const fracHtml = renderInlineMarkup('比较次数最多 \\(\\frac{n(n-1)}{2}\\) 次，满二叉树节点 \\(2^k - 1\\)')
     expect(fracHtml).toContain('class="kb-math-frac"')
     expect(fracHtml).toContain('<sup><var>k</var></sup>')
+
+    const extHtml = renderInlineMarkup(
+      '\\(\\log_2 16 = 4\\)，范围 \\(-2^{n-1} \\sim 2^{n-1} - 1\\)，取模 \\((m + \\text{rear} - \\text{front}) \\% m\\)，采样 \\(f_s \\ge 2 \\times f_{\\max}\\)',
+    )
+    expect(extHtml).toContain('<sub>2</sub><span class="kb-math-num">16</span>')
+    expect(extHtml).toContain('<span class="kb-math-bin">~</span>')
+    expect(extHtml).toContain('<span class="kb-math-bin">%</span>')
+    expect(extHtml).toContain('<sub><span class="kb-math-op">max</span></sub>')
   })
 
   it('renderInlineMarkup 公式解析不误伤 shell $、代码反引号、三色标记、搜索高亮与 XSS', () => {

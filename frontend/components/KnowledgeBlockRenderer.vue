@@ -312,12 +312,20 @@ async function copyCode(blockId: string, code?: string) {
 }
 .kb-block :deep(.kb-math sub + var),
 .kb-callout :deep(.kb-math sub + var),
+.kb-block :deep(.kb-math sub + .kb-math-num),
+.kb-callout :deep(.kb-math sub + .kb-math-num),
 .kb-block :deep(.kb-math sup + var),
 .kb-callout :deep(.kb-math sup + var),
+.kb-block :deep(.kb-math sup + .kb-math-num),
+.kb-callout :deep(.kb-math sup + .kb-math-num),
 .kb-block :deep(.kb-math .kb-math-op + var),
 .kb-callout :deep(.kb-math .kb-math-op + var),
+.kb-block :deep(.kb-math .kb-math-op + .kb-math-num),
+.kb-callout :deep(.kb-math .kb-math-op + .kb-math-num),
 .kb-block :deep(.kb-math var + .kb-math-op),
-.kb-callout :deep(.kb-math var + .kb-math-op) {
+.kb-callout :deep(.kb-math var + .kb-math-op),
+.kb-block :deep(.kb-math .kb-math-num + .kb-math-op),
+.kb-callout :deep(.kb-math .kb-math-num + .kb-math-op) {
   margin-left: 0.16em;
 }
 .kb-block :deep(.kb-math .kb-math-bin),
