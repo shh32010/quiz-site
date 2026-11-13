@@ -209,3 +209,71 @@ export function importanceBadgeMeta(imp?: string): {
   }
   return { label: '', tone: 'slate', borderClass: 'border-l-line-strong' }
 }
+
+/** 导读卡片在目录和锚点解析中的保留虚拟节点 ID */
+export const CHAPTER_INTRO_NODE_ID = -999
+
+/** 解析考纲条目的 DOM id（如 `group-76` / `group-chapter-intro`）为数字节点 ID */
+export function parseSectionAnchorId(domId: string): number | null {
+  if (domId === 'group-chapter-intro') return CHAPTER_INTRO_NODE_ID
+  if (!domId.startsWith('group-')) return null
+  const num = Number(domId.slice(6))
+  return Number.isInteger(num) && num > 0 ? num : null
+}
+
+export interface TocAnchorPosition {
+  nodeId: number
+  /** 元素相对当前视口顶部的距离（通常为 getBoundingClientRect().top） */
+  top: number
+}
+
+export interface ActiveTocScrollMetrics {
+  scrollY: number
+  scrollHeight: number
+  innerHeight: number
+  /** 视口黄金阅读线距离视口顶部的像素偏移（默认 130px） */
+  readingOffset?: number
+}
+
+/** 根据各考纲条目相对视口顶部的实时位置与页面首尾边界，返回唯一应当高亮的节点 ID */
+export function resolveActiveTocNodeId(
+  items: TocAnchorPosition[],
+  metrics: ActiveTocScrollMetrics,
+): number | null {
+  if (!items.length) return null
+  const firstId = items[0]!.nodeId
+  const lastId = items[items.length - 1]!.nodeId
+
+  if (metrics.scrollY < 90) return firstId
+
+  const maxScroll = metrics.scrollHeight - metrics.innerHeight
+  if (maxScroll > 0 && metrics.scrollY >= maxScroll - 80) return lastId
+
+  const readingOffset = metrics.readingOffset ?? 130
+  let currentId: number | null = null
+  for (const item of items) {
+    if (item.top <= readingOffset) {
+      currentId = item.nodeId
+    } else {
+      break
+    }
+  }
+  return currentId ?? firstId
+}
+
+/**
+ * 计算目录当前展示的激活节点 ID。
+ * 注意：未完成客户端挂载（hydrated=false）前统一返回 null，确保 SSR HTML 与初次水合 VNode 的 class 完全一致，
+ * 避免水合期间第 1 项保留 SSR 激活样式并在滚动后与新激活项同时高亮（双焦点）。
+ */
+export function resolveDisplayActiveGroupId(
+  activeNodeId: number | null,
+  tocNodeIds: number[],
+  hydrated: boolean,
+): number | null {
+  if (!hydrated || !tocNodeIds.length) return null
+  if (activeNodeId !== null && tocNodeIds.includes(activeNodeId)) {
+    return activeNodeId
+  }
+  return tocNodeIds[0] ?? null
+}

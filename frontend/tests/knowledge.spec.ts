@@ -4,7 +4,10 @@ import {
   filterKbBlocks,
   flattenSections,
   importanceBadgeMeta,
+  parseSectionAnchorId,
   renderInlineMarkup,
+  resolveActiveTocNodeId,
+  resolveDisplayActiveGroupId,
   rootsFor,
   type KbBlock,
   type KNode,
@@ -83,5 +86,48 @@ describe('knowledge tree utils', () => {
     expect(importanceBadgeMeta('important').label).toBe('重点')
     expect(importanceBadgeMeta('hard').label).toBe('难点')
     expect(importanceBadgeMeta('normal').label).toBe('')
+  })
+
+  it('parseSectionAnchorId 正确解析章节导读与考点锚点', () => {
+    expect(parseSectionAnchorId('group-chapter-intro')).toBe(-999)
+    expect(parseSectionAnchorId('group-76')).toBe(76)
+    expect(parseSectionAnchorId('group-0')).toBeNull()
+    expect(parseSectionAnchorId('other-76')).toBeNull()
+  })
+
+  it('resolveActiveTocNodeId 根据视口阅读线与首尾边界返回唯一当前小节', () => {
+    const items = [
+      { nodeId: 74, top: -3200 },
+      { nodeId: 75, top: -1800 },
+      { nodeId: 76, top: -400 },
+      { nodeId: 77, top: 80 },
+      { nodeId: 78, top: 960 },
+    ]
+    // 1. 接近顶部时锁定首个条目
+    expect(resolveActiveTocNodeId(items, { scrollY: 40, scrollHeight: 8000, innerHeight: 900 })).toBe(74)
+    // 2. 中间滚动时命中最后一个 top <= 130 的条目（模拟刷新直接停在 77 附近）
+    expect(resolveActiveTocNodeId(items, { scrollY: 3600, scrollHeight: 8000, innerHeight: 900 })).toBe(77)
+    // 3. 向上回滚使 77 移出阅读线、76 成为最后一个 top <= 130 的条目
+    expect(resolveActiveTocNodeId([
+      { nodeId: 74, top: -2200 },
+      { nodeId: 75, top: -800 },
+      { nodeId: 76, top: -50 },
+      { nodeId: 77, top: 260 },
+      { nodeId: 78, top: 1140 },
+    ], { scrollY: 2600, scrollHeight: 8000, innerHeight: 900 })).toBe(76)
+    // 4. 接近底部时锁定最后一个条目
+    expect(resolveActiveTocNodeId(items, { scrollY: 7050, scrollHeight: 8000, innerHeight: 900 })).toBe(78)
+  })
+
+  it('resolveDisplayActiveGroupId 在 SSR 与初次水合前返回 null 以避免首个目录焦点残留', () => {
+    const tocIds = [74, 75, 76, 77, 78]
+    // 未完成挂载前始终返回 null，保证 SSR 与客户端水合 DOM class 完全一致
+    expect(resolveDisplayActiveGroupId(null, tocIds, false)).toBeNull()
+    expect(resolveDisplayActiveGroupId(77, tocIds, false)).toBeNull()
+    // 挂载后优先返回精确命中的节点，否则回退首项
+    expect(resolveDisplayActiveGroupId(77, tocIds, true)).toBe(77)
+    expect(resolveDisplayActiveGroupId(999, tocIds, true)).toBe(74)
+    expect(resolveDisplayActiveGroupId(null, tocIds, true)).toBe(74)
+    expect(resolveDisplayActiveGroupId(null, [], true)).toBeNull()
   })
 })

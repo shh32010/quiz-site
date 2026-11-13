@@ -4,6 +4,9 @@ import { ALL_COURSES } from '~/utils/constants'
 import {
   courseOf,
   flattenSections,
+  parseSectionAnchorId,
+  resolveActiveTocNodeId,
+  resolveDisplayActiveGroupId,
   shortNodeCode,
   stripLeadingNumber,
   type KbEntry,
@@ -25,6 +28,9 @@ const readerFont = ref(17)
 const fontOptions = [15, 17, 19]
 const learnedSections = ref<number[]>([])
 const activeEntryNode = ref<number | null>(null)
+// SSR 与初次水合阶段保持 false，避免在确定客户端真实滚动位置前将首项高亮写死进 DOM
+const hasMounted = ref(false)
+const mainContentRef = ref<HTMLElement | null>(null)
 const learned = computed(() => learnedSections.value.includes(id.value))
 const highlightKeyword = computed(() => String(route.query.hl ?? '').trim())
 let lastProgressSave = 0
@@ -270,12 +276,13 @@ const tocRows = computed<TocRow[]>(() => {
   return rows
 })
 
-const activeGroupId = computed(() => {
-  if (activeEntryNode.value && tocRows.value.some(r => r.nodeId === activeEntryNode.value)) {
-    return activeEntryNode.value
-  }
-  return tocRows.value[0]?.nodeId ?? null
-})
+const activeGroupId = computed(() =>
+  resolveDisplayActiveGroupId(
+    activeEntryNode.value,
+    tocRows.value.map(r => r.nodeId),
+    hasMounted.value,
+  ),
+)
 
 function readerPath(nodeId?: number) {
   return `/knowledge/section/${id.value}${nodeId ? `#group-${nodeId}` : ''}`
@@ -345,55 +352,78 @@ async function loadPreferences() {
   }
 }
 
+let settleTimers: ReturnType<typeof setTimeout>[] = []
+let rafIds: number[] = []
+let contentResizeObserver: ResizeObserver | null = null
+let userInteractedSinceMount = false
+let mountTimestamp = 0
+
+function markUserScrollInteraction() {
+  userInteractedSinceMount = true
+}
+
 function updateActiveSection() {
-  if (isClickScrolling) return
-  if (typeof window === 'undefined') return
-  const elements = [...document.querySelectorAll<HTMLElement>('section[id^="group-"]')]
-  if (!elements.length) return
+  if (isClickScrolling || typeof window === 'undefined') return
+  const items = [...document.querySelectorAll<HTMLElement>('section[id^="group-"]')]
+    .map(el => ({
+      nodeId: parseSectionAnchorId(el.id),
+      top: el.getBoundingClientRect().top,
+    }))
+    .filter((item): item is { nodeId: number; top: number } => item.nodeId !== null)
+  if (!items.length) return
 
-  const scrollY = window.scrollY
-  const maxScroll = document.documentElement.scrollHeight - window.innerHeight
-
-  // 1. 靠近页面顶端 (< 90px)，锁定首个条目（导读卡片或首个考点）
-  if (scrollY < 90) {
-    const firstEl = elements[0]!
-    activeEntryNode.value = firstEl.id === 'group-chapter-intro' ? -999 : (Number(firstEl.id.slice(6)) || null)
-    return
-  }
-
-  // 2. 到达页面底端 (< 80px)，锁定最后一个考点
-  if (maxScroll > 0 && scrollY >= maxScroll - 80) {
-    const lastEl = elements[elements.length - 1]!
-    activeEntryNode.value = lastEl.id === 'group-chapter-intro' ? -999 : (Number(lastEl.id.slice(6)) || null)
-    return
-  }
-
-  // 3. 常规滚动：以视口黄金阅读线 (scrollY + 130px) 检测当前正处于阅读视口的考点
-  const readingLine = scrollY + 130
-  let currentId: number | null = null
-  for (const el of elements) {
-    if (el.offsetTop <= readingLine) {
-      currentId = el.id === 'group-chapter-intro' ? -999 : (Number(el.id.slice(6)) || null)
-    } else {
-      break
-    }
-  }
-
-  if (currentId !== null) {
-    activeEntryNode.value = currentId
-  } else {
-    const firstEl = elements[0]!
-    activeEntryNode.value = firstEl.id === 'group-chapter-intro' ? -999 : (Number(firstEl.id.slice(6)) || null)
+  const resolved = resolveActiveTocNodeId(items, {
+    scrollY: window.scrollY,
+    scrollHeight: document.documentElement.scrollHeight,
+    innerHeight: window.innerHeight,
+  })
+  if (resolved !== null) {
+    activeEntryNode.value = resolved
   }
 }
 
-/** 兼容旧版 #kp-123 锚点：自动定位到所属考纲讲义条目 #group-{nodeId} */
+/** 同步计算阅读进度百分比与当前高亮目录项（不写远程，仅用于初始化、恢复滚动与图片加载完成后的校正） */
+function syncReaderPosition() {
+  if (typeof window === 'undefined') return
+  const el = document.documentElement
+  const max = el.scrollHeight - el.clientHeight
+  progress.value = max > 0 ? Math.min(100, Math.round((window.scrollY / max) * 100)) : 0
+  updateActiveSection()
+}
+
+function schedulePositionSettle() {
+  syncReaderPosition()
+  nextTick(() => {
+    syncReaderPosition()
+    const id1 = window.requestAnimationFrame(() => {
+      syncReaderPosition()
+      const id2 = window.requestAnimationFrame(syncReaderPosition)
+      rafIds.push(id2)
+    })
+    rafIds.push(id1)
+  })
+  // 兜底：部分浏览器会在首帧之后稍晚恢复滚动位置或完成局部布局高度回流
+  settleTimers.push(setTimeout(syncReaderPosition, 120))
+}
+
+/** 兼容 #group-123 与旧版 #kp-123 锚点：对齐到顶栏下方并同步目录焦点 */
 function resolveLegacyHashInStructuredMode() {
   if (typeof window === 'undefined') return
   const hash = window.location.hash
   if (hash.startsWith('#group-')) {
+    const targetNodeId = parseSectionAnchorId(hash.slice(1))
     const el = document.getElementById(hash.slice(1))
-    if (el) nextTick(() => el.scrollIntoView({ behavior: 'smooth', block: 'start' }))
+    if (el) {
+      nextTick(() => {
+        const rectTop = el.getBoundingClientRect().top
+        // 若锚点元素尚未位于顶栏下方合理阅读起始区（50px~120px），即时修正位置，避免额外平滑动画卡住激活计算
+        if (rectTop < 50 || rectTop > 120) {
+          window.scrollTo({ top: Math.max(0, rectTop + window.scrollY - 85), behavior: 'auto' })
+        }
+        if (targetNodeId !== null) activeEntryNode.value = targetNodeId
+        syncReaderPosition()
+      })
+    }
     return
   }
   if (!hash.startsWith('#kp-')) return
@@ -401,25 +431,31 @@ function resolveLegacyHashInStructuredMode() {
   const hitKp = kps.value.find(item => Number(item.id) === kpId)
   const targetNodeId = hitKp?.nodeId ?? kpId
   nextTick(() => {
-    document.getElementById(`group-${targetNodeId}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    const el = document.getElementById(`group-${targetNodeId}`)
+    if (el) {
+      window.scrollTo({ top: Math.max(0, el.getBoundingClientRect().top + window.scrollY - 85), behavior: 'auto' })
+      activeEntryNode.value = targetNodeId
+      syncReaderPosition()
+    }
   })
 }
 
 watch(id, () => {
   activeEntryNode.value = null
+  userInteractedSinceMount = false
+  mountTimestamp = Date.now()
 })
 
+// 仅在客户端切换小节、entries 数据更新后对齐位置，绝不在 SSR/水合前使用 immediate: true 提前改写焦点
 watch(entries, async () => {
+  if (!hasMounted.value) return
   await nextTick()
-  updateActiveSection()
   resolveLegacyHashInStructuredMode()
-}, { immediate: true })
+  schedulePositionSettle()
+})
 
 function onScroll() {
-  const el = document.documentElement
-  const max = el.scrollHeight - el.clientHeight
-  progress.value = max > 0 ? Math.min(100, Math.round((window.scrollY / max) * 100)) : 0
-  updateActiveSection()
+  syncReaderPosition()
   const now = Date.now()
   if (now - lastProgressSave > 800) {
     lastProgressSave = now
@@ -437,15 +473,55 @@ function onScroll() {
 }
 
 onMounted(() => {
+  hasMounted.value = true
+  mountTimestamp = Date.now()
+  userInteractedSinceMount = false
   window.addEventListener('scroll', onScroll, { passive: true })
-  window.addEventListener('resize', updateActiveSection, { passive: true })
+  window.addEventListener('resize', syncReaderPosition, { passive: true })
+  window.addEventListener('pageshow', schedulePositionSettle, { passive: true })
+  window.addEventListener('load', schedulePositionSettle, { passive: true })
+  window.addEventListener('hashchange', resolveLegacyHashInStructuredMode)
+  window.addEventListener('wheel', markUserScrollInteraction, { passive: true })
+  window.addEventListener('touchstart', markUserScrollInteraction, { passive: true })
+  window.addEventListener('keydown', markUserScrollInteraction, { passive: true })
+
+  // 监听正文容器高度变化（例如上方 loading="lazy" 图片加载撑开高度时），同步修正目录焦点与首次锚点对齐
+  if (typeof ResizeObserver !== 'undefined' && mainContentRef.value) {
+    let lastHeight = mainContentRef.value.getBoundingClientRect().height
+    contentResizeObserver = new ResizeObserver((entries) => {
+      const nextHeight = entries[0]?.contentRect.height ?? lastHeight
+      if (Math.abs(nextHeight - lastHeight) < 2) return
+      lastHeight = nextHeight
+      const hasHash = Boolean(window.location.hash)
+      if (hasHash && !userInteractedSinceMount && !isClickScrolling && Date.now() - mountTimestamp < 3000) {
+        resolveLegacyHashInStructuredMode()
+      } else {
+        syncReaderPosition()
+      }
+    })
+    contentResizeObserver.observe(mainContentRef.value)
+  }
+
   loadPreferences()
-  onScroll()
+  resolveLegacyHashInStructuredMode()
+  schedulePositionSettle()
 })
 onUnmounted(() => {
   window.removeEventListener('scroll', onScroll)
-  window.removeEventListener('resize', updateActiveSection)
+  window.removeEventListener('resize', syncReaderPosition)
+  window.removeEventListener('pageshow', schedulePositionSettle)
+  window.removeEventListener('load', schedulePositionSettle)
+  window.removeEventListener('hashchange', resolveLegacyHashInStructuredMode)
+  window.removeEventListener('wheel', markUserScrollInteraction)
+  window.removeEventListener('touchstart', markUserScrollInteraction)
+  window.removeEventListener('keydown', markUserScrollInteraction)
+  contentResizeObserver?.disconnect()
+  contentResizeObserver = null
   if (clickScrollTimer) clearTimeout(clickScrollTimer)
+  for (const timer of settleTimers) clearTimeout(timer)
+  settleTimers = []
+  for (const rid of rafIds) window.cancelAnimationFrame(rid)
+  rafIds = []
 })
 
 watch(section, (value) => {
@@ -504,7 +580,7 @@ watch(section, (value) => {
         </div>
       </aside>
 
-      <main class="min-w-0 lg:max-w-3xl 2xl:max-w-4xl 2xl:justify-self-center">
+      <main ref="mainContentRef" class="min-w-0 lg:max-w-3xl 2xl:max-w-4xl 2xl:justify-self-center">
         <div v-if="loadError || !section" class="rounded-xl border border-line-subtle bg-surface-card px-5 py-8 text-sm text-fg-secondary">
           没有找到这一节。<NuxtLink :to="`/knowledge/course/${courseCode}`" class="text-brand hover:underline">返回目录</NuxtLink>
         </div>
@@ -675,17 +751,17 @@ watch(section, (value) => {
       <aside class="hidden min-[1200px]:block">
         <div class="sticky top-8 max-h-[calc(100vh-4rem)] overflow-auto pl-2">
           <p class="mb-2 text-xs font-medium text-fg-muted">本节目录</p>
-          <template v-for="row in tocRows" :key="row.key">
-            <a :href="`#group-${row.nodeId}`"
-               class="block border-l-2 py-1.5 pl-2 transition-all duration-150"
-               :class="activeGroupId === row.nodeId
-                 ? 'border-brand font-semibold text-brand bg-brand-soft/20 rounded-r'
-                 : 'border-line-subtle text-fg-muted hover:border-line-strong hover:text-fg-secondary'"
-               @click.prevent="jumpToGroup(row.nodeId)">
-              <span v-if="row.code" class="block font-mono text-[10px]">{{ row.code }}</span>
-              <span class="block text-xs leading-5">{{ row.name }}</span>
-            </a>
-          </template>
+          <a v-for="row in tocRows"
+             :key="row.key"
+             :href="`#group-${row.nodeId}`"
+             class="block border-l-2 py-1.5 pl-2 transition-all duration-150"
+             :class="activeGroupId === row.nodeId
+               ? 'border-brand font-semibold text-brand bg-brand-soft/20 rounded-r'
+               : 'border-line-subtle text-fg-muted hover:border-line-strong hover:text-fg-secondary'"
+             @click.prevent="jumpToGroup(row.nodeId)">
+            <span v-if="row.code" class="block font-mono text-[10px]">{{ row.code }}</span>
+            <span class="block text-xs leading-5">{{ row.name }}</span>
+          </a>
           <p v-if="!entries.length" class="text-xs text-fg-muted">暂无考点讲义</p>
         </div>
       </aside>
@@ -711,17 +787,17 @@ watch(section, (value) => {
     <!-- 移动端目录模态 -->
     <UiModal v-model="tocOpen" title="本节目录" size="lg">
       <div class="space-y-0.5">
-        <template v-for="row in tocRows" :key="row.key">
-          <a :href="`#group-${row.nodeId}`"
-             class="flex min-h-11 items-start gap-2 rounded-lg px-2 py-2"
-             :class="activeGroupId === row.nodeId ? 'bg-brand-soft text-brand-on-soft' : 'text-fg-secondary hover:bg-surface-muted'"
-             @click.prevent="jumpToGroup(row.nodeId)">
-            <span class="min-w-0">
-              <span v-if="row.code" class="block font-mono text-[10px] text-fg-muted">{{ row.code }}</span>
-              <span class="block text-sm font-medium">{{ row.name }}</span>
-            </span>
-          </a>
-        </template>
+        <a v-for="row in tocRows"
+           :key="row.key"
+           :href="`#group-${row.nodeId}`"
+           class="flex min-h-11 items-start gap-2 rounded-lg px-2 py-2"
+           :class="activeGroupId === row.nodeId ? 'bg-brand-soft text-brand-on-soft' : 'text-fg-secondary hover:bg-surface-muted'"
+           @click.prevent="jumpToGroup(row.nodeId)">
+          <span class="min-w-0">
+            <span v-if="row.code" class="block font-mono text-[10px] text-fg-muted">{{ row.code }}</span>
+            <span class="block text-sm font-medium">{{ row.name }}</span>
+          </span>
+        </a>
       </div>
       <p v-if="!entries.length" class="py-6 text-center text-sm text-fg-muted">暂无考点讲义</p>
       <NuxtLink :to="`/knowledge/course/${courseCode}`"
