@@ -140,21 +140,313 @@ function escapeHtml(text: string): string {
     .replace(/>/g, '&gt;')
 }
 
+/** LaTeX 数学命令到显示字符与排版角色的映射表 */
+const MATH_COMMANDS: Record<string, { text: string; kind: 'op' | 'delim' | 'bin' | 'sym' }> = {
+  log: { text: 'log', kind: 'op' },
+  ln: { text: 'ln', kind: 'op' },
+  lg: { text: 'lg', kind: 'op' },
+  max: { text: 'max', kind: 'op' },
+  min: { text: 'min', kind: 'op' },
+  lim: { text: 'lim', kind: 'op' },
+  mod: { text: 'mod', kind: 'op' },
+  sin: { text: 'sin', kind: 'op' },
+  cos: { text: 'cos', kind: 'op' },
+  tan: { text: 'tan', kind: 'op' },
+  exp: { text: 'exp', kind: 'op' },
+  sum: { text: '∑', kind: 'op' },
+  prod: { text: '∏', kind: 'op' },
+  lfloor: { text: '⌊', kind: 'delim' },
+  rfloor: { text: '⌋', kind: 'delim' },
+  lceil: { text: '⌈', kind: 'delim' },
+  rceil: { text: '⌉', kind: 'delim' },
+  langle: { text: '⟨', kind: 'delim' },
+  rangle: { text: '⟩', kind: 'delim' },
+  times: { text: '×', kind: 'bin' },
+  cdot: { text: '·', kind: 'bin' },
+  div: { text: '÷', kind: 'bin' },
+  pm: { text: '±', kind: 'bin' },
+  le: { text: '≤', kind: 'bin' },
+  leq: { text: '≤', kind: 'bin' },
+  ge: { text: '≥', kind: 'bin' },
+  geq: { text: '≥', kind: 'bin' },
+  ne: { text: '≠', kind: 'bin' },
+  neq: { text: '≠', kind: 'bin' },
+  approx: { text: '≈', kind: 'bin' },
+  equiv: { text: '≡', kind: 'bin' },
+  to: { text: '→', kind: 'bin' },
+  rightarrow: { text: '→', kind: 'bin' },
+  Rightarrow: { text: '⇒', kind: 'bin' },
+  in: { text: '∈', kind: 'bin' },
+  notin: { text: '∉', kind: 'bin' },
+  subset: { text: '⊂', kind: 'bin' },
+  subseteq: { text: '⊆', kind: 'bin' },
+  cup: { text: '∪', kind: 'bin' },
+  cap: { text: '∩', kind: 'bin' },
+  infty: { text: '∞', kind: 'sym' },
+  alpha: { text: 'α', kind: 'sym' },
+  beta: { text: 'β', kind: 'sym' },
+  gamma: { text: 'γ', kind: 'sym' },
+  delta: { text: 'δ', kind: 'sym' },
+  epsilon: { text: 'ε', kind: 'sym' },
+  theta: { text: 'θ', kind: 'sym' },
+  lambda: { text: 'λ', kind: 'sym' },
+  mu: { text: 'μ', kind: 'sym' },
+  pi: { text: 'π', kind: 'sym' },
+  sigma: { text: 'σ', kind: 'sym' },
+  omega: { text: 'ω', kind: 'sym' },
+  Delta: { text: 'Δ', kind: 'sym' },
+  Theta: { text: 'Θ', kind: 'op' },
+  Omega: { text: 'Ω', kind: 'op' },
+  Sigma: { text: 'Σ', kind: 'op' },
+}
+
+const MATH_OPEN_DELIMS = new Set(['(', '[', '⌊', '⌈', '⟨', '{'])
+
+/**
+ * 将已做 HTML 转义的行内 LaTeX 公式（如 \log_2 n）转换为纯 HTML 公式片段
+ * 不引入外部依赖，且保留可搜索文本与深浅色语义继承
+ */
+export function formatMathExpression(escapedExpr: string): string {
+  const src = (escapedExpr ?? '').trim()
+  if (!src) return ''
+
+  let pos = 0
+
+  const skipSpaces = () => {
+    while (pos < src.length && /\s/.test(src[pos]!)) pos += 1
+  }
+
+  /** 读取 {...} 原始文本（用于 \text / \mathrm 等纯正体文本） */
+  const readRawGroup = (): string => {
+    skipSpaces()
+    if (src[pos] !== '{') {
+      const ch = src[pos] ?? ''
+      if (ch) pos += 1
+      return ch
+    }
+    pos += 1
+    let depth = 1
+    const start = pos
+    while (pos < src.length && depth > 0) {
+      if (src[pos] === '\\' && pos + 1 < src.length) {
+        pos += 2
+        continue
+      }
+      if (src[pos] === '{') depth += 1
+      else if (src[pos] === '}') depth -= 1
+      pos += 1
+    }
+    const end = depth === 0 ? pos - 1 : pos
+    return src.slice(start, end)
+  }
+
+  /** 解析单个原子的主干与是否作为一元前导（开口定界符/运算符后接负号） */
+  const parseAtom = (expectUnary: boolean): { html: string; nextUnary: boolean } => {
+    skipSpaces()
+    if (pos >= src.length) return { html: '', nextUnary: expectUnary }
+
+    const ch = src[pos]!
+
+    // 花括号分组
+    if (ch === '{') {
+      pos += 1
+      const inner = parseSequence('}')
+      if (src[pos] === '}') pos += 1
+      return { html: inner, nextUnary: false }
+    }
+
+    // 已被 escapeHtml 转义的 HTML 实体（必须整体识别，不可拆成字母变量）
+    for (const ent of ['&lt;', '&gt;', '&amp;']) {
+      if (src.startsWith(ent, pos)) {
+        pos += ent.length
+        return { html: `<span class="kb-math-bin">${ent}</span>`, nextUnary: true }
+      }
+    }
+
+    // LaTeX 命令
+    if (ch === '\\') {
+      pos += 1
+      const cmdMatch = src.slice(pos).match(/^[A-Za-z]+/)
+      if (cmdMatch) {
+        const cmd = cmdMatch[0]
+        pos += cmd.length
+        if (cmd === 'frac') {
+          const num = parseAtomOrGroup()
+          const den = parseAtomOrGroup()
+          return {
+            html: `<span class="kb-math-frac"><span class="kb-math-frac-num">${num}</span><span class="kb-math-frac-den">${den}</span></span>`,
+            nextUnary: false,
+          }
+        }
+        if (cmd === 'sqrt') {
+          const body = parseAtomOrGroup()
+          return {
+            html: `<span class="kb-math-sqrt"><span class="kb-math-sqrt-sign">√</span><span class="kb-math-sqrt-body">${body}</span></span>`,
+            nextUnary: false,
+          }
+        }
+        if (cmd === 'text' || cmd === 'mathrm') {
+          const textBody = readRawGroup()
+          return { html: `<span class="kb-math-text">${textBody}</span>`, nextUnary: false }
+        }
+        const entry = MATH_COMMANDS[cmd]
+        if (entry) {
+          if (entry.kind === 'sym') return { html: entry.text, nextUnary: false }
+          const cls = `kb-math-${entry.kind}`
+          return {
+            html: `<span class="${cls}">${entry.text}</span>`,
+            nextUnary: entry.kind === 'bin' || MATH_OPEN_DELIMS.has(entry.text),
+          }
+        }
+        return { html: `<span class="kb-math-op">${cmd}</span>`, nextUnary: false }
+      }
+      // 符号转义如 \{ \} \, \; \|
+      const escapedChar = src[pos] ?? ''
+      pos += 1
+      if (escapedChar === ',' || escapedChar === ';' || escapedChar === ' ') {
+        return { html: '<span class="kb-math-gap"></span>', nextUnary: expectUnary }
+      }
+      if (escapedChar === '{' || escapedChar === '}' || escapedChar === '|') {
+        return {
+          html: `<span class="kb-math-delim">${escapedChar}</span>`,
+          nextUnary: MATH_OPEN_DELIMS.has(escapedChar),
+        }
+      }
+      return { html: escapedChar, nextUnary: false }
+    }
+
+    // 数字字面量
+    const numMatch = src.slice(pos).match(/^[0-9]+(?:\.[0-9]+)?/)
+    if (numMatch) {
+      pos += numMatch[0].length
+      return { html: numMatch[0], nextUnary: false }
+    }
+
+    // 英文字母：已知函数名（如无反斜杠的 log）保持正体，其余按数学变量斜体渲染
+    const wordMatch = src.slice(pos).match(/^[A-Za-z]+/)
+    if (wordMatch) {
+      const word = wordMatch[0]
+      pos += word.length
+      if (MATH_COMMANDS[word]?.kind === 'op') {
+        return { html: `<span class="kb-math-op">${word}</span>`, nextUnary: false }
+      }
+      return {
+        html: word.split('').map(c => `<var>${c}</var>`).join(''),
+        nextUnary: false,
+      }
+    }
+
+    // 单字符运算符与定界符
+    pos += 1
+    if (ch === '(' || ch === ')' || ch === '[' || ch === ']' || ch === '|') {
+      return {
+        html: `<span class="kb-math-delim">${ch}</span>`,
+        nextUnary: ch === '(' || ch === '[',
+      }
+    }
+    if (ch === '+' || ch === '-') {
+      const glyph = ch === '-' ? '−' : '+'
+      const cls = expectUnary ? 'kb-math-unary' : 'kb-math-bin'
+      return { html: `<span class="${cls}">${glyph}</span>`, nextUnary: true }
+    }
+    if (ch === '=' || ch === '/' || ch === '×' || ch === '÷' || ch === '≤' || ch === '≥' || ch === '≠') {
+      return { html: `<span class="kb-math-bin">${ch}</span>`, nextUnary: true }
+    }
+    if (ch === ',' || ch === ';' || ch === ':') {
+      return { html: `<span class="kb-math-punct">${ch}</span>`, nextUnary: true }
+    }
+    return { html: ch, nextUnary: false }
+  }
+
+  /** 读取下标/上标/\frac 参数（花括号整组或单个原子） */
+  const parseAtomOrGroup = (): string => {
+    skipSpaces()
+    if (pos >= src.length) return ''
+    if (src[pos] === '{') {
+      pos += 1
+      const inner = parseSequence('}')
+      if (src[pos] === '}') pos += 1
+      return inner
+    }
+    // 单字符数字或单字母变量优先于整串字母（如 a_ij 只取 i？标准 LaTeX x_2n 只取 2，x_ij 只取 i）
+    const next = src[pos]!
+    if (/[0-9A-Za-z]/.test(next)) {
+      pos += 1
+      return /[0-9]/.test(next) ? next : `<var>${next}</var>`
+    }
+    return parseAtom(true).html
+  }
+
+  const parseSequence = (stopChar?: string): string => {
+    let out = ''
+    let expectUnary = true
+
+    while (pos < src.length) {
+      skipSpaces()
+      if (pos >= src.length) break
+      if (stopChar && src[pos] === stopChar) break
+      // 跳过意外孤立的上下标符号
+      if (src[pos] === '_' || src[pos] === '^') {
+        pos += 1
+        continue
+      }
+
+      const atom = parseAtom(expectUnary)
+      let subHtml = ''
+      let supHtml = ''
+
+      for (let i = 0; i < 2; i += 1) {
+        skipSpaces()
+        if (src[pos] === '_' && !subHtml) {
+          pos += 1
+          subHtml = parseAtomOrGroup()
+        } else if (src[pos] === '^' && !supHtml) {
+          pos += 1
+          supHtml = parseAtomOrGroup()
+        } else {
+          break
+        }
+      }
+
+      out += atom.html
+      if (subHtml && supHtml) {
+        out += `<span class="kb-math-subsup"><sup>${supHtml}</sup><sub>${subHtml}</sub></span>`
+      } else if (subHtml) {
+        out += `<sub>${subHtml}</sub>`
+      } else if (supHtml) {
+        out += `<sup>${supHtml}</sup>`
+      }
+      expectUnary = subHtml || supHtml ? false : atom.nextUnary
+    }
+    return out
+  }
+
+  return `<span class="kb-math">${parseSequence()}</span>`
+}
+
 /**
  * 渲染讲义块内的行内标记：
- * - 第一步：转义 HTML 并提取反引号代码放入占位符，保护代码内部原本的 ==、* 等符号
+ * - 第一步：转义 HTML 并提取反引号代码、\(...\) 行内公式放入占位符，保护内部符号不被着色正则误切
  * - 第二步：转换三色行内标记与加粗：
  *   ==核心==（红）、^^重点^^（绿）、@@难点@@（黄）、**粗体**
- * - 第三步：还原行内代码占位符
+ * - 第三步：还原行内代码与数学公式占位符
  * - 第四步：可选搜索关键词高亮 ?hl= -> <mark class="kb-hl">...</mark>
  */
 export function renderInlineMarkup(text: string, highlightKeyword = ''): string {
   const codes: string[] = []
-  let html = escapeHtml(text).replace(/`([^`]+)`/g, (_m, codeContent) => {
-    const idx = codes.length
-    codes.push(codeContent)
-    return `\u0000CODE_${idx}\u0000`
-  })
+  const maths: string[] = []
+
+  let html = escapeHtml(text)
+    .replace(/`([^`]+)`/g, (_m, codeContent) => {
+      const idx = codes.length
+      codes.push(codeContent)
+      return `\u0000CODE_${idx}\u0000`
+    })
+    .replace(/\\\((.+?)\\\)/g, (_m, mathContent) => {
+      const idx = maths.length
+      maths.push(formatMathExpression(mathContent))
+      return `\u0000MATH_${idx}\u0000`
+    })
 
   html = html
     .replace(/==(.+?)==/g, '<mark class="kb-mark">$1</mark>')
@@ -162,10 +454,12 @@ export function renderInlineMarkup(text: string, highlightKeyword = ''): string 
     .replace(/@@(.+?)@@/g, '<mark class="kb-hard">$1</mark>')
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
 
-  html = html.replace(/\u0000CODE_(\d+)\u0000/g, (_m, idxStr) => {
-    const codeContent = codes[Number(idxStr)] ?? ''
-    return `<code>${codeContent}</code>`
-  })
+  html = html
+    .replace(/\u0000CODE_(\d+)\u0000/g, (_m, idxStr) => {
+      const codeContent = codes[Number(idxStr)] ?? ''
+      return `<code>${codeContent}</code>`
+    })
+    .replace(/\u0000MATH_(\d+)\u0000/g, (_m, idxStr) => maths[Number(idxStr)] ?? '')
 
   const kw = (highlightKeyword ?? '').trim()
   if (kw) {

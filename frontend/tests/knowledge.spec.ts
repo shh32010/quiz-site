@@ -59,6 +59,33 @@ describe('knowledge tree utils', () => {
     expect(html).toContain('<mark class="kb-mark">唯一<mark class="kb-hl">入口</mark></mark>')
   })
 
+  it('renderInlineMarkup 将 \\(...\\) 数学公式渲染为结构化公式（支持上下标、取整、分式与变量）', () => {
+    const html = renderInlineMarkup('最坏比较次数为：\\(\\log_2 n\\) 次，严格上界为 \\(\\lfloor \\log_2 n \\rfloor + 1\\)')
+    expect(html).toContain('<span class="kb-math">')
+    expect(html).toContain('<span class="kb-math-op">log</span><sub>2</sub><var>n</var>')
+    expect(html).toContain('<span class="kb-math-delim">⌊</span>')
+    expect(html).toContain('<span class="kb-math-delim">⌋</span>')
+    expect(html).not.toContain('\\(')
+    expect(html).not.toContain('\\)')
+
+    const fracHtml = renderInlineMarkup('比较次数最多 \\(\\frac{n(n-1)}{2}\\) 次，满二叉树节点 \\(2^k - 1\\)')
+    expect(fracHtml).toContain('class="kb-math-frac"')
+    expect(fracHtml).toContain('<sup><var>k</var></sup>')
+  })
+
+  it('renderInlineMarkup 公式解析不误伤 shell $、代码反引号、三色标记、搜索高亮与 XSS', () => {
+    const safeHtml = renderInlineMarkup(
+      '命令 `$ ln -s /a /b` 与代码 `\\(\\log_2 n\\)`；==\\(\\log_2 n\\)==；\\(<script>i < n</script>\\)',
+      'log',
+    )
+    expect(safeHtml).toContain('<code>$ ln -s /a /b</code>')
+    expect(safeHtml).toContain('<code>\\(\\<mark class="kb-hl">log</mark>_2 n\\)</code>')
+    expect(safeHtml).not.toContain('<code><span class="kb-math">')
+    expect(safeHtml).toContain('<mark class="kb-mark"><span class="kb-math"><span class="kb-math-op"><mark class="kb-hl">log</mark></span><sub>')
+    expect(safeHtml).not.toContain('<script>')
+    expect(safeHtml).toContain('&lt;')
+  })
+
   it('renderInlineMarkup 支持公式含单个 =、代码含 ==、绿色重点与黄色难点', () => {
     const input = '计算公式：==容量 = 长 × 宽==，在 C 语言中使用 `a == b` 进行判断，^^重点语法^^ 与 @@难点分析@@'
     const html = renderInlineMarkup(input)

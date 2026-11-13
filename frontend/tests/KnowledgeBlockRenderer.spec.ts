@@ -83,4 +83,32 @@ describe('KnowledgeBlockRenderer Callout 样式渲染测试', () => {
     expect(wrapper.find('.kb-block').exists()).toBe(true)
     expect(wrapper.text()).toContain('常规考点列表')
   })
+
+  it('列表与提示卡支持 \\(...\\) 行内数学公式渲染', () => {
+    const blocks: KbBlock[] = [
+      {
+        id: 'math-list',
+        t: 'list',
+        imp: 'core',
+        items: ['②、二分法查找：最坏比较次数为：\\(\\log_2 n\\) 次。'],
+      },
+      {
+        id: 'math-trap',
+        t: 'callout',
+        kind: 'trap',
+        imp: 'core',
+        title: '高频易错陷阱：二分查找比较次数',
+        text: '严格上界为 \\(\\lfloor \\log_2 n \\rfloor + 1\\)。',
+      },
+    ]
+
+    const wrapper = mount(KnowledgeBlockRenderer, {
+      props: { blocks },
+    })
+
+    const maths = wrapper.findAll('.kb-math')
+    expect(maths).toHaveLength(2)
+    expect(wrapper.html()).toContain('<sub>2</sub><var>n</var>')
+    expect(wrapper.text()).not.toContain('\\(')
+  })
 })

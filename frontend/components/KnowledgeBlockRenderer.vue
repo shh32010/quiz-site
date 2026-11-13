@@ -269,6 +269,119 @@ async function copyCode(blockId: string, code?: string) {
   background: rgb(var(--surface-card) / 0.9);
   border: 1px solid rgb(var(--line-subtle));
 }
+.kb-block :deep(.kb-math),
+.kb-callout :deep(.kb-math) {
+  font-family: "Cambria Math", "Times New Roman", "Noto Serif", Georgia, serif;
+  font-size: 1.06em;
+  letter-spacing: 0.01em;
+  padding: 0 0.12em;
+  white-space: nowrap;
+}
+.kb-block :deep(.kb-math var),
+.kb-callout :deep(.kb-math var) {
+  font-style: italic;
+}
+.kb-block :deep(.kb-math .kb-math-op),
+.kb-callout :deep(.kb-math .kb-math-op),
+.kb-block :deep(.kb-math .kb-math-text),
+.kb-callout :deep(.kb-math .kb-math-text) {
+  font-style: normal;
+}
+.kb-block :deep(.kb-math .kb-math-text),
+.kb-callout :deep(.kb-math .kb-math-text) {
+  font-family: inherit;
+  font-size: 0.92em;
+}
+.kb-block :deep(.kb-math sub),
+.kb-callout :deep(.kb-math sub),
+.kb-block :deep(.kb-math sup),
+.kb-callout :deep(.kb-math sup) {
+  font-size: 0.72em;
+  line-height: 0;
+  position: relative;
+  vertical-align: baseline;
+  margin-left: 0.03em;
+}
+.kb-block :deep(.kb-math sub),
+.kb-callout :deep(.kb-math sub) {
+  bottom: -0.24em;
+}
+.kb-block :deep(.kb-math sup),
+.kb-callout :deep(.kb-math sup) {
+  top: -0.44em;
+}
+.kb-block :deep(.kb-math sub + var),
+.kb-callout :deep(.kb-math sub + var),
+.kb-block :deep(.kb-math sup + var),
+.kb-callout :deep(.kb-math sup + var),
+.kb-block :deep(.kb-math .kb-math-op + var),
+.kb-callout :deep(.kb-math .kb-math-op + var),
+.kb-block :deep(.kb-math var + .kb-math-op),
+.kb-callout :deep(.kb-math var + .kb-math-op) {
+  margin-left: 0.16em;
+}
+.kb-block :deep(.kb-math .kb-math-bin),
+.kb-callout :deep(.kb-math .kb-math-bin) {
+  padding: 0 0.18em;
+}
+.kb-block :deep(.kb-math sub .kb-math-bin),
+.kb-callout :deep(.kb-math sub .kb-math-bin),
+.kb-block :deep(.kb-math sup .kb-math-bin),
+.kb-callout :deep(.kb-math sup .kb-math-bin) {
+  padding: 0 0.06em;
+}
+.kb-block :deep(.kb-math .kb-math-delim),
+.kb-callout :deep(.kb-math .kb-math-delim) {
+  padding: 0 0.03em;
+}
+.kb-block :deep(.kb-math .kb-math-punct),
+.kb-callout :deep(.kb-math .kb-math-punct) {
+  padding-right: 0.16em;
+}
+.kb-block :deep(.kb-math .kb-math-gap),
+.kb-callout :deep(.kb-math .kb-math-gap) {
+  display: inline-block;
+  width: 0.18em;
+}
+.kb-block :deep(.kb-math .kb-math-frac),
+.kb-callout :deep(.kb-math .kb-math-frac) {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  vertical-align: middle;
+  font-size: 0.84em;
+  line-height: 1.1;
+  margin: 0 0.16em;
+}
+.kb-block :deep(.kb-math .kb-math-frac-num),
+.kb-callout :deep(.kb-math .kb-math-frac-num) {
+  border-bottom: 1px solid currentColor;
+  padding: 0 0.2em 1px;
+}
+.kb-block :deep(.kb-math .kb-math-frac-den),
+.kb-callout :deep(.kb-math .kb-math-frac-den) {
+  padding: 1px 0.2em 0;
+}
+.kb-block :deep(.kb-math .kb-math-sqrt-body),
+.kb-callout :deep(.kb-math .kb-math-sqrt-body) {
+  border-top: 1px solid currentColor;
+  padding: 0 0.12em;
+}
+.kb-block :deep(.kb-math .kb-math-subsup),
+.kb-callout :deep(.kb-math .kb-math-subsup) {
+  display: inline-flex;
+  flex-direction: column;
+  line-height: 0.9;
+  vertical-align: middle;
+  margin-left: 0.04em;
+}
+.kb-block :deep(.kb-math .kb-math-subsup sup),
+.kb-callout :deep(.kb-math .kb-math-subsup sup),
+.kb-block :deep(.kb-math .kb-math-subsup sub),
+.kb-callout :deep(.kb-math .kb-math-subsup sub) {
+  position: static;
+  line-height: 1;
+}
 .kb-block :deep(mark.kb-mark),
 .kb-callout :deep(mark.kb-mark) {
   border-radius: 0.25rem;
