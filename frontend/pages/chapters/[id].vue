@@ -1,6 +1,7 @@
 <script setup lang="ts">
 // 章节下的题目列表（含子孙章节）
 import { TYPE_LABEL, TYPE_TABS } from '~/utils/constants'
+import { calcChapterComposeMinutes } from '~/utils/practice'
 
 const route = useRoute()
 const router = useRouter()
@@ -43,6 +44,11 @@ const typeMap = computed<Record<number, number>>(() =>
   Object.fromEntries((data.value?.typeCounts ?? []).map((x: any) => [Number(x.type), Number(x.count)])))
 const allCount = computed(() =>
   Object.values(typeMap.value).reduce((s, n) => s + n, 0))
+const actualComposeCount = computed(() => {
+  const n = allCount.value
+  return n > 0 ? Math.min(composeCount.value, n) : composeCount.value
+})
+const composeMinutes = computed(() => calcChapterComposeMinutes(actualComposeCount.value))
 const practiceLink = computed(() =>
   `/practice?mode=chapter&target=${chapterId.value}${type.value ? `&type=${type.value}` : ''}`)
 const typeTabs = computed(() => TYPE_TABS.map(t => ({
@@ -121,7 +127,7 @@ async function composeChapter() {
       <template #actions>
         <UiButton v-if="canCompose" variant="secondary" size="md"
                   :loading="composing" :disabled="!(data?.total ?? 0)"
-                  :title="`按大纲配比抽 ${composeCount} 题，不受当前题型筛选影响；优先未做过的题`"
+                  :title="`按大纲配比抽 ${composeCount} 题（建议 ${composeMinutes} 分钟，超时仅提醒不强制），不受当前题型筛选影响；优先未做过的题`"
                   @click="composeChapter">
           随机组卷 · {{ composeCount }} 题
         </UiButton>
@@ -133,7 +139,7 @@ async function composeChapter() {
     </UiPageHeader>
 
     <p v-if="canCompose" class="text-xs text-fg-muted">
-      随机组卷按大纲配比：{{ composePlan }}（共 {{ composeCount }} 题 · {{ composeScore }} 分）
+      随机组卷按大纲配比：{{ composePlan }}（共 {{ composeCount }} 题 · {{ composeScore }} 分 · 建议 {{ composeMinutes }} 分钟，超时仅提醒不强制交卷）
     </p>
     <p v-if="composeWarning" class="text-xs text-warn-fg">{{ composeWarning }}</p>
     <p v-if="composeError" class="text-sm text-danger-fg">{{ composeError }}</p>

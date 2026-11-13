@@ -4,6 +4,8 @@
 // 未登录 = 游客模式：可试做，判分不落库、不进错题本
 import { MODE_LABEL, TYPE_LABEL } from '~/utils/constants'
 import {
+  derivePracticeTimerState,
+  formatPracticeTimerText,
   getPrimaryLabel,
   shouldAutoNext,
   shouldInstantSubmitChoice,
@@ -15,6 +17,7 @@ useHead({ title: '刷题' })
 const api = useApi()
 const route = useRoute()
 const router = useRouter()
+const toast = useToast()
 
 const sessionId = ref<number | null>(null)
 const guest = ref(false)
@@ -45,7 +48,12 @@ const answerBox = ref<HTMLTextAreaElement | null>(null)
 const ai = ref<{ loading: boolean; content: string; err: string }>({ loading: false, content: '', err: '' })
 const variant = ref<{ loading: boolean; content: string; err: string }>({ loading: false, content: '', err: '' })
 
+const timerLimitSec = ref(0)
 const remain = ref(-1)
+const overtimeSec = ref(0)
+const isOvertime = ref(false)
+const overtimeNotice = ref('')
+let overtimeAlerted = false
 let timer: ReturnType<typeof setInterval> | null = null
 let advanceTimer: ReturnType<typeof setTimeout> | null = null
 let disposed = false
@@ -102,11 +110,12 @@ const canAutoNext = computed(() => shouldAutoNext(mode.value, total.value))
 const currentOrder = computed(() => Number(question.value?.itemOrder ?? 1))
 const isLast = computed(() => Boolean(question.value) && currentOrder.value >= total.value)
 const progressPercent = computed(() => total.value ? Math.min(100, Math.round(currentOrder.value / total.value * 100)) : 0)
-const remainText = computed(() => {
-  if (remain.value < 0) return ''
-  const m = Math.floor(remain.value / 60), s = remain.value % 60
-  return `${m}:${String(s).padStart(2, '0')}`
-})
+const remainText = computed(() => formatPracticeTimerText({
+  limitSec: timerLimitSec.value,
+  remainingSec: remain.value,
+  overtimeSec: overtimeSec.value,
+  isOvertime: isOvertime.value,
+}))
 const options = computed<[string, string][]>(() => {
   try {
     return (Object.entries(JSON.parse(question.value?.optionJson || '{}')) as [string, string][])
@@ -202,31 +211,67 @@ function showGuest(i: number) {
   total.value = guestRows.value.length
 }
 
+function clearTimer() {
+  if (timer) { clearInterval(timer); timer = null }
+}
+
+function triggerOvertimeReminder() {
+  overtimeNotice.value = '建议用时已到（仅提醒不强制交卷），可继续作答并在完成后手动交卷'
+  if (!overtimeAlerted) {
+    overtimeAlerted = true
+    toast.show('建议用时已到，可继续作答并在完成后手动交卷', 'warn', 6000)
+  }
+}
+
+async function syncTimerTick(st: any, elapsedSinceSyncSec: number): Promise<boolean> {
+  const state = derivePracticeTimerState({
+    mode: mode.value,
+    limitSec: Number(st.limitSec || 0),
+    elapsedSecAtSync: Number(st.elapsedSec || 0),
+    elapsedSinceSyncSec,
+    autoSubmit: typeof st.autoSubmit === 'boolean' ? st.autoSubmit : undefined,
+  })
+  timerLimitSec.value = state.limitSec
+  remain.value = state.remainingSec
+  overtimeSec.value = state.overtimeSec
+  isOvertime.value = state.isOvertime
+  if (state.shouldAutoSubmit) {
+    clearTimer()
+    notice.value = '时间到，已自动交卷'
+    await finishSession()
+    return true
+  }
+  if (state.isOvertime) {
+    triggerOvertimeReminder()
+  } else {
+    overtimeNotice.value = ''
+  }
+  return false
+}
+
 async function loadStatus(): Promise<boolean> {
   if (!sessionId.value) return false
   try {
     const st = await api.get<any>(`/api/practice/${sessionId.value}/status`)
     mode.value = st.mode || mode.value
-    remain.value = st.remainingSec
     if (st.finished) {
       // 已交卷会话不要重新拉题，直接去历史明细复盘
       await router.replace(`/history/${sessionId.value}`)
       return true
     }
-    if (st.expired) {
-      notice.value = '时间到，已自动交卷'
-      await finishSession()
+    const syncAtMs = Date.now()
+    if (await syncTimerTick(st, 0)) {
       return true
     }
-    if (!disposed && st.limitSec > 0) {
-      if (timer) clearInterval(timer)
+    if (!disposed && Number(st.limitSec || 0) > 0) {
+      clearTimer()
       timer = setInterval(async () => {
-        remain.value = Math.max(0, remain.value - 1)
-        if (remain.value === 0) {
-          if (timer) { clearInterval(timer); timer = null }
-          notice.value = '时间到，已自动交卷'
-          await finishSession()
+        if (disposed || finished.value) {
+          clearTimer()
+          return
         }
+        const elapsedSinceSync = Math.floor((Date.now() - syncAtMs + 200) / 1000)
+        await syncTimerTick(st, elapsedSinceSync)
       }, 1000)
     }
   } catch { /* 状态失败不阻塞答题 */ }
@@ -383,7 +428,12 @@ async function finishSession() {
     question.value = null
     finishOpen.value = false
     sheetOpen.value = false
-    if (timer) { clearInterval(timer); timer = null }
+    overtimeNotice.value = ''
+    timerLimitSec.value = 0
+    remain.value = -1
+    overtimeSec.value = 0
+    isOvertime.value = false
+    clearTimer()
     clearAdvance()
   } catch (e: any) {
     error.value = e.message ?? '交卷失败，请重试'
@@ -624,7 +674,7 @@ onMounted(() => {
 onUnmounted(() => {
   disposed = true
   window.removeEventListener('pointerdown', clearAdvance)
-  if (timer) clearInterval(timer)
+  clearTimer()
   clearAdvance()
 })
 </script>
@@ -633,7 +683,7 @@ onUnmounted(() => {
   <div class="min-h-screen text-fg-primary">
     <PracticeHeader :mode-label="modeLabel" :current-order="currentOrder" :total="total"
                     :progress-percent="progressPercent" :remain="remain" :remain-text="remainText"
-                    :guest="guest" :has-question="Boolean(question)"
+                    :overtime="isOvertime" :guest="guest" :has-question="Boolean(question)"
                     @exit="exit" @open-sheet="openSheet" />
 
     <main class="mx-auto max-w-3xl px-3 pb-28 pt-4 sm:max-w-4xl sm:px-4">
@@ -646,6 +696,10 @@ onUnmounted(() => {
         </button>
       </div>
       <p v-if="notice" class="mb-3 rounded-lg border border-warn-border bg-warn-bg px-3 py-2 text-sm text-warn-fg">{{ notice }}</p>
+      <p v-if="!finished && overtimeNotice" role="status"
+         class="mb-3 rounded-lg border border-warn-border bg-warn-bg px-3 py-2 text-sm text-warn-fg">
+        {{ overtimeNotice }}
+      </p>
 
       <div v-if="guest" class="mb-3 rounded-lg border border-warn-border bg-warn-bg px-3 py-2 text-xs text-warn-fg">
         游客模式：可以试做，但进度不会保存。

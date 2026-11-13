@@ -7,6 +7,7 @@ defineProps<{
   progressPercent: number
   remain: number
   remainText: string
+  overtime?: boolean
   guest: boolean
   hasQuestion: boolean
 }>()
@@ -29,8 +30,11 @@ const emit = defineEmits<{ exit: []; openSheet: [] }>()
         </div>
       </div>
       <UiThemeToggle class="shrink-0" />
-      <span v-if="remain >= 0" class="shrink-0 rounded-lg bg-surface-muted px-2 py-1 text-xs font-medium tabular-nums"
-            :class="remain < 300 ? 'text-danger-fg' : 'text-fg-secondary'">⏱ {{ remainText }}</span>
+      <span v-if="remainText"
+            class="shrink-0 whitespace-nowrap rounded-lg px-2 py-1 text-xs font-medium tabular-nums"
+            :class="overtime
+              ? 'border border-warn-border bg-warn-bg text-warn-fg'
+              : (remain < 300 ? 'bg-surface-muted text-danger-fg' : 'bg-surface-muted text-fg-secondary')">⏱ {{ remainText }}</span>
       <button v-if="!guest && hasQuestion" type="button"
               class="min-h-11 shrink-0 rounded-lg border border-line-subtle px-2.5 py-1.5 text-xs text-fg-secondary hover:border-brand hover:text-brand"
               @click="emit('openSheet')">答题卡</button>

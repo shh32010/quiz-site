@@ -418,7 +418,11 @@ public class PracticeService {
         }
     }
 
-    /** 会话状态：计时以服务端 started_at 为准 */
+    private static Integer toInt(Object val) {
+        return val instanceof Number n ? n.intValue() : null;
+    }
+
+    /** 会话状态：计时以服务端 started_at 为准；章节随机卷按题量×75秒计时且只提醒不强制交卷 */
     public Map<String, Object> status(long sessionId, UUID uid) {
         requireOwn(sessionId, uid);
         Map<String, Object> row = jdbc.queryForMap("""
@@ -426,25 +430,38 @@ public class PracticeService {
                        s.finished_at as "finishedAt",
                        s.mode,
                        coalesce(p.suggest_time,
-                                case when s.mode = 'random' then
-                                  case s.target_id when 4 then 6000 when 5 then 3000 end
+                                case
+                                  when s.mode = 'random' then
+                                    case s.target_id when 4 then 6000 when 5 then 3000 end
+                                  when s.mode = 'chapter_random' then
+                                    nullif((select count(*)::int from session_question x where x.session_id = s.id), 0) * 75
                                 end) as "limitSec",
                        extract(epoch from (now() - s.started_at))::int as "elapsedSec"
                   from practice_session s
                   left join t_exam_paper p on p.id = s.target_id and s.mode = 'paper'
                  where s.id = ?
                 """, sessionId);
-        Integer limit = (Integer) row.get("limitSec");
-        Integer elapsed = (Integer) row.get("elapsedSec");
-        boolean expired = limit != null && elapsed != null && elapsed >= limit;
-        return Map.of(
-                "startedAt", row.get("startedAt") == null ? "" : row.get("startedAt").toString(),
-                "finished", row.get("finishedAt") != null,
-                "mode", row.get("mode"),
-                "limitSec", limit == null ? 0 : limit,
-                "elapsedSec", elapsed == null ? 0 : elapsed,
-                "remainingSec", limit == null ? -1 : Math.max(0, limit - elapsed),
-                "expired", expired);
+        String sessionMode = row.get("mode") == null ? "" : row.get("mode").toString();
+        Integer limit = toInt(row.get("limitSec"));
+        Integer elapsed = toInt(row.get("elapsedSec"));
+        int safeElapsed = elapsed == null ? 0 : Math.max(0, elapsed);
+        boolean timed = limit != null && limit > 0;
+        boolean expired = timed && safeElapsed >= limit;
+        // 仅章节随机组卷超时后不强制自动交卷，保持用户自主控制交卷节奏
+        boolean autoSubmit = timed && !"chapter_random".equals(sessionMode);
+        int remainingSec = !timed ? -1 : Math.max(0, limit - safeElapsed);
+        int overtimeSec = (timed && safeElapsed > limit) ? (safeElapsed - limit) : 0;
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("startedAt", row.get("startedAt") == null ? "" : row.get("startedAt").toString());
+        out.put("finished", row.get("finishedAt") != null);
+        out.put("mode", sessionMode);
+        out.put("limitSec", timed ? limit : 0);
+        out.put("elapsedSec", safeElapsed);
+        out.put("remainingSec", remainingSec);
+        out.put("overtimeSec", overtimeSec);
+        out.put("expired", expired);
+        out.put("autoSubmit", autoSubmit);
+        return out;
     }
 
     /** 受控复盘：仅本会话已作答的题 */

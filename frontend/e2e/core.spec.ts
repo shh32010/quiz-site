@@ -156,4 +156,94 @@ test.describe('刷题站核心链路 E2E', () => {
     )
     expect(overflow).toBe(false)
   })
+
+  test('章节随机卷计时到点只提醒不强制交卷（含超时恢复）', async ({ page }) => {
+    await page.addInitScript(() => {
+      localStorage.setItem('quiz_token', 'e2e-mock-token')
+      localStorage.setItem('quiz_announcement_daily', '2026-11-02-5|' + new Date().toISOString().slice(0, 10))
+    })
+    let finishCalled = false
+    await page.route('**/api/announcement', async (route) => {
+      await route.fulfill({ status: 200, contentType: 'application/json', body: 'null' })
+    })
+    await page.route('**/api/auth/me', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ id: 1, username: 'e2e_user', nickname: '测试同学', role: 'user' }),
+      })
+    })
+    await page.route('**/api/practice/9001/status', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          startedAt: '2026-11-13T09:00:00Z',
+          finished: false,
+          mode: 'chapter_random',
+          limitSec: 120,
+          elapsedSec: 118,
+          remainingSec: 2,
+          overtimeSec: 0,
+          expired: false,
+          autoSubmit: false,
+        }),
+      })
+    })
+    await page.route('**/api/practice/9001/sheet', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ total: 2, answered: 0, remaining: 2, rows: [] }),
+      })
+    })
+    await page.route('**/api/practice/9001/next', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          kind: 'question',
+          question: {
+            id: 5001,
+            questionType: 1,
+            stem: '下列哪个属于线性结构？',
+            optionJson: JSON.stringify({ A: '栈', B: '树', C: '图', D: '集合' }),
+            score: 2,
+            itemOrder: 1,
+            total: 2,
+          },
+        }),
+      })
+    })
+    await page.route('**/api/questions/*/knowledge', async (route) => {
+      await route.fulfill({ status: 200, contentType: 'application/json', body: '[]' })
+    })
+    await page.route('**/api/favorites/*', async (route) => {
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ favorited: false }) })
+    })
+    await page.route('**/api/practice/9001/finish', async (route) => {
+      finishCalled = true
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ score: 0, total_score: 4, correct_count: 0, question_count: 2 }),
+      })
+    })
+
+    await page.goto('/practice?session=9001')
+    await expect(page.getByText('章节随机卷')).toBeVisible()
+    await expect(page.getByText(/⏱ 0:0[12]/)).toBeVisible()
+
+    // 等待超过 2 秒进入超时正计时：出现常驻提醒 + Toast，顶栏切为 已超时 +，绝不自动交卷
+    await expect(page.getByText(/⏱ 已超时 \+0:0[012]/)).toBeVisible({ timeout: 6000 })
+    await expect(page.getByRole('status')).toContainText('建议用时已到（仅提醒不强制交卷）')
+    await expect(page.getByRole('button', { name: '建议用时已到，可继续作答并在完成后手动交卷' })).toBeVisible()
+    await expect(page.getByText('下列哪个属于线性结构？')).toBeVisible()
+    expect(finishCalled).toBe(false)
+
+    const overflow = await page.evaluate(() =>
+      document.documentElement.scrollWidth > document.documentElement.clientWidth,
+    )
+    expect(overflow).toBe(false)
+  })
 })

@@ -95,4 +95,65 @@ class PracticeServiceTest {
         assertThat(res.get("sessionId")).isEqualTo(100L);
         assertThat(res.get("count")).isEqualTo(2);
     }
+
+    @Test
+    void chapterRandomStatusUsesQuestionCountTimes75AndDisablesAutoSubmit() {
+        JdbcTemplate jdbc = mock(JdbcTemplate.class);
+        UUID uid = UUID.randomUUID();
+
+        when(jdbc.queryForObject(startsWith("select count(*) from practice_session"), eq(Integer.class), eq(88L), eq(uid)))
+                .thenReturn(1);
+        // 未超时：40 题 -> 3000 秒，已用时 120 秒
+        when(jdbc.queryForMap(contains("when s.mode = 'chapter_random'"), eq(88L)))
+                .thenReturn(Map.of(
+                        "startedAt", "2026-11-13T09:00:00Z",
+                        "mode", "chapter_random",
+                        "limitSec", 3000,
+                        "elapsedSec", 120));
+
+        PracticeService service = new PracticeService(jdbc);
+        Map<String, Object> active = service.status(88L, uid);
+        assertThat(active.get("mode")).isEqualTo("chapter_random");
+        assertThat(active.get("limitSec")).isEqualTo(3000);
+        assertThat(active.get("remainingSec")).isEqualTo(2880);
+        assertThat(active.get("overtimeSec")).isEqualTo(0);
+        assertThat(active.get("expired")).isEqualTo(false);
+        assertThat(active.get("autoSubmit")).isEqualTo(false);
+
+        // 已超时：24 题 -> 1800 秒，已用时 1935 秒 -> 只提醒不强制（autoSubmit=false, overtimeSec=135）
+        when(jdbc.queryForMap(contains("when s.mode = 'chapter_random'"), eq(88L)))
+                .thenReturn(Map.of(
+                        "startedAt", "2026-11-13T09:00:00Z",
+                        "mode", "chapter_random",
+                        "limitSec", 1800,
+                        "elapsedSec", 1935));
+
+        Map<String, Object> overtime = service.status(88L, uid);
+        assertThat(overtime.get("limitSec")).isEqualTo(1800);
+        assertThat(overtime.get("remainingSec")).isEqualTo(0);
+        assertThat(overtime.get("overtimeSec")).isEqualTo(135);
+        assertThat(overtime.get("expired")).isEqualTo(true);
+        assertThat(overtime.get("autoSubmit")).isEqualTo(false);
+    }
+
+    @Test
+    void paperAndRandomStatusKeepAutoSubmitEnabledWhenTimed() {
+        JdbcTemplate jdbc = mock(JdbcTemplate.class);
+        UUID uid = UUID.randomUUID();
+
+        when(jdbc.queryForObject(startsWith("select count(*) from practice_session"), eq(Integer.class), eq(77L), eq(uid)))
+                .thenReturn(1);
+        when(jdbc.queryForMap(contains("when s.mode = 'chapter_random'"), eq(77L)))
+                .thenReturn(Map.of(
+                        "startedAt", "2026-11-13T09:00:00Z",
+                        "mode", "random",
+                        "limitSec", 6000,
+                        "elapsedSec", 6005));
+
+        PracticeService service = new PracticeService(jdbc);
+        Map<String, Object> res = service.status(77L, uid);
+        assertThat(res.get("expired")).isEqualTo(true);
+        assertThat(res.get("autoSubmit")).isEqualTo(true);
+        assertThat(res.get("remainingSec")).isEqualTo(0);
+    }
 }
