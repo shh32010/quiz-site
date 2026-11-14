@@ -94,11 +94,10 @@ async function copyCode(blockId: string, code?: string) {
                   :class="block.kind === 'trap' ? 'bg-red-100/90 text-red-600 dark:bg-red-900/60 dark:text-red-300' : 'bg-blue-100/90 text-blue-600 dark:bg-blue-900/60 dark:text-blue-300'">
               {{ block.kind === 'trap' ? '⚠️' : '💡' }}
             </span>
-            <!-- 提炼后的纯净主题标题 -->
+            <!-- 提炼后的纯净主题标题（支持行内代码与高亮标记） -->
             <h4 class="text-sm font-bold tracking-tight sm:text-base truncate"
-                :class="block.kind === 'trap' ? 'text-danger-fg' : 'text-fg-primary'">
-              {{ calloutCleanTitle(block.title, block.kind) }}
-            </h4>
+                :class="block.kind === 'trap' ? 'text-danger-fg' : 'text-fg-primary'"
+                v-html="inlineHtml(calloutCleanTitle(block.title, block.kind))" />
           </div>
 
           <!-- 右侧专属胶囊徽标 -->

@@ -111,4 +111,73 @@ describe('KnowledgeBlockRenderer Callout 样式渲染测试', () => {
     expect(wrapper.html()).toContain('<sub>2</sub><var>n</var>')
     expect(wrapper.text()).not.toContain('\\(')
   })
+
+  it('callout 卡片保留 \\n 多要点换行与三色高亮渲染', () => {
+    const blocks: KbBlock[] = [
+      {
+        id: 'co-multiline',
+        t: 'callout',
+        kind: 'tip',
+        imp: 'core',
+        title: '考向复习提示：软件测试两大方法',
+        text: '测试方法分类：\n• ==静态测试（不运行程序）==；\n• ==动态测试（运行程序）==。',
+      },
+    ]
+
+    const wrapper = mount(KnowledgeBlockRenderer, {
+      props: { blocks },
+    })
+
+    const prose = wrapper.find('.kb-callout .kb-prose p')
+    expect(prose.exists()).toBe(true)
+    expect(prose.text()).toContain('\n• 静态测试（不运行程序）；\n• 动态测试（运行程序）。')
+    expect(wrapper.findAll('.kb-mark')).toHaveLength(2)
+  })
+
+  it('img 区块正确渲染 alt 属性与含行内标记的 figcaption', () => {
+    const blocks: KbBlock[] = [
+      {
+        id: 'img-cap',
+        t: 'img',
+        src: '/kb-assets/refinement/b523-donut-chart.png',
+        w: 1320,
+        h: 780,
+        alt: '甜甜圈图各组成部分比例对比示例',
+        caption: '甜甜圈图与 ==`Donut Plot`== 组成部分比例示例',
+      },
+    ]
+
+    const wrapper = mount(KnowledgeBlockRenderer, {
+      props: { blocks },
+    })
+
+    const img = wrapper.find('img')
+    expect(img.attributes('alt')).toBe('甜甜圈图各组成部分比例对比示例')
+    const figcap = wrapper.find('figcaption')
+    expect(figcap.exists()).toBe(true)
+    expect(figcap.text()).toBe('甜甜圈图与 Donut Plot 组成部分比例示例')
+    expect(figcap.find('code').text()).toBe('Donut Plot')
+    expect(figcap.find('.kb-mark').exists()).toBe(true)
+  })
+
+  it('callout 标题中的行内反引号代码能正确解析为 code 标签', () => {
+    const blocks: KbBlock[] = [
+      {
+        id: 'trap-code-title',
+        t: 'callout',
+        kind: 'trap',
+        imp: 'core',
+        title: '高频易错陷阱：if 条件中赋值号 `=` 误写代替等于号 `==`！',
+        text: '应使用 `if (a == 0)` 判断相等。',
+      },
+    ]
+
+    const wrapper = mount(KnowledgeBlockRenderer, {
+      props: { blocks },
+    })
+
+    const heading = wrapper.find('.kb-callout h4')
+    expect(heading.text()).toBe('if 条件中赋值号 = 误写代替等于号 ==！')
+    expect(heading.findAll('code').map(c => c.text())).toEqual(['=', '=='])
+  })
 })
