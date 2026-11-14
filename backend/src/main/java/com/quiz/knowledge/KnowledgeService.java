@@ -13,6 +13,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 
@@ -94,13 +95,10 @@ public class KnowledgeService {
                 c.getLevel() == null ? 0 : c.getLevel(), total, childNodes);
     }
 
-    /** 某章节（含子孙）下的已发布讲义，可按标题/内容搜索 */
-    public Map<String, Object> list(int chapterId, String q, int page, int size) {
-        int safeSize = Math.min(Math.max(size, 1), 200);
-        int offset = Math.max(0, (page - 1) * safeSize);
-        String kw = q == null ? "" : q.trim();
-        String like = "%" + kw + "%";
+    private static final int SEARCH_SNIPPET_MAX_LEN = 136;
 
+    /** 某章节（含子孙）下的已发布讲义，可按标题/内容搜索并按相关性排序 */
+    public Map<String, Object> list(int chapterId, String q, int page, int size) {
         String sub = """
                 with recursive sub as (
                   select id from t_chapter where id = ? and not deleted
@@ -108,44 +106,7 @@ public class KnowledgeService {
                   select c.id from t_chapter c join sub s on c.parent_id = s.id where not c.deleted
                 )
                 """;
-        String where = """
-                 where e.status = 'published'
-                   and not c.deleted
-                   and c.id in (select id from sub)
-                   and (? = '' or c.name ilike ? or c.code ilike ? or r.search_text ilike ?)
-                """;
-
-        Integer total = jdbc.queryForObject(
-                sub + """
-                select count(*)
-                  from kb_entry e
-                  join kb_revision r on r.node_id = e.node_id and r.rev_no = e.published_rev
-                  join t_chapter c on c.id = e.node_id
-                """ + where,
-                Integer.class, chapterId, kw, like, like, like);
-
-        List<Map<String, Object>> rows = jdbc.queryForList(
-                sub + """
-                select c.id, c.id as "nodeId", c.parent_id as "sectionId",
-                       c.code as "nodeCode", c.name as "nodeName",
-                       c.name as "title",
-                       p.name as "section",
-                       left(r.search_text, 160) as "content",
-                       '' as "importance",
-                       (select count(*)
-                          from t_question q
-                         where not q.deleted and q.review_status = 'ok' and q.chapter_id = c.id) as "questionCount"
-                  from kb_entry e
-                  join kb_revision r on r.node_id = e.node_id and r.rev_no = e.published_rev
-                  join t_chapter c on c.id = e.node_id
-                  left join t_chapter p on p.id = c.parent_id
-                """ + where + """
-                 order by c.item_order nulls last, c.id
-                 limit ? offset ?
-                """,
-                chapterId, kw, like, like, like, safeSize, offset);
-
-        return Map.of("total", total == null ? 0 : total, "page", page, "size", safeSize, "rows", rows);
+        return queryPublishedEntries(sub, "  and c.id in (select id from sub)\n", List.of(chapterId), q, page, size);
     }
 
     /** 节阅读器：节信息 + 新版结构化讲义 entries + 极简旧版锚点映射 kps */
@@ -292,32 +253,65 @@ public class KnowledgeService {
         return kpRows.isEmpty() ? null : kpRows.getFirst();
     }
 
-    /** 全库搜索已发布讲义 */
+    /** 全库检索已发布讲义：支持按代码/标题/正文相关性排序，并提取关键词居中摘要 */
     public Map<String, Object> search(String q, int page, int size) {
+        return queryPublishedEntries("", "", List.of(), q, page, size);
+    }
+
+    /** 共享的分页+相关性检索实现（供章节列表检索与全库检索复用） */
+    private Map<String, Object> queryPublishedEntries(
+            String withCte,
+            String extraCondition,
+            List<Object> extraParams,
+            String q,
+            int page,
+            int size
+    ) {
         int safeSize = Math.min(Math.max(size, 1), 200);
         int offset = Math.max(0, (page - 1) * safeSize);
         String kw = q == null ? "" : q.trim();
         String like = "%" + kw + "%";
+
         String where = """
                  where e.status = 'published'
                    and not c.deleted
+                """ + extraCondition + """
                    and (? = '' or c.name ilike ? or c.code ilike ? or r.search_text ilike ?)
                 """;
 
-        Integer total = jdbc.queryForObject("""
+        List<Object> countArgs = new ArrayList<>(extraParams);
+        countArgs.add(kw);
+        countArgs.add(like);
+        countArgs.add(like);
+        countArgs.add(like);
+
+        Integer total = jdbc.queryForObject(
+                withCte + """
                 select count(*)
                   from kb_entry e
                   join kb_revision r on r.node_id = e.node_id and r.rev_no = e.published_rev
                   join t_chapter c on c.id = e.node_id
                 """ + where,
-                Integer.class, kw, like, like, like);
+                Integer.class, countArgs.toArray());
 
-        List<Map<String, Object>> rows = jdbc.queryForList("""
+        List<Object> rowArgs = new ArrayList<>(countArgs);
+        // 相关性排序参数：优先代码精确/模糊匹配，其次标题匹配，最后按正文首次命中位置升序
+        rowArgs.add(kw);
+        rowArgs.add(kw);
+        rowArgs.add(like);
+        rowArgs.add(like);
+        rowArgs.add(kw);
+        rowArgs.add(kw);
+        rowArgs.add(safeSize);
+        rowArgs.add(offset);
+
+        List<Map<String, Object>> rows = jdbc.queryForList(
+                withCte + """
                 select c.id, c.id as "nodeId", c.parent_id as "sectionId",
                        c.code as "nodeCode", c.name as "nodeName",
                        c.name as "title",
                        p.name as "section",
-                       left(r.search_text, 160) as "content",
+                       r.search_text as "content",
                        '' as "importance",
                        (select count(*)
                           from t_question q
@@ -327,11 +321,67 @@ public class KnowledgeService {
                   join t_chapter c on c.id = e.node_id
                   left join t_chapter p on p.id = c.parent_id
                 """ + where + """
-                 order by c.item_order nulls last, c.id
+                 order by
+                   case when ? = '' then 0
+                        when lower(c.code) = lower(?) then 0
+                        when c.code ilike ? then 1
+                        when c.name ilike ? then 2
+                        else 3 end,
+                   case when ? = '' then 0
+                        else coalesce(nullif(strpos(lower(r.search_text), lower(?)), 0), 999999) end,
+                   c.item_order nulls last,
+                   c.id
                  limit ? offset ?
-                """, kw, like, like, like, safeSize, offset);
+                """,
+                rowArgs.toArray());
 
-        return Map.of("total", total == null ? 0 : total, "page", page, "size", safeSize, "rows", rows);
+        return Map.of(
+                "total", total == null ? 0 : total,
+                "page", page,
+                "size", safeSize,
+                "rows", formatSearchSnippets(rows, kw)
+        );
+    }
+
+    /** 为检索结果行生成以关键词为中心的动态摘要（复制为可变 Map，兼容只读测试数据） */
+    static List<Map<String, Object>> formatSearchSnippets(List<Map<String, Object>> rows, String kw) {
+        List<Map<String, Object>> out = new ArrayList<>(rows.size());
+        for (Map<String, Object> row : rows) {
+            Map<String, Object> copy = new LinkedHashMap<>(row);
+            Object raw = copy.get("content");
+            copy.put("content", extractSnippet(raw == null ? "" : String.valueOf(raw), kw, SEARCH_SNIPPET_MAX_LEN));
+            out.add(copy);
+        }
+        return out;
+    }
+
+    /** 从正文中提取以关键词为中心的动态片段；未命中关键词或为空查询时截取开头摘要 */
+    static String extractSnippet(String text, String keyword, int maxLen) {
+        if (text == null || text.isBlank() || maxLen <= 0) {
+            return "";
+        }
+        String clean = text.replaceAll("\\s+", " ").trim();
+        if (clean.length() <= maxLen) {
+            return clean;
+        }
+        String kw = keyword == null ? "" : keyword.trim();
+        int idx = kw.isEmpty() ? -1 : clean.toLowerCase(Locale.ROOT).indexOf(kw.toLowerCase(Locale.ROOT));
+        int start = 0;
+        if (idx >= 0) {
+            int leadContext = Math.max(24, maxLen / 3);
+            if (idx > leadContext) {
+                start = Math.min(idx - leadContext, Math.max(0, clean.length() - maxLen));
+            }
+        }
+        int end = Math.min(clean.length(), start + maxLen);
+        String slice = clean.substring(start, end).trim();
+        if (start > 0) {
+            slice = "…" + slice;
+        }
+        if (end < clean.length()) {
+            slice = slice + "…";
+        }
+        return slice;
     }
 
     /** 获取当前用户的服务端知识点阅读进度与已学状态 */

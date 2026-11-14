@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // 结构化讲义块渲染器：支持列表、段落、自适应表格、代码卡片、可折叠树图、配图与全新现代质感易错/复习提示卡片
 import { computed, ref } from 'vue'
-import { filterKbBlocks, importanceBadgeMeta, renderInlineMarkup, type KbBlock } from '~/utils/knowledge'
+import { calloutTheme, filterKbBlocks, importanceBadgeMeta, renderInlineMarkup, type KbBlock } from '~/utils/knowledge'
 import UiBadge from '~/components/ui/UiBadge.vue'
 import UiImageLightbox from '~/components/ui/UiImageLightbox.vue'
 
@@ -47,18 +47,12 @@ function openImage(src?: string) {
 
 /** 提取 callout 核心标题，避免与右侧胶囊徽标前缀重复 */
 function calloutCleanTitle(title?: string, kind?: string): string {
+  const fallback = calloutTheme(kind).fallbackTitle
   if (!title) {
-    return kind === 'trap' ? '核心避坑要点' : '核心提分考向'
+    return fallback
   }
   const cleaned = title.replace(/^(考向复习提示|复习提示|高频易错陷阱|易错陷阱|重点注意事项|注意事项)[：:]\s*/, '')
-  return cleaned.trim() || (kind === 'trap' ? '核心避坑要点' : '核心提分考向')
-}
-
-/** 胶囊徽标文案 */
-function calloutBadgeText(kind?: string): string {
-  if (kind === 'trap') return '高频易错陷阱'
-  if (kind === 'warn') return '重点注意事项'
-  return '考向复习提示'
+  return cleaned.trim() || fallback
 }
 
 async function copyCode(blockId: string, code?: string) {
@@ -76,36 +70,30 @@ async function copyCode(blockId: string, code?: string) {
 <template>
   <div class="kb-blocks space-y-4">
     <template v-for="block in visibleBlocks" :key="block.id">
-      <!-- 1. 专门的提示/陷阱卡片 (callout) - 方案 A 现代质感徽章卡片风 -->
+      <!-- 1. 专门的提示/陷阱/重点注意卡片 (callout) - 方案 A 现代质感徽章卡片风 -->
       <div v-if="block.t === 'callout'"
            :id="block.id"
            class="kb-callout relative overflow-hidden rounded-2xl border p-4 sm:p-5 shadow-xs transition-all"
-           :class="[
-             block.kind === 'trap'
-               ? 'border-red-200/90 bg-gradient-to-br from-red-50/80 via-surface-card to-danger-bg/25 border-l-[5px] border-l-red-500 dark:border-red-900/60 dark:border-l-red-400 dark:from-red-950/25 dark:via-surface-card dark:to-surface-card'
-               : 'border-blue-200/90 bg-gradient-to-br from-blue-50/80 via-surface-card to-brand-soft/25 border-l-[5px] border-l-brand dark:border-blue-900/60 dark:border-l-blue-400 dark:from-blue-950/25 dark:via-surface-card dark:to-surface-card'
-           ]">
+           :class="calloutTheme(block.kind).cardClass">
         <!-- 头部 Header -->
         <div class="mb-3 flex flex-wrap items-center justify-between gap-2.5 border-b pb-2.5"
-             :class="block.kind === 'trap' ? 'border-red-100/90 dark:border-red-950/60' : 'border-blue-100/90 dark:border-blue-950/60'">
+             :class="calloutTheme(block.kind).headerBorderClass">
           <div class="flex items-center gap-2 min-w-0">
             <!-- 独立微底托图标 -->
             <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg shadow-2xs text-sm"
-                  :class="block.kind === 'trap' ? 'bg-red-100/90 text-red-600 dark:bg-red-900/60 dark:text-red-300' : 'bg-blue-100/90 text-blue-600 dark:bg-blue-900/60 dark:text-blue-300'">
-              {{ block.kind === 'trap' ? '⚠️' : '💡' }}
+                  :class="calloutTheme(block.kind).iconWrapClass">
+              {{ calloutTheme(block.kind).icon }}
             </span>
             <!-- 提炼后的纯净主题标题（支持行内代码与高亮标记） -->
             <h4 class="text-sm font-bold tracking-tight sm:text-base truncate"
-                :class="block.kind === 'trap' ? 'text-danger-fg' : 'text-fg-primary'"
+                :class="calloutTheme(block.kind).titleClass"
                 v-html="inlineHtml(calloutCleanTitle(block.title, block.kind))" />
           </div>
 
           <!-- 右侧专属胶囊徽标 -->
           <span class="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold shadow-2xs shrink-0"
-                :class="block.kind === 'trap'
-                  ? 'bg-red-100/90 text-red-700 border border-red-200/80 dark:bg-red-900/50 dark:text-red-300 dark:border-red-800/60'
-                  : 'bg-blue-100/90 text-blue-700 border border-blue-200/80 dark:bg-blue-900/50 dark:text-blue-300 dark:border-blue-800/60'">
-            {{ calloutBadgeText(block.kind) }}
+                :class="calloutTheme(block.kind).badgeClass">
+            {{ calloutTheme(block.kind).badge }}
           </span>
         </div>
 

@@ -104,13 +104,17 @@ class KnowledgeServiceTest {
     }
 
     @Test
+    @SuppressWarnings("unchecked")
     void searchSearchesPublishedRevisionSearchText() {
         ChapterRepository chapterRepo = mock(ChapterRepository.class);
         JdbcTemplate jdbc = mock(JdbcTemplate.class);
 
         when(jdbc.queryForObject(contains("from kb_entry e"), eq(Integer.class), eq("main"), eq("%main%"), eq("%main%"), eq("%main%")))
                 .thenReturn(1);
-        when(jdbc.queryForList(contains("select c.id, c.id as \"nodeId\""), eq("main"), eq("%main%"), eq("%main%"), eq("%main%"), eq(20), eq(0)))
+        when(jdbc.queryForList(contains("order by"),
+                eq("main"), eq("%main%"), eq("%main%"), eq("%main%"),
+                eq("main"), eq("main"), eq("%main%"), eq("%main%"),
+                eq("main"), eq("main"), eq(20), eq(0)))
                 .thenReturn(List.of(Map.of(
                         "id", 239, "nodeId", 239, "sectionId", 238,
                         "nodeCode", "S1-1.1", "nodeName", "程序的构成",
@@ -123,7 +127,94 @@ class KnowledgeServiceTest {
         Map<String, Object> res = service.search("main", 1, 20);
 
         assertThat(res.get("total")).isEqualTo(1);
-        List<?> rows = (List<?>) res.get("rows");
+        List<Map<String, Object>> rows = (List<Map<String, Object>>) res.get("rows");
         assertThat(rows).hasSize(1);
+        assertThat(rows.get(0).get("content")).isEqualTo("main 函数是唯一入口");
+        // 确保检索 SQL 具备相关性排序：代码精确匹配 -> 代码包含 -> 标题匹配 -> 正文命中位置
+        verify(jdbc).queryForList(contains("lower(c.code) = lower(?)"), any(Object[].class));
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void searchCentersSnippetAroundLateKeywordHit() {
+        ChapterRepository chapterRepo = mock(ChapterRepository.class);
+        JdbcTemplate jdbc = mock(JdbcTemplate.class);
+        String longBody = "1、排序基本概念与选择排序、冒泡排序、快速排序与直接插入排序对比说明，前置内容非常长用于模拟真实长篇讲义。"
+                + "A".repeat(140)
+                + "8、二分查找（折半查找）要求线性表有序且支持随机访问，每次将待查区间缩小一半。";
+
+        when(jdbc.queryForObject(contains("from kb_entry e"), eq(Integer.class), any(Object[].class)))
+                .thenReturn(1);
+        when(jdbc.queryForList(contains("from kb_entry e"), any(Object[].class)))
+                .thenReturn(List.of(Map.of(
+                        "id", 263, "nodeId", 263, "sectionId", 259,
+                        "nodeCode", "S1-6.4", "nodeName", "使用一维数组解决批量数据查找或排序等问题",
+                        "title", "使用一维数组解决批量数据查找或排序等问题", "section", "数组的应用",
+                        "content", longBody, "importance", "",
+                        "questionCount", 12
+                )));
+
+        KnowledgeService service = new KnowledgeService(chapterRepo, jdbc, new ObjectMapper());
+        Map<String, Object> res = service.search("二分查找", 1, 20);
+
+        List<Map<String, Object>> rows = (List<Map<String, Object>>) res.get("rows");
+        String snippet = String.valueOf(rows.get(0).get("content"));
+        assertThat(snippet).contains("二分查找");
+        assertThat(snippet).startsWith("…");
+        assertThat(snippet.length()).isLessThanOrEqualTo(140);
+    }
+
+    @Test
+    void extractSnippetHandlesEdgesAndCaseInsensitivity() {
+        assertThat(KnowledgeService.extractSnippet(null, "kw", 160)).isEmpty();
+        assertThat(KnowledgeService.extractSnippet("   ", "kw", 160)).isEmpty();
+
+        // 命中位于开头附近时不加前省略号
+        String head = "二分查找（折半查找）需要有序数组。" + "B".repeat(200);
+        String headSnippet = KnowledgeService.extractSnippet(head, "二分查找", 100);
+        assertThat(headSnippet).startsWith("二分查找");
+        assertThat(headSnippet).endsWith("…");
+
+        // 命中位于末尾时不加后省略号
+        String tail = "C".repeat(200) + "最终核心结论：Time Complexity is O(log n)。";
+        String tailSnippet = KnowledgeService.extractSnippet(tail, "time complexity", 80);
+        assertThat(tailSnippet).startsWith("…");
+        assertThat(tailSnippet).contains("Time Complexity");
+        assertThat(tailSnippet).doesNotEndWith("…");
+
+        // 仅标题命中、正文不含关键词时回退开头摘要
+        String fallback = "这里是一段较长的导论正文。" + "D".repeat(200);
+        String fallbackSnippet = KnowledgeService.extractSnippet(fallback, "不存在的词", 80);
+        assertThat(fallbackSnippet).startsWith("这里是一段较长的导论正文。");
+        assertThat(fallbackSnippet).endsWith("…");
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void listSearchesChapterSubtreeWithRelevanceAndSnippets() {
+        ChapterRepository chapterRepo = mock(ChapterRepository.class);
+        JdbcTemplate jdbc = mock(JdbcTemplate.class);
+        String longBody = "X".repeat(160) + "顺序表与二分查找时间复杂度分析。";
+
+        when(jdbc.queryForObject(contains("with recursive sub as"), eq(Integer.class),
+                eq(258), eq("二分查找"), eq("%二分查找%"), eq("%二分查找%"), eq("%二分查找%")))
+                .thenReturn(1);
+        when(jdbc.queryForList(contains("with recursive sub as"),
+                eq(258), eq("二分查找"), eq("%二分查找%"), eq("%二分查找%"), eq("%二分查找%"),
+                eq("二分查找"), eq("二分查找"), eq("%二分查找%"), eq("%二分查找%"),
+                eq("二分查找"), eq("二分查找"), eq(20), eq(0)))
+                .thenReturn(List.of(Map.of(
+                        "id", 263, "nodeId", 263, "sectionId", 259,
+                        "nodeCode", "S1-6.4", "nodeName", "一维数组查找与排序",
+                        "title", "一维数组查找与排序", "section", "数组的应用",
+                        "content", longBody, "importance", "", "questionCount", 12
+                )));
+
+        KnowledgeService service = new KnowledgeService(chapterRepo, jdbc, new ObjectMapper());
+        Map<String, Object> res = service.list(258, "二分查找", 1, 20);
+
+        assertThat(res.get("total")).isEqualTo(1);
+        List<Map<String, Object>> rows = (List<Map<String, Object>>) res.get("rows");
+        assertThat(String.valueOf(rows.get(0).get("content"))).startsWith("…").contains("二分查找");
     }
 }

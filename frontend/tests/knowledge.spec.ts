@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  calloutTheme,
   courseOf,
   filterKbBlocks,
   flattenSections,
@@ -116,11 +117,51 @@ describe('knowledge tree utils', () => {
     expect(filterKbBlocks(blocks, true).map(b => b.id)).toEqual(['b1', 'b3', 'b4'])
   })
 
-  it('importanceBadgeMeta 返回等级标签与左边框样式', () => {
-    expect(importanceBadgeMeta('core').label).toBe('')
-    expect(importanceBadgeMeta('important').label).toBe('重点')
-    expect(importanceBadgeMeta('hard').label).toBe('难点')
-    expect(importanceBadgeMeta('normal').label).toBe('')
+  it('importanceBadgeMeta 返回与四色图例一致的等级标签、色调与左边框样式', () => {
+    expect(importanceBadgeMeta('core')).toEqual({
+      label: '',
+      tone: 'red',
+      borderClass: 'border-l-danger-fg',
+    })
+    expect(importanceBadgeMeta('important')).toEqual({
+      label: '重点',
+      tone: 'green',
+      borderClass: 'border-l-success-fg',
+    })
+    expect(importanceBadgeMeta('hard')).toEqual({
+      label: '难点',
+      tone: 'amber',
+      borderClass: 'border-l-warn-fg',
+    })
+    expect(importanceBadgeMeta('normal')).toEqual({
+      label: '',
+      tone: 'slate',
+      borderClass: 'border-l-line-strong',
+    })
+  })
+
+  it('calloutTheme 为 trap/warn/tip 返回各自专属语义配色与图标', () => {
+    expect(calloutTheme('trap')).toMatchObject({
+      kind: 'trap',
+      icon: '⚠️',
+      badge: '高频易错陷阱',
+      fallbackTitle: '核心避坑要点',
+    })
+    const warn = calloutTheme('warn')
+    expect(warn).toMatchObject({
+      kind: 'warn',
+      icon: '📌',
+      badge: '重点注意事项',
+      fallbackTitle: '重点注意事项',
+    })
+    expect(warn.cardClass).toContain('border-amber')
+    expect(warn.cardClass).toContain('border-l-warn-fg')
+    expect(calloutTheme('tip')).toMatchObject({
+      kind: 'tip',
+      icon: '💡',
+      badge: '考向复习提示',
+    })
+    expect(calloutTheme(undefined).kind).toBe('tip')
   })
 
   it('parseSectionAnchorId 正确解析章节导读与考点锚点', () => {

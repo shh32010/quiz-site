@@ -697,7 +697,12 @@ watch(section, (value) => {
                   <p v-if="entry.nodeCode" class="font-mono text-xs font-semibold text-brand">{{ shortNodeCode(entry.nodeCode) }}</p>
                   <h2 class="mt-0.5 text-lg font-bold text-fg-primary sm:text-xl">{{ entry.nodeName }}</h2>
                 </div>
-                <div class="flex shrink-0 items-center gap-1.5">
+                <div class="flex max-w-full flex-wrap items-center gap-1.5">
+                  <NuxtLink v-if="(entry.questionCount ?? 0) > 0"
+                            :to="practiceReturn(entry.nodeId)"
+                            class="inline-flex min-h-9 items-center gap-1 rounded-lg border border-brand/30 bg-brand-soft/60 px-2.5 py-1 text-xs font-medium text-brand transition-colors hover:bg-brand-soft">
+                    专练本考点 →
+                  </NuxtLink>
                   <UiBadge tone="blue">精编讲义 v{{ entry.revNo }}</UiBadge>
                   <a :href="`#group-${entry.nodeId}`"
                      class="flex h-9 w-9 items-center justify-center rounded-lg text-fg-muted hover:bg-surface-muted hover:text-brand"

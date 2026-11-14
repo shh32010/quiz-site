@@ -180,4 +180,57 @@ describe('KnowledgeBlockRenderer Callout 样式渲染测试', () => {
     expect(heading.text()).toBe('if 条件中赋值号 = 误写代替等于号 ==！')
     expect(heading.findAll('code').map(c => c.text())).toEqual(['=', '=='])
   })
+
+  it('重点注意事项 (warn) 卡片拥有专属琥珀色渐变容器、图钉图标与独立徽标', () => {
+    const blocks: KbBlock[] = [
+      {
+        id: 'warn-1',
+        t: 'callout',
+        kind: 'warn',
+        imp: 'important',
+        title: '重点注意事项：Windows 快捷键与路径规范',
+        text: '注意 ^^绝对路径与相对路径^^ 的区别。',
+      },
+    ]
+
+    const wrapper = mount(KnowledgeBlockRenderer, {
+      props: { blocks },
+    })
+
+    const callout = wrapper.find('.kb-callout')
+    expect(callout.exists()).toBe(true)
+    expect(callout.classes().some(c => c.includes('border-amber'))).toBe(true)
+    expect(callout.classes()).toContain('border-l-warn-fg')
+    expect(callout.text()).toContain('📌')
+    expect(callout.find('h4').text()).toBe('Windows 快捷键与路径规范')
+    expect(callout.text()).toContain('重点注意事项')
+  })
+
+  it('普通讲义块按 important=绿色、hard=琥珀色 渲染徽章与左边框', () => {
+    const blocks: KbBlock[] = [
+      {
+        id: 'blk-imp',
+        t: 'p',
+        imp: 'important',
+        title: '绿色重点块',
+        text: '^^重点内容^^',
+      },
+      {
+        id: 'blk-hard',
+        t: 'p',
+        imp: 'hard',
+        title: '黄色难点块',
+        text: '@@难点内容@@',
+      },
+    ]
+
+    const wrapper = mount(KnowledgeBlockRenderer, {
+      props: { blocks },
+    })
+
+    const cards = wrapper.findAll('.kb-block')
+    expect(cards).toHaveLength(2)
+    expect(cards[0].classes()).toContain('border-l-success-fg')
+    expect(cards[1].classes()).toContain('border-l-warn-fg')
+  })
 })

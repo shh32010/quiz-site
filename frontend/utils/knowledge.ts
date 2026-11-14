@@ -490,10 +490,10 @@ export function filterKbBlocks(blocks: KbBlock[], coreOnly: boolean): KbBlock[] 
   )
 }
 
-/** 知识点/讲义块重要度对应的徽章与左边框样式 */
+/** 知识点/讲义块重要度对应的徽章与左边框样式（严格对齐四色考纲图例：核心红、重点绿、难点黄/琥珀、了解灰） */
 export function importanceBadgeMeta(imp?: string): {
   label: string
-  tone: 'red' | 'amber' | 'blue' | 'slate'
+  tone: 'red' | 'green' | 'amber' | 'slate'
   borderClass: string
 } {
   const v = (imp ?? '').trim().toLowerCase()
@@ -501,12 +501,74 @@ export function importanceBadgeMeta(imp?: string): {
     return { label: '', tone: 'red', borderClass: 'border-l-danger-fg' }
   }
   if (v === 'important' || v === '重点') {
-    return { label: '重点', tone: 'amber', borderClass: 'border-l-warn-fg' }
+    return { label: '重点', tone: 'green', borderClass: 'border-l-success-fg' }
   }
   if (v === 'hard' || v === '难点') {
-    return { label: '难点', tone: 'blue', borderClass: 'border-l-brand' }
+    return { label: '难点', tone: 'amber', borderClass: 'border-l-warn-fg' }
   }
   return { label: '', tone: 'slate', borderClass: 'border-l-line-strong' }
+}
+
+export interface CalloutTheme {
+  kind: 'trap' | 'warn' | 'tip'
+  icon: string
+  badge: string
+  fallbackTitle: string
+  cardClass: string
+  headerBorderClass: string
+  iconWrapClass: string
+  titleClass: string
+  badgeClass: string
+}
+
+const CALLOUT_THEMES: Record<'trap' | 'warn' | 'tip', CalloutTheme> = {
+  trap: {
+    kind: 'trap',
+    icon: '⚠️',
+    badge: '高频易错陷阱',
+    fallbackTitle: '核心避坑要点',
+    cardClass:
+      'border-red-200/90 bg-gradient-to-br from-red-50/80 via-surface-card to-danger-bg/25 border-l-[5px] border-l-red-500 dark:border-red-900/60 dark:border-l-red-400 dark:from-red-950/25 dark:via-surface-card dark:to-surface-card',
+    headerBorderClass: 'border-red-100/90 dark:border-red-950/60',
+    iconWrapClass: 'bg-red-100/90 text-red-600 dark:bg-red-900/60 dark:text-red-300',
+    titleClass: 'text-danger-fg',
+    badgeClass:
+      'bg-red-100/90 text-red-700 border border-red-200/80 dark:bg-red-900/50 dark:text-red-300 dark:border-red-800/60',
+  },
+  warn: {
+    kind: 'warn',
+    icon: '📌',
+    badge: '重点注意事项',
+    fallbackTitle: '重点注意事项',
+    cardClass:
+      'border-amber-200/90 bg-gradient-to-br from-amber-50/80 via-surface-card to-warn-bg/30 border-l-[5px] border-l-warn-fg dark:border-amber-900/60 dark:border-l-amber-400 dark:from-amber-950/25 dark:via-surface-card dark:to-surface-card',
+    headerBorderClass: 'border-amber-100/90 dark:border-amber-950/60',
+    iconWrapClass: 'bg-amber-100/90 text-amber-700 dark:bg-amber-900/60 dark:text-amber-300',
+    titleClass: 'text-warn-fg',
+    badgeClass:
+      'bg-amber-100/90 text-amber-800 border border-amber-200/80 dark:bg-amber-900/50 dark:text-amber-300 dark:border-amber-800/60',
+  },
+  tip: {
+    kind: 'tip',
+    icon: '💡',
+    badge: '考向复习提示',
+    fallbackTitle: '核心提分考向',
+    cardClass:
+      'border-blue-200/90 bg-gradient-to-br from-blue-50/80 via-surface-card to-brand-soft/25 border-l-[5px] border-l-brand dark:border-blue-900/60 dark:border-l-blue-400 dark:from-blue-950/25 dark:via-surface-card dark:to-surface-card',
+    headerBorderClass: 'border-blue-100/90 dark:border-blue-950/60',
+    iconWrapClass: 'bg-blue-100/90 text-blue-600 dark:bg-blue-900/60 dark:text-blue-300',
+    titleClass: 'text-fg-primary',
+    badgeClass:
+      'bg-blue-100/90 text-blue-700 border border-blue-200/80 dark:bg-blue-900/50 dark:text-blue-300 dark:border-blue-800/60',
+  },
+}
+
+/** 根据 callout 卡片类型返回统一的配色、图标与文案配置 */
+export function calloutTheme(kind?: string): CalloutTheme {
+  if (kind === 'trap' || kind === 'warn') {
+    return CALLOUT_THEMES[kind]
+  }
+  return CALLOUT_THEMES.tip
 }
 
 /** 导读卡片在目录和锚点解析中的保留虚拟节点 ID */
