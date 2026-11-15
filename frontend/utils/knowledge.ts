@@ -185,6 +185,14 @@ const MATH_COMMANDS: Record<string, { text: string; kind: 'op' | 'delim' | 'bin'
   cup: { text: '∪', kind: 'bin' },
   cap: { text: '∩', kind: 'bin' },
   infty: { text: '∞', kind: 'sym' },
+  dots: { text: '…', kind: 'sym' },
+  ldots: { text: '…', kind: 'sym' },
+  cdots: { text: '⋯', kind: 'sym' },
+  lor: { text: '∨', kind: 'bin' },
+  land: { text: '∧', kind: 'bin' },
+  neg: { text: '¬', kind: 'sym' },
+  circ: { text: '∘', kind: 'bin' },
+  degree: { text: '°', kind: 'sym' },
   alpha: { text: 'α', kind: 'sym' },
   beta: { text: 'β', kind: 'sym' },
   gamma: { text: 'γ', kind: 'sym' },
@@ -363,6 +371,19 @@ export function formatMathExpression(escapedExpr: string): string {
     return { html: ch, nextUnary: false }
   }
 
+  /**
+   * 识别并消费上标度号（^\circ / ^{\circ} / ^\degree / ^{\degree} / ^° / ^{°}）
+   * Unicode 度号 ° 本身已处于右上角位置，直接输出可避免包入 <sup> 造成双重缩小与上漂
+   */
+  const tryConsumeDegreeSup = (): boolean => {
+    const match = src
+      .slice(pos)
+      .match(/^\s*(?:\{\s*(?:\\(?:circ|degree)|°)\s*\}|\\(?:circ|degree)(?![A-Za-z])|°)/)
+    if (!match) return false
+    pos += match[0].length
+    return true
+  }
+
   /** 读取下标/上标/\frac 参数（花括号整组或单个原子） */
   const parseAtomOrGroup = (): string => {
     skipSpaces()
@@ -399,15 +420,20 @@ export function formatMathExpression(escapedExpr: string): string {
       const atom = parseAtom(expectUnary)
       let subHtml = ''
       let supHtml = ''
+      let hasDegreeSup = false
 
       for (let i = 0; i < 2; i += 1) {
         skipSpaces()
         if (src[pos] === '_' && !subHtml) {
           pos += 1
           subHtml = parseAtomOrGroup()
-        } else if (src[pos] === '^' && !supHtml) {
+        } else if (src[pos] === '^' && !supHtml && !hasDegreeSup) {
           pos += 1
-          supHtml = parseAtomOrGroup()
+          if (tryConsumeDegreeSup()) {
+            hasDegreeSup = true
+          } else {
+            supHtml = parseAtomOrGroup()
+          }
         } else {
           break
         }
@@ -421,7 +447,10 @@ export function formatMathExpression(escapedExpr: string): string {
       } else if (supHtml) {
         out += `<sup>${supHtml}</sup>`
       }
-      expectUnary = subHtml || supHtml ? false : atom.nextUnary
+      if (hasDegreeSup) {
+        out += '°'
+      }
+      expectUnary = subHtml || supHtml || hasDegreeSup ? false : atom.nextUnary
     }
     return out
   }

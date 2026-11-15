@@ -233,4 +233,49 @@ describe('KnowledgeBlockRenderer Callout 样式渲染测试', () => {
     expect(cards[0].classes()).toContain('border-l-success-fg')
     expect(cards[1].classes()).toContain('border-l-warn-fg')
   })
+
+  it('行内公式正确渲染度数、省略号、逻辑符号与函数复合且 ° 不嵌套 <sup>', () => {
+    const blocks: KbBlock[] = [
+      {
+        id: 'math-ext-p',
+        t: 'p',
+        imp: 'hard',
+        text: '@@角度与弧度换算（\\(\\pi = 180^\\circ\\)）@@，直角为 \\(90^{\\circ}\\)，复合函数 \\(f \\circ g\\)。',
+      },
+      {
+        id: 'math-ext-list',
+        t: 'list',
+        imp: 'normal',
+        items: [
+          '自然数序列：\\(0, 1, 2, \\dots\\)',
+          '逻辑运算：析取 \\(\\lor\\) 与否定 \\(\\neg\\)',
+        ],
+      },
+    ]
+
+    const wrapper = mount(KnowledgeBlockRenderer, {
+      props: { blocks },
+    })
+
+    // 校验 @@...@@ 高亮与 \pi = 180^\circ 渲染结果
+    const hardMark = wrapper.find('.kb-hard')
+    expect(hardMark.exists()).toBe(true)
+    expect(hardMark.find('.kb-math').text()).toBe('π=180°')
+
+    // 校验所有行内公式都不含多余的 <sup>（避免 ° 双重缩小上漂）以及原始命令字样
+    expect(wrapper.find('.kb-math sup').exists()).toBe(false)
+    expect(wrapper.text()).toContain('90°')
+    expect(wrapper.text()).toContain('0,1,2,…')
+    expect(wrapper.text()).toContain('∨')
+    expect(wrapper.text()).toContain('¬')
+    expect(wrapper.text()).toContain('f∘g')
+    expect(wrapper.text()).not.toContain('circ')
+    expect(wrapper.text()).not.toContain('dots')
+    expect(wrapper.text()).not.toContain('lor')
+    expect(wrapper.text()).not.toContain('neg')
+    // 校验 \circ 与 \lor 具备二元运算符语义类
+    const bins = wrapper.findAll('.kb-math .kb-math-bin').map(node => node.text())
+    expect(bins).toContain('∘')
+    expect(bins).toContain('∨')
+  })
 })

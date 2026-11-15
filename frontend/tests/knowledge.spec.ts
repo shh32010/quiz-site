@@ -82,6 +82,39 @@ describe('knowledge tree utils', () => {
     expect(extHtml).toContain('<sub><span class="kb-math-op">max</span></sub>')
   })
 
+  it('renderInlineMarkup 正确处理 ^\\circ / ^{\\circ} 度号（不包 <sup>）、\\circ 复合符及 \\dots / \\lor / \\land / \\neg', () => {
+    // 1. 弧度与角度：^\circ 与 ^{\circ} 均直接输出 Unicode 度号 °，不得套入 <sup>
+    const degHtml = renderInlineMarkup('换算：\\(\\pi = 180^\\circ\\)，直角 \\(90^{\\circ}\\)，差值 \\(180^\\circ - 90^\\circ\\)')
+    expect(degHtml).toContain('<span class="kb-math">π<span class="kb-math-bin">=</span><span class="kb-math-num">180</span>°</span>')
+    expect(degHtml).toContain('<span class="kb-math"><span class="kb-math-num">90</span>°</span>')
+    expect(degHtml).toContain('°<span class="kb-math-bin">−</span><span class="kb-math-num">90</span>°')
+    expect(degHtml).not.toContain('<sup>')
+    expect(degHtml).not.toContain('circ')
+
+    // 2. 独立出现的 \circ 仍作为复合符号 ∘ (bin)，\degree 直接输出 °
+    const compHtml = renderInlineMarkup('复合运算 \\(f \\circ g\\) 与 \\(\\degree\\)')
+    expect(compHtml).toContain('<span class="kb-math"><var>f</var><span class="kb-math-bin">∘</span><var>g</var></span>')
+    expect(compHtml).toContain('<span class="kb-math">°</span>')
+
+    // 3. 省略号与逻辑运算符：\dots / \ldots / \cdots / \lor / \land / \neg
+    const logicHtml = renderInlineMarkup('序列 \\(0, 1, 2, \\dots\\)、\\(a_1, \\ldots, a_n\\)、\\(1 + \\cdots + n\\)，逻辑 \\(\\lor\\)、\\(p \\land q\\)、\\(\\neg\\)、\\(\\neg p\\)')
+    expect(logicHtml).toContain('<span class="kb-math-num">2</span><span class="kb-math-punct">,</span>…</span>')
+    expect(logicHtml).toContain('<span class="kb-math-punct">,</span>…<span class="kb-math-punct">,</span>')
+    expect(logicHtml).toContain('<span class="kb-math-bin">+</span>⋯<span class="kb-math-bin">+</span>')
+    expect(logicHtml).toContain('<span class="kb-math"><span class="kb-math-bin">∨</span></span>')
+    expect(logicHtml).toContain('<span class="kb-math"><var>p</var><span class="kb-math-bin">∧</span><var>q</var></span>')
+    expect(logicHtml).toContain('<span class="kb-math">¬</span>')
+    expect(logicHtml).toContain('<span class="kb-math">¬<var>p</var></span>')
+    expect(logicHtml).not.toContain('dots')
+    expect(logicHtml).not.toContain('lor')
+    expect(logicHtml).not.toContain('neg')
+
+    // 4. 与难点标记 @@...@@ 及搜索词高亮组合
+    const markedHtml = renderInlineMarkup('@@角度与弧度换算（\\(\\pi = 180^\\circ\\)）@@', '弧度')
+    expect(markedHtml).toContain('<mark class="kb-hard">角度与<mark class="kb-hl">弧度</mark>换算（<span class="kb-math">π<span class="kb-math-bin">=</span><span class="kb-math-num">180</span>°</span>）</mark>')
+    expect(markedHtml).not.toContain('<sup>')
+  })
+
   it('renderInlineMarkup 公式解析不误伤 shell $、代码反引号、三色标记、搜索高亮与 XSS', () => {
     const safeHtml = renderInlineMarkup(
       '命令 `$ ln -s /a /b` 与代码 `\\(\\log_2 n\\)`；==\\(\\log_2 n\\)==；\\(<script>i < n</script>\\)',
