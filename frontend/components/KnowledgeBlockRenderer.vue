@@ -1,7 +1,16 @@
 <script setup lang="ts">
 // 结构化讲义块渲染器：支持列表、段落、自适应表格、代码卡片、可折叠树图、配图与全新现代质感易错/复习提示卡片
 import { computed, ref } from 'vue'
-import { calloutTheme, filterKbBlocks, importanceBadgeMeta, renderInlineMarkup, type KbBlock } from '~/utils/knowledge'
+import hljs from 'highlight.js/lib/core'
+import cLang from 'highlight.js/lib/languages/c'
+import cppLang from 'highlight.js/lib/languages/cpp'
+import sqlLang from 'highlight.js/lib/languages/sql'
+import iniLang from 'highlight.js/lib/languages/ini'
+import bashLang from 'highlight.js/lib/languages/bash'
+import xmlLang from 'highlight.js/lib/languages/xml'
+import jsLang from 'highlight.js/lib/languages/javascript'
+import plainLang from 'highlight.js/lib/languages/plaintext'
+import { calloutTheme, filterKbBlocks, FRONTIER_THEME, importanceBadgeMeta, renderInlineMarkup, type KbBlock } from '~/utils/knowledge'
 import UiBadge from '~/components/ui/UiBadge.vue'
 import UiImageLightbox from '~/components/ui/UiImageLightbox.vue'
 
@@ -13,6 +22,39 @@ const props = withDefaults(defineProps<{
   coreOnly: false,
   highlightKeyword: '',
 })
+
+hljs.registerLanguage('c', cLang)
+hljs.registerLanguage('cpp', cppLang)
+hljs.registerLanguage('sql', sqlLang)
+hljs.registerLanguage('ini', iniLang)
+hljs.registerLanguage('bash', bashLang)
+hljs.registerLanguage('shell', bashLang)
+hljs.registerLanguage('xml', xmlLang)
+hljs.registerLanguage('html', xmlLang)
+hljs.registerLanguage('javascript', jsLang)
+hljs.registerLanguage('js', jsLang)
+hljs.registerLanguage('plaintext', plainLang)
+hljs.registerLanguage('text', plainLang)
+hljs.registerLanguage('txt', plainLang)
+
+const codeCache = new Map<string, string>()
+function codeHtml(block: KbBlock): string {
+  const code = block.code ?? ''
+  const lang = (block.lang || 'plaintext').toLowerCase()
+  const key = `${block.id}|${lang}|${code.length}`
+  const cached = codeCache.get(key)
+  if (cached !== undefined) return cached
+  let html = ''
+  try {
+    html = hljs.getLanguage(lang)
+      ? hljs.highlight(code, { language: lang, ignoreIllegals: true }).value
+      : hljs.highlight(code, { language: 'plaintext' }).value
+  } catch {
+    html = code.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+  }
+  codeCache.set(key, html)
+  return html
+}
 
 const copiedId = ref<string | null>(null)
 const lightboxOpen = ref(false)
@@ -103,6 +145,30 @@ async function copyCode(blockId: string, code?: string) {
         </div>
       </div>
 
+      <!-- 1.5 前沿补充：沿用 callout 卡片壳，中性灰配色 -->
+      <div v-else-if="block.t === 'frontier'"
+           :id="block.id"
+           class="kb-callout relative overflow-hidden rounded-2xl border p-4 sm:p-5 shadow-xs transition-all"
+           :class="FRONTIER_THEME.cardClass">
+        <div class="mb-3 flex flex-wrap items-center justify-between gap-2.5 border-b pb-2.5"
+             :class="FRONTIER_THEME.headerBorderClass">
+          <div class="flex min-w-0 items-center gap-2">
+            <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-sm shadow-2xs"
+                  :class="FRONTIER_THEME.iconWrapClass">{{ FRONTIER_THEME.icon }}</span>
+            <h4 class="truncate text-sm font-bold tracking-tight sm:text-base"
+                :class="FRONTIER_THEME.titleClass">
+              <span v-html="inlineHtml(block.title)" />
+              <span v-if="block.period" class="ml-2 text-xs font-normal text-fg-muted">{{ block.period }}</span>
+            </h4>
+          </div>
+          <span class="inline-flex shrink-0 items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold shadow-2xs"
+                :class="FRONTIER_THEME.badgeClass">{{ FRONTIER_THEME.badge }}</span>
+        </div>
+        <div class="kb-prose text-sm leading-relaxed text-fg-secondary sm:text-[15px]">
+          <p v-html="inlineHtml(block.text)" />
+        </div>
+      </div>
+
       <!-- 2. 其余普通教学块 (p, list, table, code, tree, img) -->
       <div v-else
            :id="block.id"
@@ -182,7 +248,7 @@ async function copyCode(blockId: string, code?: string) {
               {{ copiedId === block.id ? '✓ 已复制' : '复制代码' }}
             </button>
           </div>
-          <pre class="overflow-x-auto p-3 font-mono text-xs leading-6 text-fg-primary sm:text-sm"><code>{{ block.code }}</code></pre>
+          <pre class="overflow-x-auto p-3 font-mono text-xs leading-6 text-fg-primary sm:text-sm"><code v-html="codeHtml(block)" /></pre>
         </div>
 
         <!-- 5. 树状思维导图块 (tree)：可折叠树形组件，支持 4 层结构 -->

@@ -72,6 +72,8 @@ export function normalizeKnowledgeContent(text: string, title = ''): string {
 /** 搜索/列表用的纯文本片段 */
 export function plainSnippet(text: string, max = 140): string {
   const plain = (text ?? '')
+    // 去掉知识库颜色定界符，避免摘要里出现 ==/^^/@@
+    .replace(/==|\^\^|@@/g, '')
     .replace(/[#*_`~\[\]()|]/g, ' ')
     .replace(/-{3,}/g, ' ')
     .replace(/\s+/g, ' ')

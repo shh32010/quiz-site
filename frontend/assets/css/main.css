@@ -269,3 +269,55 @@ html.dark .question-img {
     display: none;
   }
 }
+
+/* 代码块语法高亮（highlight.js）：关键字蓝、字符串绿、注释灰、数字橙 */
+.hljs-keyword,
+.hljs-built_in,
+.hljs-selector-tag {
+  color: rgb(var(--brand));
+  font-weight: 600;
+}
+.hljs-string,
+.hljs-attr,
+.hljs-template-variable {
+  color: rgb(var(--success-fg));
+}
+.hljs-comment,
+.hljs-quote {
+  color: rgb(var(--fg-muted));
+  font-style: italic;
+}
+.hljs-number,
+.hljs-literal,
+.hljs-symbol {
+  color: #ea580c;
+}
+.hljs-title,
+.hljs-function .hljs-title,
+.hljs-section {
+  color: #7c3aed;
+  font-weight: 600;
+}
+.hljs-variable,
+.hljs-params,
+.hljs-property {
+  color: rgb(var(--fg-secondary));
+}
+.hljs-meta,
+.hljs-type {
+  color: #0f766e;
+}
+html.dark .hljs-number,
+html.dark .hljs-literal,
+html.dark .hljs-symbol {
+  color: #fb923c;
+}
+html.dark .hljs-title,
+html.dark .hljs-function .hljs-title,
+html.dark .hljs-section {
+  color: #c4b5fd;
+}
+html.dark .hljs-meta,
+html.dark .hljs-type {
+  color: #5eead4;
+}

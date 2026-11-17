@@ -29,7 +29,7 @@ export interface KbTreeNode {
 
 export interface KbBlock {
   id: string
-  t: 'p' | 'list' | 'table' | 'code' | 'tree' | 'callout' | 'img'
+  t: 'p' | 'list' | 'table' | 'code' | 'tree' | 'callout' | 'frontier' | 'img'
   imp?: 'core' | 'important' | 'hard' | 'normal'
   title?: string
   text?: string
@@ -41,6 +41,7 @@ export interface KbBlock {
   code?: string
   root?: KbTreeNode
   kind?: 'tip' | 'warn' | 'trap'
+  period?: string
   src?: string
   alt?: string
   caption?: string
@@ -513,6 +514,7 @@ export function filterKbBlocks(blocks: KbBlock[], coreOnly: boolean): KbBlock[] 
   return (blocks ?? []).filter(block =>
     block.imp === 'core'
     || block.t === 'callout'
+    || block.t === 'frontier'
     || (block.text ?? '').includes('==')
     || (block.items ?? []).some(item => item.includes('=='))
     || (block.rows ?? []).some(row => row.some(cell => cell.includes('=='))),
@@ -590,6 +592,21 @@ const CALLOUT_THEMES: Record<'trap' | 'warn' | 'tip', CalloutTheme> = {
     badgeClass:
       'bg-blue-100/90 text-blue-700 border border-blue-200/80 dark:bg-blue-900/50 dark:text-blue-300 dark:border-blue-800/60',
   },
+}
+
+/** 前沿补充卡片：沿用 callout 的卡片壳，配色改为中性灰，避免与红/黄/蓝三种提示抢视觉 */
+export const FRONTIER_THEME: CalloutTheme = {
+  kind: 'tip',
+  icon: '◈',
+  badge: '前沿补充',
+  fallbackTitle: '前沿补充',
+  cardClass:
+    'border-slate-200/90 bg-gradient-to-br from-slate-50/80 via-surface-card to-surface-muted/20 border-l-[5px] border-l-slate-400 dark:border-slate-800/60 dark:border-l-slate-500 dark:from-slate-950/20 dark:via-surface-card dark:to-surface-card',
+  headerBorderClass: 'border-slate-200/80 dark:border-slate-800/60',
+  iconWrapClass: 'bg-slate-100/90 text-slate-600 dark:bg-slate-800/60 dark:text-slate-300',
+  titleClass: 'text-fg-primary',
+  badgeClass:
+    'bg-slate-100/90 text-slate-700 border border-slate-200/80 dark:bg-slate-800/50 dark:text-slate-300 dark:border-slate-700/60',
 }
 
 /** 根据 callout 卡片类型返回统一的配色、图标与文案配置 */
