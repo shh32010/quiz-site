@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="860" height="860" viewBox="0 0 860 860" font-family="Microsoft YaHei, Arial, sans-serif">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#334155"/>
+    </marker>
+    <style>
+      .box{fill:#ffffff;stroke:#2563eb;stroke-width:2;rx:10}
+      .diamond{fill:#fef3c7;stroke:#d97706;stroke-width:2}
+      .flow{stroke:#334155;stroke-width:2;fill:none;marker-end:url(#arrow)}
+      .t{fill:#1f2937;font-size:16px;text-anchor:middle;dominant-baseline:middle}
+      .t2{fill:#475569;font-size:14px;text-anchor:middle}
+      .lbl{fill:#1d4ed8;font-size:14px;text-anchor:middle;dominant-baseline:middle}
+    </style>
+  </defs>
+  <rect x="0" y="0" width="860" height="860" fill="#ffffff"/>
+
+  <rect class="box" x="270" y="30" width="140" height="50"/>
+  <text class="t" x="340" y="55">开始</text>
+
+  <rect class="box" x="270" y="120" width="140" height="50"/>
+  <text class="t" x="340" y="145">i = 0</text>
+
+  <polygon class="diamond" points="340,200 480,245 340,290 200,245"/>
+  <text class="t" x="340" y="245">i &lt; 100 ?</text>
+
+  <rect class="box" x="270" y="330" width="140" height="50"/>
+  <text class="t" x="340" y="355">j = i + 1</text>
+
+  <polygon class="diamond" points="340,410 480,455 340,500 200,455"/>
+  <text class="t" x="340" y="455">j &lt; 100 ?</text>
+
+  <rect class="box" x="270" y="540" width="140" height="60"/>
+  <text class="t" x="340" y="562">循环体</text>
+  <text class="t2" x="340" y="584">（内层循环）</text>
+
+  <rect class="box" x="270" y="640" width="140" height="50"/>
+  <text class="t" x="340" y="665">j++</text>
+
+  <rect class="box" x="270" y="750" width="140" height="50"/>
+  <text class="t" x="340" y="775">i++</text>
+
+  <rect class="box" x="650" y="220" width="140" height="50"/>
+  <text class="t" x="720" y="245">结束</text>
+
+  <path class="flow" d="M340,80 L340,120"/>
+  <path class="flow" d="M340,170 L340,200"/>
+  <path class="flow" d="M340,290 L340,330"/>
+  <path class="flow" d="M340,380 L340,410"/>
+  <path class="flow" d="M340,500 L340,540"/>
+  <path class="flow" d="M340,600 L340,640"/>
+  <path class="flow" d="M270,665 L90,665 L90,455 L200,455"/>
+  <path class="flow" d="M480,455 L560,455 L560,775 L410,775"/>
+  <path class="flow" d="M270,775 L180,775 L180,245 L200,245"/>
+  <path class="flow" d="M480,245 L650,245"/>
+
+  <text class="lbl" x="368" y="312">是</text>
+  <text class="lbl" x="368" y="432">是</text>
+  <text class="lbl" x="565" y="245">否</text>
+  <text class="lbl" x="120" y="470">回到内层判断</text>
+  <text class="lbl" x="604" y="700">否（内层结束）</text>
+  <text class="lbl" x="182" y="150">回到外层判断</text>
+  <text class="t2" x="340" y="835">说明：break 只退出当前内层循环，外层 i 继续递增</text>
+</svg>
