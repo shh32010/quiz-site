@@ -16,21 +16,29 @@
 ```
 quiz-v2/
 ├── backend/        Spring Boot 后端（端口 8080）
-│   ├── src/main/java/com/quiz/
-│   │   ├── auth/       注册登录（JWT + BCrypt）
-│   │   ├── chapter/    章节树 / 课程统计
-│   │   ├── paper/      真题卷
-│   │   ├── question/   题目浏览（不含答案）
-│   │   └── config/     安全 / 缓存
-│   └── src/main/resources/application.yml
+│   └── src/main/java/com/quiz/
+│       ├── auth/         注册登录（JWT + BCrypt）
+│       ├── knowledge/    知识库讲义、搜索与阅读进度
+│       ├── chapter/      章节树 / 课程统计
+│       ├── practice/     练习会话、判分与历史
+│       ├── wrong/        错题本
+│       ├── favorite/     收藏
+│       ├── compose/      随机/章节组卷
+│       ├── paper/        真题卷
+│       ├── feedback/     题目与内容反馈
+│       ├── announcement/ 站内公告
+│       ├── admin/  stats/  report/  ai/
+│       └── common/ config/  公共与配置
 ├── frontend/       Nuxt 3 前端（端口 3100）
-│   ├── pages/chapters/  章节树 + 题目列表
-│   ├── pages/papers/    真题列表 + 详情
-│   └── nuxt.config.ts   /api 反代到后端
-├── docs/           SQL、脚本、数据迁移
+│   ├── pages/            首页、章节、练习、知识库（course/kp/section）、搜索、错题、收藏、组卷、报告、账户与管理
+│   ├── components/       知识块渲染、练习/反馈、导航与 UI
+│   ├── public/kb-assets/ 讲义图片与重绘资源
+│   └── nuxt.config.ts    /api 反代到后端
+├── docs/           规范（KNOWLEDGE_STANDARD）、SQL、Nginx/运维与历史归档（archive/）
 ├── docs/project/   本机项目文档（Git 忽略）
 ├── docs/reference/ 大纲与真题（Git 忽略）
-└── private/        本机原始资料/历史归档（Git 忽略）
+├── private/        本机原始资料与工作区（Git 忽略；agy-context 见其 README）
+└── scripts/        辅助脚本
 ```
 
 ## 本地开发

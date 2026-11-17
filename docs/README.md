@@ -1,6 +1,6 @@
 # `docs/` 目录索引
 
-**最后整理**：2026-11-11
+**最后整理**：2026-11-17
 
 ---
 
@@ -17,7 +17,7 @@ docs/
 └── archive/        历史一次性数据清洗与修题 SQL 归档（只作历史记录，切勿重复执行）
 ```
 
-> **知识点讲义**的编写、重写、审核、验收一律以 [`KNOWLEDGE_STANDARD.md`](KNOWLEDGE_STANDARD.md) 为准：PDF 内容与红/绿/黄标记全覆盖，前端只展示一份讲义。
+> **知识点讲义**的编写、重写、审核、验收一律以 [`KNOWLEDGE_STANDARD.md`](KNOWLEDGE_STANDARD.md) 为准：PDF 内容与红/绿/黄标记全覆盖，前端只展示一份讲义。2026-11-17 已增补 `frontier` 块、颜色密度上限、禁标位置、`color_meta`、一段一块与重绘规则。
 
 ---
 
@@ -76,6 +76,13 @@ docs/
 
 ## 5. 历史一次性数据修复归档（`docs/archive/`）
 
+- **[`archive/20261116-kb-rebuild/`](archive/20261116-kb-rebuild/)**：2026-11-16 全库 52 章 / 232 节点按 24 版教材并行重建的逐章 SQL（A1–S6）。
+- **[`archive/20261117-feedback/`](archive/20261117-feedback/README.md)**：2026-11-17 题库反馈 63–75 批量修复、同题簇合并与系统性审计记录。
+- **[`archive/20261117-p0/`](archive/20261117-p0/)**：P0 题库整改 dry-run、试点与执行报告（含对比 CSV 与重写稿）。
+- **[`archive/20261117-p0b/`](archive/20261117-p0b/)**：P0-B 54 道填空字母与 13 道多选单字母修复。
+- **[`archive/20261117-p0c/`](archive/20261117-p0c/)**：P0-C 批量执行报告与 SQL。
+- **[`archive/20261117-manual80/`](archive/20261117-manual80/)**：80 道人工/分歧题多轮盲答复核与执行记录。
+- **[`archive/20261117-kb-color/`](archive/20261117-kb-color/README.md)**：知识库全量颜色精读与 471 条内容问题修复总结（含回滚说明）。
 - **[`archive/20261102-data-fixes/data_write_audit_fix_20261102.sql`](archive/20261102-data-fixes/data_write_audit_fix_20261102.sql)**：2026-11-02 题库四大专项治理（22 组重复题复核合并、229 道题型错标恢复、S1 C 语言 48 `error` + 16 `quarantined` 深复核、X9 47 题与 18 知识点清零）。
 - **[`archive/20261111-announcement/data_write_announcement_20261111.sql`](archive/20261111-announcement/data_write_announcement_20261111.sql)**：2026-11-11 公告卡片固定为 4 条（最新两条 + 部署/题库两条常驻），其余更新只保留在更新历史。
 - **[`archive/20261111-renumber/data_write_kb_renumber_20261111.sql`](archive/20261111-renumber/data_write_kb_renumber_20261111.sql)**：2026-11-11 知识库 92 篇首号非 1 的讲义按“目”重排顶层序号；旧 revision 保留。
