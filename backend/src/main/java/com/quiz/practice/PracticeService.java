@@ -72,22 +72,37 @@ public class PracticeService {
         List<Integer> ids = switch (mode) {
             case "chapter" -> {
                 List<Object> params = new java.util.ArrayList<>();
-                params.add(targetId);
+                String sql;
+                if (targetId != null && targetId < 0) {
+                    // 虚拟“综合题（未挂三级）”：一级直属 + 二级非叶子章直属
+                    int root = -targetId - 100000;
+                    sql = """
+                            select q.id from t_question q join t_chapter c on c.id = q.chapter_id
+                             where not q.deleted and q.review_status = 'ok' and not c.deleted
+                               and (c.id = ? or (c.parent_id = ? and c.level = 2
+                                 and exists (select 1 from t_chapter ch where ch.parent_id = c.id and not ch.deleted)))
+                            """;
+                    params.add(root);
+                    params.add(root);
+                } else {
+                    sql = """
+                            with recursive sub as (
+                              select id from t_chapter where id = ?
+                              union all
+                              select c.id from t_chapter c join sub s on c.parent_id = s.id
+                            )
+                            select q.id from t_question q join sub on sub.id = q.chapter_id
+                             where not q.deleted and q.review_status = 'ok'
+                            """;
+                    params.add(targetId);
+                }
                 String typeFilter = "";
                 if (type != null && type >= 1 && type <= 5) {
                     typeFilter = " and q.question_type = ?";
                     params.add(type);
                 }
                 params.add(limit);
-                yield jdbc.queryForList("""
-                        with recursive sub as (
-                          select id from t_chapter where id = ?
-                          union all
-                          select c.id from t_chapter c join sub s on c.parent_id = s.id
-                        )
-                        select q.id from t_question q join sub on sub.id = q.chapter_id
-                         where not q.deleted and q.review_status = 'ok'
-                        """ + typeFilter + " order by q.id limit ?", Integer.class, params.toArray());
+                yield jdbc.queryForList(sql + typeFilter + " order by q.id limit ?", Integer.class, params.toArray());
             }
             case "course" -> jdbc.queryForList("""
                     select id from t_question

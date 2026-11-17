@@ -78,7 +78,19 @@ public class QuestionService {
         int offset = Math.max(0, (page - 1) * size);
         List<Object> args = new ArrayList<>();
         String where = "where review_status = 'ok'";
-        if (chapterId != null) {
+        if (chapterId != null && chapterId < 0) {
+            // 虚拟“综合题（未挂三级）”：一级直属题 + 二级非叶子章直属题
+            int root = -chapterId - 100000;
+            where += """
+                     and chapter_id in (
+                       select c.id from t_chapter c
+                        where not c.deleted and (
+                          c.id = ? or (c.parent_id = ? and c.level = 2
+                            and exists (select 1 from t_chapter ch where ch.parent_id = c.id and not ch.deleted))))
+                    """;
+            args.add(root);
+            args.add(root);
+        } else if (chapterId != null) {
             where += """
                      and chapter_id in (
                        with recursive sub as (

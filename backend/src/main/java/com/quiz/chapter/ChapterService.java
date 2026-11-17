@@ -64,12 +64,24 @@ public class ChapterService {
 
         List<ChapterNode> out = new ArrayList<>();
         for (Chapter root : roots) {
-            out.add(build(root, byParent, counts));
+            out.add(build(root, byParent, counts, true));
         }
         return out;
     }
 
-    private ChapterNode build(Chapter c, Map<Integer, List<Chapter>> byParent, Map<Integer, Integer> counts) {
+    /** 虚拟“综合题”节点 id：-100000 - 一级章节 id */
+    public static int virtualId(int rootId) {
+        return -100000 - rootId;
+    }
+
+    /** 虚拟节点对应的根章节 id；非虚拟返回 null */
+    public static Integer virtualRootId(int id) {
+        int root = -id - 100000;
+        return id < 0 && root > 0 ? root : null;
+    }
+
+    private ChapterNode build(Chapter c, Map<Integer, List<Chapter>> byParent,
+                              Map<Integer, Integer> counts, boolean isRoot) {
         int own = counts.getOrDefault(c.getId(), 0);
         List<Chapter> kids = byParent.getOrDefault(c.getId(), List.of());
         if (kids.isEmpty()) {
@@ -78,12 +90,27 @@ public class ChapterService {
         List<Chapter> sorted = new ArrayList<>(kids);
         sorted.sort(Comparator.comparing((Chapter x) -> x.getItemOrder() == null ? 0 : x.getItemOrder())
                 .thenComparing(Chapter::getId));
-        int total = own;
+        int total = 0;
         List<ChapterNode> childNodes = new ArrayList<>();
         for (Chapter kid : sorted) {
-            ChapterNode n = build(kid, byParent, counts);
+            ChapterNode n = build(kid, byParent, counts, false);
             childNodes.add(n);
             total += n.questionCount();
+        }
+        if (isRoot) {
+            // 一级直属题 + 二级非叶子章直属题，归入“综合题（未挂三级）”虚拟节点
+            int virtualCount = own;
+            for (Chapter kid : sorted) {
+                if (!byParent.getOrDefault(kid.getId(), List.of()).isEmpty()) {
+                    virtualCount += counts.getOrDefault(kid.getId(), 0);
+                }
+            }
+            if (virtualCount > 0) {
+                childNodes.add(new ChapterNode(virtualId(c.getId()), c.getSubjectId(),
+                        (c.getCode() == null ? "" : c.getCode()) + "-综合", "综合题（未挂三级）",
+                        (short) 3, virtualCount, new ArrayList<>()));
+                total += virtualCount;
+            }
         }
         return new ChapterNode(c.getId(), c.getSubjectId(), c.getCode(), c.getName(),
                 c.getLevel() == null ? 0 : c.getLevel(), total, childNodes);
@@ -95,8 +122,27 @@ public class ChapterService {
         return jdbc.queryForList("select course, cnt from v_course_counts order by course");
     }
 
-    /** 单个章节基本信息：用于判断是否一级章、选择整卷题量 */
+    /** 单个章节基本信息：用于判断是否一级章、选择整卷题量；支持虚拟“综合题”节点 */
     public Map<String, Object> one(int id) {
+        Integer rootId = virtualRootId(id);
+        if (rootId != null) {
+            List<Map<String, Object>> roots = jdbc.queryForList("""
+                    select id, subject_id as "subjectId", code, name
+                      from t_chapter where id = ? and not deleted
+                    """, rootId);
+            if (roots.isEmpty()) {
+                return null;
+            }
+            Map<String, Object> root = roots.get(0);
+            return Map.of(
+                    "id", id,
+                    "subjectId", root.get("subjectId"),
+                    "parentId", rootId,
+                    "code", String.valueOf(root.get("code")) + "-综合",
+                    "name", "综合题（未挂三级）",
+                    "level", 3,
+                    "virtual", true);
+        }
         List<Map<String, Object>> rows = jdbc.queryForList("""
                 select id, subject_id as "subjectId", parent_id as "parentId",
                        code, name, level

@@ -74,7 +74,7 @@ const composeWarning = computed(() => {
   return missing.length ? `本章${missing.join('、')}不足，差额已用其他题型补足（实际分值可能略低）` : ''
 })
 const chapterTitle = computed(() =>
-  data.value?.rows?.[0]?.chapterName || '章节题目')
+  chapterInfo.value?.name || data.value?.rows?.[0]?.chapterName || '章节题目')
 const chapterPath = computed(() =>
   data.value?.rows?.[0]?.chapterPath || '')
 

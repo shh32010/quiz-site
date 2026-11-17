@@ -135,6 +135,9 @@ public class ComposeService {
      */
     @Transactional
     public Map<String, Object> startChapter(UUID uid, int chapterId, int count, Integer type) {
+        if (chapterId < 0) {
+            throw new IllegalArgumentException("综合题章节暂不支持组卷，请使用章节练习");
+        }
         List<Map<String, Object>> chapters = jdbc.queryForList(
                 "select subject_id, level from t_chapter where id = ? and not deleted", chapterId);
         if (chapters.isEmpty()) {
