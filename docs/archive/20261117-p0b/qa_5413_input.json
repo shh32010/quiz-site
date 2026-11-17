@@ -1,0 +1,86 @@
+[
+  {
+    "id": "338179",
+    "old_type": "4",
+    "new_type": "4",
+    "stem": "用高级语言编写的程序必须将它转换成___________程序，计算机才能直接执行。",
+    "options": "",
+    "current": "B",
+    "proposed": "机器语言",
+    "action": "change_answer",
+    "new_analysis": "计算机硬件只能识别由二进制指令构成的机器语言，高级语言程序必须先经编译或解释转换成机器语言（目标代码）后才能直接执行。故填机器语言。",
+    "risk": "no_image"
+  },
+  {
+    "id": "338209",
+    "old_type": "4",
+    "new_type": "4",
+    "stem": "UNIX 操作系统是_________语言编写的。",
+    "options": "",
+    "current": "C",
+    "proposed": "C语言",
+    "action": "change_answer",
+    "new_analysis": "UNIX 最初用汇编语言编写；1973 年 Thompson 与 Ritchie 改用 C 语言重写，C 语言由此成为编写操作系统的主流语言。故填 C 语言。",
+    "risk": "no_image"
+  },
+  {
+    "id": "365851",
+    "old_type": "4",
+    "new_type": "4",
+    "stem": "____:用户只能打开和查看共享资源，不能修改和删除共享资源。",
+    "options": "",
+    "current": "C",
+    "proposed": "读取",
+    "action": "change_answer",
+    "new_analysis": "共享文件夹权限中，读取只允许用户打开和查看共享资源，不能修改和删除；若要增删改需授予更改权限，完全控制还可再改权限。故填 读取。",
+    "risk": "no_image,qc_error"
+  },
+  {
+    "id": "366699",
+    "old_type": "5",
+    "new_type": "5",
+    "stem": "设有数组定义:char array[]=\"SuZhouUniversity\\0\"; 则数组 array 所占的存储空间为____。",
+    "options": "",
+    "current": "D",
+    "proposed": "18字节",
+    "action": "change_answer",
+    "new_analysis": "SuZhouUniversity 共 16 个字符，加显式写出的 \\0 已占 17 个字节，编译器还会自动在末尾补一个 \\0，因此数组共占 17+1=18 个字节。故填 18 字节。",
+    "risk": "no_image"
+  },
+  {
+    "id": "388899",
+    "old_type": "2",
+    "new_type": "2",
+    "stem": "下列关于远程文件传输(FTP)的叙述, 错误的是____。",
+    "options": "{\"A\": \"使用 IE 浏览器无法启动 FTP 服务\", \"B\": \"使用 FTP 每次只可以传输一个文件\", \"C\": \"用户可以从(向)FTP 服务器下载(上传)文件\", \"D\": \"FTP 程序允许用户在 FTP 服务器上创建新文件夹\"}",
+    "current": "B",
+    "proposed": "A,B",
+    "action": "change_answer",
+    "new_analysis": "FTP 支持一次传输多个文件，B 说每次只可传输一个文件错误；IE 浏览器可通过 ftp:// 访问 FTP 服务器并启动传输，A 说无法启动也错误；C、D 叙述正确。故选 A、B。",
+    "risk": "paper,no_image,qc_error"
+  },
+  {
+    "id": "373776",
+    "old_type": "2",
+    "new_type": "1",
+    "stem": "关于CREATE语句下列说法正确的是（）",
+    "options": "{\"A\": \"create table 表名(字段名 1 字段类型,字段名 2 字段类型,....)\", \"B\": \"create tables 表名(字段类型,字段名1 字段类型,字段名2.....)\", \"C\": \"create tables 表名(字段名1 字段类型,字段名2 字段类型,....)\", \"D\": \"create table 表名(字段类型,字段名1 字段类型,字段名2.....)\"}",
+    "current": "A",
+    "proposed": "A",
+    "action": "change_type",
+    "new_analysis": "CREATE 语句用于建表，标准语法为 create table 表名(字段名 字段类型,…)，括号内字段名在前、类型在后。B、C 的 create tables 拼写错误，D 把类型写在字段名前，均不合语法。故选 A。",
+    "risk": "no_image"
+  },
+  {
+    "id": "364424",
+    "old_type": "4",
+    "new_type": "4",
+    "stem": "IP 地址分为 A、B、C、D、E 五类，若网上某台主机的 IP 地址为 120.195.128.11，该 IP地址属于 类地址。",
+    "options": "",
+    "current": "A",
+    "proposed": "A",
+    "action": "keep",
+    "new_analysis": "IP 地址类别由首字节决定，最高位为 0 即 A 类，首字节取 1～126。120.195.128.11 的首字节 120 小于 127，故属 A 类地址，不要误归入从 128 起算的 B 类。故填 A。",
+    "risk": "no_image"
+  }
+]

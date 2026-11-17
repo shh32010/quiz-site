@@ -1,0 +1,490 @@
+[
+  {
+    "id": 334900,
+    "type": 5,
+    "stem": "PC机的I/O接口用于连接（）\n\nA CPU和输入输出设备\n\nB CPU和内存储器\n\nC主机和总线\n\nD输入输出设备和总线",
+    "options": null,
+    "confirmed_answer": "D",
+    "old_analysis": "CPU 和内存之间通过 CPU 前段总线连接，I/O 接口用于连接的是 I/O 设备和 I/O 总线"
+  },
+  {
+    "id": 334904,
+    "type": 5,
+    "stem": "下列关于显卡（显示控制器）错误的是（）\n\nA 绘图处理器（GPU）是显卡的核心，它决定了显卡的档次。\nB目前许多显卡已配置有GB级的显存\nC显示控制器可以直接集成在CPU或芯片组中\nD 目前显卡大多采用 AGP 接口代替过去的接口",
+    "options": null,
+    "confirmed_answer": "D",
+    "old_analysis": "D 错：AGP 被 PCI-E 取代而非「AGP 代替过去接口」，故选 D。"
+  },
+  {
+    "id": 334911,
+    "type": 5,
+    "stem": "若某台 PC 机已排除硬件的病毒感染，但执行程序是总是频繁读写硬盘造成系统运行缓慢，则首先需要考虑给计算机扩充（）\n\nA寄存器\n\nB CPU\n\nC 内存\n\nD 硬盘",
+    "options": null,
+    "confirmed_answer": "C",
+    "old_analysis": "本题是对虚拟存储器知识的灵活考察。假如物理内存的容量不够大，操作系统就需要频繁的从硬盘的虚拟内存读取数据至物理内存，造成计算机整体性能的下降。"
+  },
+  {
+    "id": 335428,
+    "type": 1,
+    "stem": "CPU 能直接访问的存储器是（）。",
+    "options": "{\"A\": \"硬盘存储器\", \"B\": \"光盘存储器\", \"C\": \"软盘存储器\", \"D\": \"内存储器\"}",
+    "confirmed_answer": "D",
+    "old_analysis": "CPU 只能直接访问内存储器（主存），硬盘、光盘、软盘都属于辅助存储器，其中的程序和数据必须先调入内存，才能被 CPU 读取和执行。故选 D。"
+  },
+  {
+    "id": 338134,
+    "type": 4,
+    "stem": "某台安装了Windows操作系统的计算机上显示C:、D:、E:3个盘符,其中C为系统盘。若在桌面上新建一个文档,则该文档存放在上述盘符中的____盘(2018)（2.0）",
+    "options": null,
+    "confirmed_answer": "C",
+    "old_analysis": "桌面属于系统盘 C 盘下的用户目录，新建文档存放在 C 盘，故填 C。"
+  },
+  {
+    "id": 338179,
+    "type": 4,
+    "stem": "用高级语言编写的程序必须将它转换成___________程序，计算机才能直接执行。",
+    "options": null,
+    "confirmed_answer": "机器语言",
+    "old_analysis": "高级语言编写的程序必须转换成机器语言程序，计算机才能直接执行，故选 B（机器语言）。"
+  },
+  {
+    "id": 338209,
+    "type": 4,
+    "stem": "UNIX 操作系统是_________语言编写的。",
+    "options": null,
+    "confirmed_answer": "C语言",
+    "old_analysis": "UNIX 操作系统是用 C 语言编写的，故填 C。"
+  },
+  {
+    "id": 338722,
+    "type": 5,
+    "stem": "下列关于 IPV6 的叙述错误的是（）\n\nA 地址空间更大\n\nB首部格式灵活\n\nC 不支持自动配置\n\nD目前的主流操作系统已支持IPV6",
+    "options": null,
+    "confirmed_answer": "C",
+    "old_analysis": "IPV6 主要解决的是 IPv4 地址不够用的问题，IPV6 支持自动配置。"
+  },
+  {
+    "id": 341728,
+    "type": 4,
+    "stem": "IP 地址分为 A、B、C、D、E 五类，若网络中某台主机的 IP 地址为 120.195.128.11，则该 IP 地址属于________类地址。",
+    "options": null,
+    "confirmed_answer": "A",
+    "old_analysis": "120属A类。"
+  },
+  {
+    "id": 341764,
+    "type": 4,
+    "stem": "IPv4地址分为A、B、C、D、E五类，若某台主机的IP地址为210.29.64.5，该IP地址属于________类地址。",
+    "options": null,
+    "confirmed_answer": "C",
+    "old_analysis": "210属C类。"
+  },
+  {
+    "id": 342006,
+    "type": 4,
+    "stem": "IP地址分为A、B、C、D、E五类，若网上某台主机的IP为155.129.10.10，该IP地址属于____ 类地址。",
+    "options": null,
+    "confirmed_answer": "B",
+    "old_analysis": "155.129.10.10 首字节在 128~191 范围内，属于 B 类地址，故填 B。"
+  },
+  {
+    "id": 342040,
+    "type": 4,
+    "stem": "IP地址分为A、B、C、D、E五类，若网上某台主机的IP地址为155.129.10.10，____类地址。",
+    "options": null,
+    "confirmed_answer": "B",
+    "old_analysis": "155属B类。"
+  },
+  {
+    "id": 342905,
+    "type": 1,
+    "stem": "以下关于数字签名的描述中，错误的有( )。",
+    "options": "{\"A\": \"数字签名只能利用公钥密码体制实现\", \"C\": \"常用的公钥数字签名算法有 RSA 和 DSS\", \"B\": \"数字签名不可以保证消息内容的机密性\", \"D\": \"数字签名可以确认消息的完整性\"}",
+    "confirmed_answer": "A",
+    "old_analysis": "「只能利用公钥密码体制实现」为唯一错误项；B/C/D 均为正确叙述，故选 A。"
+  },
+  {
+    "id": 342969,
+    "type": 1,
+    "stem": "解决 IP 地址资源紧缺问题的办法有（）。",
+    "options": "{\"A\": \"DNS\", \"B\": \"NAT\", \"C\": \"RARP\", \"D\": \"NSLOOKUP\"}",
+    "confirmed_answer": "B",
+    "old_analysis": "NAT 通过网络地址转换使多台主机共用少量公网地址，是缓解 IPv4 地址紧缺的主要办法；DNS、RARP 属名称地址解析服务，NSLOOKUP 为查询工具，均不节省地址。故选 B。"
+  },
+  {
+    "id": 345267,
+    "type": 4,
+    "stem": "目标 IP 地址分为 $A B C D E$ 五类, 若某台主机的 IP 地址为 202.195.10.10, 则该 IP 地址属于 ____ 类地址。",
+    "options": null,
+    "confirmed_answer": "C",
+    "old_analysis": "202 开头的 IP 地址属于 C 类地址，故填 C。"
+  },
+  {
+    "id": 347243,
+    "type": 4,
+    "stem": "若有一个 IPv4 地址二进制表示 “10000010 00011000 00100011 01000100”，则 IP 地址类型为 ____ 类地址。",
+    "options": null,
+    "confirmed_answer": "B",
+    "old_analysis": "将两个补码相加:\n\n10011011 (-101)\n\n\\+ 00000110 (+6)\n\n10100001 (-95，符号位为1，表示负数)\n\n结果为补码10100001，对应的原码是11011111，表示的十进制数为-95。因此，答案是C.-95。"
+  },
+  {
+    "id": 349260,
+    "type": 1,
+    "stem": "下列不同进制的数值，与十六进制数F4相等的数有（）。",
+    "options": "{\"A\": \"11110100B\", \"B\": \"1111100B\", \"C\": \"3640Q\", \"D\": \"173D\"}",
+    "confirmed_answer": "A",
+    "old_analysis": "十六进制 F4 等于 15×16+4=244，而 11110100B 也等于 244；3640Q、1111100B 与 173D 换算后均不等于 244。故选 A。"
+  },
+  {
+    "id": 352965,
+    "type": 1,
+    "stem": "智能家居是以住宅为平台,通过物联网技术将家中的各种设备连接到一起,实现智能化的一种生态系统。它具有智能灯光控制、智能电器控制、安防监控系统、智能背景音乐、智能视频共享、可视对讲系统和家庭影院系统等功能。通过各式各样的传感器设备采集数据信息,实现了智能家居的场景化,也让用户真正享受到智能家居带来的乐趣。下列关于 智能家居中传感器技术说法错误的是()。",
+    "options": "{\"A\": \"根据季节的变化或者户的需求来调整温度，需要温度传感器\", \"B\": \"需要根据湿度情况实现自动调节室内湿度的功能，需要湿度传感器\", \"C\": \"探测燃气泄漏的、二氧化碳浓度以及烟雾浓度，要用到光敏传感器\", \"D\": \"侦测人的移动，配合监控实现陌生人闯入自动抓拍，需要用到红外传感器\"}",
+    "confirmed_answer": "C",
+    "old_analysis": "温度/湿度/红外传感正确；燃气烟雾探测用气敏非光敏。"
+  },
+  {
+    "id": 353010,
+    "type": 1,
+    "stem": "智能家居是以住宅为平台,通过物联网技术将家中的各种设备连接到一起,实现智能化的一种生态系统。它具有智能灯光控制、智能电器控制、安防监控系统、智能背景音乐、智能视频共享、可视对讲系统和家庭影院系统等功能。通过各式各样的传感器设备采集数据信息,实现了智能家居的场景化,也让用户真正享受到智能家居带来的乐趣。下列关于智能家居中传感器技术说法错误的是()。",
+    "options": "{\"A\": \"根据季节的变化或者户的需求来调整温度，需要温度传感器\", \"B\": \"需要根据湿度情况实现自动调节室内湿度的功能，需要湿度传感器\", \"C\": \"探测燃气泄漏的、二氧化碳浓度以及烟雾浓度，要用到光敏传感器\", \"D\": \"侦测人的移动，配合监控实现陌生人闯入自动抓拍，需要用到红外传感器\"}",
+    "confirmed_answer": "C",
+    "old_analysis": "同352965。"
+  },
+  {
+    "id": 356304,
+    "type": 4,
+    "stem": "IP 地址分为 A、B、C、D、E 五类，若网上某台主机的 IP 地址为 128.195.128.11,该 IP 地址属于____类地址。",
+    "options": null,
+    "confirmed_answer": "B",
+    "old_analysis": "IP 地址 128.195.128.11 的首字节 128 在 128～191 之间，属于 B 类地址。故填 B。"
+  },
+  {
+    "id": 356396,
+    "type": 4,
+    "stem": "若网上某台主机的 IP 地址为 202.195.1298.11，该 IP 地址属于 ____ 类地址。",
+    "options": null,
+    "confirmed_answer": "C",
+    "old_analysis": "202 开头的 IP 地址属于 C 类地址，故填 C。"
+  },
+  {
+    "id": 356480,
+    "type": 4,
+    "stem": "210.77.88.99 属于____类 IP 地址。",
+    "options": null,
+    "confirmed_answer": "C",
+    "old_analysis": "210在192~223→C类。"
+  },
+  {
+    "id": 357799,
+    "type": 1,
+    "stem": "通常提到64位的计算机是指该计算机( )。",
+    "options": "{\"A\": \"内存容量为64MB\", \"B\": \"运算速度为 64MIPS (5) 芯\", \"C\": \"主频为 $64\\\\mathrm{MHz}$\", \"D\": \"整数寄存器和定点运算器的宽度 (6) 现\"}",
+    "confirmed_answer": "D",
+    "old_analysis": "字长指的是 CPU 中整数寄存器和定点运算器的宽度，也就是二进制整数运算的位数"
+  },
+  {
+    "id": 358904,
+    "type": 4,
+    "stem": "若 IP 地址为 129.29.140.5，则该地址属于________类地址。",
+    "options": null,
+    "confirmed_answer": "B",
+    "old_analysis": "129属128-191→B类。"
+  },
+  {
+    "id": 359071,
+    "type": 4,
+    "stem": "大写字母‚A‛的 ASCII 码其等值的十进制数是 65，若 ASCII 码等值的十进制数为 68，则它对应的字母是______。",
+    "options": null,
+    "confirmed_answer": "D",
+    "old_analysis": "ASCII 68对应'D'。"
+  },
+  {
+    "id": 360838,
+    "type": 4,
+    "stem": "220.3.18.1是一个类IP地址。",
+    "options": null,
+    "confirmed_answer": "C",
+    "old_analysis": "220属C类。"
+  },
+  {
+    "id": 363715,
+    "type": 4,
+    "stem": "IP 地址202. 13. 112. 14 是 类IP 地址。",
+    "options": null,
+    "confirmed_answer": "C",
+    "old_analysis": "202属192-223→C类。"
+  },
+  {
+    "id": 364009,
+    "type": 4,
+    "stem": "CPU 的运算速度是指它每秒钟能执行的指令数目。- 下面 — 提高运算速度的有效措施。\n\n（1）增加CPU中寄存器的数目；（2）提高CPU的主频；（3）增加高速缓存(Cache)的容量；（4）扩充磁盘存储器的容量。\nA.(1)、(2)和(3)　B.(1)、(3)和(4)　C.(1)和(4)　D.(2)、(3)和(4)",
+    "options": null,
+    "confirmed_answer": "A",
+    "old_analysis": "增加 CPU 中寄存器数目、提高主频、增加 Cache 容量都能提高运算速度；扩充磁盘容量不能，故选取 (1)(2)(3)，即选 A。"
+  },
+  {
+    "id": 364096,
+    "type": 4,
+    "stem": "IP 地址分为 A、B、C、D、E 五类,若网上某主机 IP 地址为 155.129.10.10该该地址属于-----类地址",
+    "options": null,
+    "confirmed_answer": "B",
+    "old_analysis": "155属128-191→B类。"
+  },
+  {
+    "id": 364282,
+    "type": 4,
+    "stem": "若 IP 地址为 129.29.140.5，则该地址属于 类地址。",
+    "options": null,
+    "confirmed_answer": "B",
+    "old_analysis": "129属B类。"
+  },
+  {
+    "id": 364291,
+    "type": 4,
+    "stem": "IP 地址分为 A、B、C、D、E 五类，若网上某台主机的 IP 地址为 120.195.128.11，该 IP地址属于 类地址。",
+    "options": null,
+    "confirmed_answer": "A",
+    "old_analysis": "120 在 1~126 之间，属于 A 类地址，故填 A。"
+  },
+  {
+    "id": 364414,
+    "type": 4,
+    "stem": "若 IP 地址为 129.29.140.5，则该地址属于 类地址。",
+    "options": null,
+    "confirmed_answer": "B",
+    "old_analysis": "同364282。"
+  },
+  {
+    "id": 364424,
+    "type": 4,
+    "stem": "IP 地址分为 A、B、C、D、E 五类，若网上某台主机的 IP 地址为 120.195.128.11，该 IP地址属于 类地址。",
+    "options": null,
+    "confirmed_answer": "A",
+    "old_analysis": "120 在 1~126 之间，属于 A 类地址，故填 A。"
+  },
+  {
+    "id": 364873,
+    "type": 4,
+    "stem": "下列选项中，<span style=\"text-emphasis: dot; text-emphasis-position: under;\">不属于</span>总线性能指标的是\n\nA.总线带宽　B.总线位数　C.总线长度　D.总线工作频率",
+    "options": null,
+    "confirmed_answer": "C",
+    "old_analysis": "总线性能指标包括带宽、总线位数（宽度）、工作频率等，不包括总线长度，故选 C。"
+  },
+  {
+    "id": 364874,
+    "type": 4,
+    "stem": "下列<span style=\"text-emphasis: dot; text-emphasis-position: under;\">不</span>能用于服务器操作系统的是\n\nA.Android　B.Linux　C.UNIX　D.Windows",
+    "options": null,
+    "confirmed_answer": "A",
+    "old_analysis": "Android 是移动设备操作系统，不能用于服务器；Linux、UNIX、Windows 都可用作服务器操作系统，故选 A。"
+  },
+  {
+    "id": 364877,
+    "type": 4,
+    "stem": "下列不属于云计算特点的是\n\nA.超大规模　B.虚拟化　C.私有化　D.高可靠性",
+    "options": null,
+    "confirmed_answer": "C",
+    "old_analysis": "云计算特点有超大规模、虚拟化、高可靠性等，私有化不是云计算的特点，故选 C。"
+  },
+  {
+    "id": 364977,
+    "type": 4,
+    "stem": "16下面四个选项中,均是正确的八进制或十六进制数的选项是______。\n\nA)-10        B)0abc       C)0010        D)0a12\n0x8f         -017         -0x11          -0x123\n-011         0xc          0xf1           -0xa",
+    "options": null,
+    "confirmed_answer": "C",
+    "old_analysis": "0010（八进制）、-0x11、0xf1（十六进制）均为合法的八/十六进制数，其余选项含 0abc、0a12 等非法写法，故选 C。"
+  },
+  {
+    "id": 364978,
+    "type": 4,
+    "stem": "17下面四个选项中,均是正确的数值常量或字符常量的选项是______。\n\nA)0.0        B)\"a\"        C)'3'         D)+001\n0f           3.9e-2.5      011           0xabcd\n8.9e         1e1          0xFF00        2e2\n'&'          '\\\"'          0a            50.",
+    "options": null,
+    "confirmed_answer": "D",
+    "old_analysis": "+001、0xabcd、2e2、50. 均为合法常量，其余选项含 0f、8.9e、3.9e-2.5、0a 等非法写法，故选 D。"
+  },
+  {
+    "id": 364979,
+    "type": 4,
+    "stem": "18下面不正确的字符串常量是______。\n\nA)'abc'      B)\"12'12\"     C)\"0\"     D)\" \"",
+    "options": null,
+    "confirmed_answer": "A",
+    "old_analysis": "「abc」用单引号括起多个字符，不是合法的字符串常量（字符串须用双引号），故选 A。"
+  },
+  {
+    "id": 364987,
+    "type": 4,
+    "stem": "3 下列运算符中优先级最高的是______。\n\nA)<    B)+    C)&&    D)!=",
+    "options": null,
+    "confirmed_answer": "B",
+    "old_analysis": "运算符优先级中算术运算符（+）高于关系运算符（<、!=）高于逻辑运算符（&&），最高的是 +，故选 B。"
+  },
+  {
+    "id": 364991,
+    "type": 4,
+    "stem": "9若希望当A的值为奇数时,表达式的值为“真”,A的值为偶数时,表达式的值为“假”。则以下不能满足要求的表达式是______。\n\nA)A%2= =1     B)!(A%2= =0)    C)!(A%2)     D)A%2",
+    "options": null,
+    "confirmed_answer": "C",
+    "old_analysis": "!(A%2) 在 A 为奇数时值为假，不能满足「奇数为真、偶数为假」的要求，故选 C。"
+  },
+  {
+    "id": 364992,
+    "type": 4,
+    "stem": "13- 执行以下语句后,a,b,c的值分别为______。\n\nint a,b,c;\na=b=c=1;\n++a||++b&&++c;\nA)1,1,1     B)2,1,1      C)2,2,1     D)2,2,2",
+    "options": null,
+    "confirmed_answer": "B",
+    "old_analysis": "++a 得 2 为真，逻辑或短路（++b、++c 不执行），故 a=2、b=1、c=1，选 B。"
+  },
+  {
+    "id": 364995,
+    "type": 4,
+    "stem": "24 以下程序的输出结果是______。\n\nmain()\n{int x=2,y=-1,z=2;\nif(x<y)\nif(y<0) z=0;\nelse z+=1;\nprintf(\"%d\\n\",z);\n}\nA)3    B)2    C)1    D)0",
+    "options": null,
+    "confirmed_answer": "B",
+    "old_analysis": "x<y 不成立（else 与内层 if(y<0) 配对），条件整体为假、z 保持 2，输出 2，故选 B。"
+  },
+  {
+    "id": 364996,
+    "type": 4,
+    "stem": "30 以下程序的运行结果是______。\n\nmain()\n{int k=4,a=3,b=2,c=1;\nprintf(\"\\n%d\\n\",k<a?k:c<b?c:a);\n}\nA)4    B)3    C)2    D)1",
+    "options": null,
+    "confirmed_answer": "D",
+    "old_analysis": "k<a 为假，取 c<b?c:a；c<b 为真，取 c 得 1，输出 1，故选 D。"
+  },
+  {
+    "id": 364997,
+    "type": 4,
+    "stem": "32 阅读以下程序，则执行下面语句后m的值是______。\n\nint w=1,x=2,y=3,z=4,m;\nm=w<x?w:x;\nm=m<y?m:y;\nm=m<z?m:z;\nA)1    B)2    C)3    D)4",
+    "options": null,
+    "confirmed_answer": "A",
+    "old_analysis": "m=w<x?w:x=1；m=m<y?m:y=1；m=m<z?m:z=1，故 m=1，选 A。"
+  },
+  {
+    "id": 365059,
+    "type": 4,
+    "stem": "32下面程序段的运行结果是______。\n\nfor(x=3;x<6;x++) printf((x%2)?(\"**%d\"):(\"##%d\\n\")),x);\nA)**3    B)##3    C)##3    D)**3##4\n##4      **4      **4##5   **5\n**5      ##5",
+    "options": null,
+    "confirmed_answer": "D",
+    "old_analysis": "x=3（奇）输出 **3；x=4 输出 ##4 并换行；x=5 输出 **5。即 **3、##4（换行）、**5，选 D。"
+  },
+  {
+    "id": 365190,
+    "type": 4,
+    "stem": "备案 关于信息系统的叙述，错误的是 0 (D) 5G信号频率高，穿透力强，相对4G技术所需基站数量较少(C) 超大网络容量，能更好地满足物联网的通信需求(B) 网络时延在 1 毫秒左右，能更好地满足自动驾驶、远程医疗等实时应用(A) 数据传输速率达到 Gbps 级, 能更好地满足高清视频等数据传输需求",
+    "options": null,
+    "confirmed_answer": "D",
+    "old_analysis": "5G 信号频率高、穿透力较弱、所需基站更密集，D 项说法错误（其余三项均为 5G 的正确特点），故选 D。"
+  },
+  {
+    "id": 365851,
+    "type": 4,
+    "stem": "____:用户只能打开和查看共享资源，不能修改和删除共享资源。",
+    "options": null,
+    "confirmed_answer": "读取",
+    "old_analysis": "选项C中的网络与其他三个选项不在同一个网段中。"
+  },
+  {
+    "id": 366628,
+    "type": 4,
+    "stem": "有语句 putchar(getchar()),程序运行时输入:A，则输出结果是____________。",
+    "options": null,
+    "confirmed_answer": "A",
+    "old_analysis": "putchar(getchar())输出 A。"
+  },
+  {
+    "id": 366699,
+    "type": 5,
+    "stem": "设有数组定义:char array[]=\"SuZhouUniversity\\0\"; 则数组 array 所占的存储空间为____。",
+    "options": null,
+    "confirmed_answer": "18字节",
+    "old_analysis": "\"SuZhouUniversity10\" 本身有 17 个字符，外加一个隐含的结束符，一共 18 个存储单元。"
+  },
+  {
+    "id": 368649,
+    "type": 4,
+    "stem": "根据给出的信息进行计算，网络地址(网络号):204.37.4.128，子网掩码:255.255.255.224 则网络地址类型是类地址。",
+    "options": null,
+    "confirmed_answer": "C",
+    "old_analysis": "204 属 C 类。"
+  },
+  {
+    "id": 373708,
+    "type": 1,
+    "stem": "下面对 union 的描述正确的是( )",
+    "options": "{\"A\": \"union 只连接结果集完全一样的查询语句\", \"B\": \"union 可以连接结果集中数据类型个数相同的多个结果集\", \"C\": \"union 是筛选关键词，对结果集再进行操作\", \"D\": \"任何查询语句都可以用 union 来连接\"}",
+    "confirmed_answer": "B",
+    "old_analysis": "union 要求各查询结果集的列数相同且对应列类型兼容，并非结果集完全一样，故 A 错；union 是集合运算而非筛选关键词，C 错；任何查询语句列数不同时不能用 union 连接，D 错。只有 B 说明可连接列数相同的多个结果集，描述正确。"
+  },
+  {
+    "id": 373720,
+    "type": 1,
+    "stem": "下面数据库名称合法的是( )",
+    "options": "{\"A\": \"db1/student\", \"C\": \"db1_student\", \"D\": \"db1&student\", \"B\": \"db1.student\"}",
+    "confirmed_answer": "C",
+    "old_analysis": "未加反引号时，MySQL 标识符只能由字母、数字、下划线和美元符号组成。db1/student 含斜杠、db1.student 含点、db1&student 含与号，均不合法；只有 db1_student 符合命名规则。因此合法的数据库名称只有 C。"
+  },
+  {
+    "id": 373727,
+    "type": 1,
+    "stem": "关于CREATE语句下列说法正确的是（）",
+    "options": "{\"A\": \"create table 表名(字段名1 字段类型,字段名2 字段类型,.....)\", \"B\": \"create tables 表名(字段类型,字段名1 字段类型,字段名2.....)\", \"C\": \"create tables 表名(字段名1 字段类型,字段名2 字段类型,.....)\", \"D\": \"create table 表名(字段类型,字段名1 字段类型,字段名2.....)\"}",
+    "confirmed_answer": "A",
+    "old_analysis": "CREATE TABLE 语法（AD）。"
+  },
+  {
+    "id": 373776,
+    "type": 1,
+    "stem": "关于CREATE语句下列说法正确的是（）",
+    "options": "{\"A\": \"create table 表名(字段名 1 字段类型,字段名 2 字段类型,....)\", \"B\": \"create tables 表名(字段类型,字段名1 字段类型,字段名2.....)\", \"C\": \"create tables 表名(字段名1 字段类型,字段名2 字段类型,....)\", \"D\": \"create table 表名(字段类型,字段名1 字段类型,字段名2.....)\"}",
+    "confirmed_answer": "A",
+    "old_analysis": "CREATE TABLE（AD）。"
+  },
+  {
+    "id": 377432,
+    "type": 4,
+    "stem": "IP 地址分为 A、B、C、D、E 五类，若网上某台主机的 IP 地址为 120.195.128.11，该 IP 地址属于____类地址。",
+    "options": null,
+    "confirmed_answer": "A",
+    "old_analysis": "120 开头（首位为 0）的 IP 地址属于 A 类地址，故填 A。"
+  },
+  {
+    "id": 380477,
+    "type": 4,
+    "stem": "以下程序的输出结果是______。 #include <stdio.h> main() { int i; for(i=1;i<5;i++) { if(i%2) printf(\"*\"); else continue; printf(\"#\"); } printf(\"\\\\n\"); } A、*#*#*# B、#*#*#* C、*#*# D、#*#*\\",
+    "options": null,
+    "confirmed_answer": "C",
+    "old_analysis": "i=1、3 时输出 *#，i=2、4 时 continue 跳过 # 只输出 *，序列为 *#*#*#，故选 C。"
+  },
+  {
+    "id": 388620,
+    "type": 4,
+    "stem": "IP 地址分为 A、B、C、D、E 五类。某 IP 地址二进制表示的最高 3 位为 “110”，则此 IP 地址为 ____ 类地址。",
+    "options": null,
+    "confirmed_answer": "C",
+    "old_analysis": "IP 地址最高 3 位为 110 时属于 C 类地址，故填 C。"
+  },
+  {
+    "id": 388899,
+    "type": 2,
+    "stem": "下列关于远程文件传输(FTP)的叙述, 错误的是____。",
+    "options": "{\"A\": \"使用 IE 浏览器无法启动 FTP 服务\", \"B\": \"使用 FTP 每次只可以传输一个文件\", \"C\": \"用户可以从(向)FTP 服务器下载(上传)文件\", \"D\": \"FTP 程序允许用户在 FTP 服务器上创建新文件夹\"}",
+    "confirmed_answer": "A,B",
+    "old_analysis": ":TXT 文件是简单的文件。\n\n| 文本类型 | 特点 | 在计算机内的表示 | 文件扩展名 | 用途 |\n| --- | --- | --- | --- | --- |\n| 简单文本 | 没有字体、字号和版面格式的变化,文本在页面上逐行排列,也不含图片和表格 | 由一连串与正文内容对应的字符的编码所组成,几乎不包含任何其他的格式信息和结构信息 | .txt | 网上聊天短信文字录入OCR输入 |\n| 丰富格式文本(线性文本) | 有字体、字号、颜色等变化,文本在页面上可以自由定位和布局,还可插入图片和表格 | 除了与正文对应的字符编码之外,还使用某种“标记语言”所规定的一些标记来说明该文本的文字属性和排版格式等 | .doc.rtf.htm.html.pdf | 公文论文书稿网页 |\n| 丰富格式文本(超文本) | 除上述特征外,文本中还含有超链,使文本呈现为一种网状结构 | 同上,但还应包含用于指出“链源”和“链宿”的标记 | .doc.rtf.htm.html.p02.hlp | 同上,以及软件的联机文档(帮助文件) |"
+  },
+  {
+    "id": 388913,
+    "type": 4,
+    "stem": "IP 地址分为 A、B、C、D、E 五类, 若某台主机的 IP 地址为 202.195.10.10, 则该 IP 地址属于 ____ 类地址。",
+    "options": null,
+    "confirmed_answer": "C",
+    "old_analysis": "IP地址的类型判断依据:\n\n- A类地址的首字节范围为:1～126\n- B类地址的首字节范围为:128~191\n- C类地址的首字节范围为:192~223\n- D类地址的首字节范围为:224～239\n- E类地址的首字节范围为:240～247\n\n因此，本题填“C”。\n\n最高位是0(二进制)\n\n前两位是10(二进制)\n\n前三位是 110(二进制)\n\n前四位是1110(二进制)\n\n前五位是11110(二进制)"
+  },
+  {
+    "id": 389981,
+    "type": 4,
+    "stem": "某台安装了 Windows 操作系统的计算机上显示有 C:、D:、E:3 个盘符, 其中 C 为系统盘。若在桌面上新建一个文档, 则该文档存放在上述盘符中的 ____ 盘。",
+    "options": null,
+    "confirmed_answer": "C",
+    "old_analysis": "桌面上的文件占用C盘分区空间。因此，本题填“C”。"
+  }
+]
