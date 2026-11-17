@@ -83,6 +83,7 @@ docs/
 - **[`archive/20261117-p0c/`](archive/20261117-p0c/)**：P0-C 批量执行报告与 SQL。
 - **[`archive/20261117-manual80/`](archive/20261117-manual80/)**：80 道人工/分歧题多轮盲答复核与执行记录。
 - **[`archive/20261117-kb-color/`](archive/20261117-kb-color/README.md)**：知识库全量颜色精读与 471 条内容问题修复总结（含回滚说明）。
+- **[`archive/20261117-kp-link/`](archive/20261117-kp-link/README.md)**：题库知识点补挂（2,003 题 / 3,013 条链接，high 抽检 95%）。
 - **[`archive/20261102-data-fixes/data_write_audit_fix_20261102.sql`](archive/20261102-data-fixes/data_write_audit_fix_20261102.sql)**：2026-11-02 题库四大专项治理（22 组重复题复核合并、229 道题型错标恢复、S1 C 语言 48 `error` + 16 `quarantined` 深复核、X9 47 题与 18 知识点清零）。
 - **[`archive/20261111-announcement/data_write_announcement_20261111.sql`](archive/20261111-announcement/data_write_announcement_20261111.sql)**：2026-11-11 公告卡片固定为 4 条（最新两条 + 部署/题库两条常驻），其余更新只保留在更新历史。
 - **[`archive/20261111-renumber/data_write_kb_renumber_20261111.sql`](archive/20261111-renumber/data_write_kb_renumber_20261111.sql)**：2026-11-11 知识库 92 篇首号非 1 的讲义按“目”重排顶层序号；旧 revision 保留。
