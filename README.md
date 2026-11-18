@@ -88,7 +88,7 @@ npm run dev          # http://localhost:3000
 
 ## 数据来源
 
-题库 54,216 行（活跃 44,390，可练 44,154），来自江苏专转本真题与配套题库，
+题库 54,216 行（活跃 44,323，可练 44,096），来自江苏专转本真题与配套题库，
 经大模型逐题精读（分类/难度/质检/答案四维）后入库。
 当前状态/运维手册见 `docs/project/STATUS.md`，待办见 `docs/project/TODO.md`，知识点重构方案见 `docs/project/KNOWLEDGE_REFACTOR.md`（本机保留，Git 忽略）。考试大纲/真题见 `docs/reference/`，题库原始资料见 `private/reference/`（均本机保留，Git 忽略）。
 
