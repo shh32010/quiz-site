@@ -1,0 +1,7 @@
+[
+  {"id":353448,"verdict":"ok","issue_type":"none","note":"虚拟化技术四特点为分区、隔离、封装、硬件独立，proposed 与解析一致且正确。"},
+  {"id":363075,"verdict":"ok","issue_type":"none","note":"GNU 是 GNU's Not Unix 的递归缩写，proposed 及解析均正确。"},
+  {"id":338097,"verdict":"ok","issue_type":"none","note":"题干为大数据的标准定义，答案大数据与解析一致。"},
+  {"id":334404,"verdict":"ok","issue_type":"none","note":"150MB/s~600MB/s 串行速率及英文简称要求均指向 SATA，答案与解析正确。"},
+  {"id":345318,"verdict":"ok","issue_type":"none","note":"三个空依次为 CCD、像素、高，blank_count=3 与题干三处空线一致，解析正确。"}
+]

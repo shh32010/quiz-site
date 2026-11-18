@@ -1,0 +1,70 @@
+﻿id,action,source_kind,current_type,is_golden,category,proposed_type,current_correct,proposed_correct,proposed_options,confidence,note,stem,options
+342185,left_manual,option_json,5,False,single_choice,1,A（EIA/TIA 568B）,A,,medium,题干为含 5 个小问的综合大题，options 仅覆盖问题 5（568B/568A），答案 A 正确；建议人工裁剪题干只保留第 5 问,"某公司有人力资源部和销售部两个部门，各有26台主机需要接入Internt，其中销售部同时在线网户数通常小于15。ISP为公司分配的网段为200.101.110.128/26,公司人力资源部采用固定IP地址、销售部采用动态IP地址分配策略，将人力资源部和销售部划归不同的网段，连接方式如下图所示。
+
+
+ subgraph PCa1[""PCa1""]
+ A1[""PCa1""]
+ A2[""PCa2""]
+ A3[""PCa26\n部门A""]
+ end
+
+ subgraph Router1[""路由器1""]
+ E0[""e0:200.101.110.158""]
+ E1[""e1:200.101.110.190""]
+ S0[""s0""]
+ E2[""e2:200.101.110.169/29""]
+ end
+
+ subgraph ServerArea[""服务器区""]
+ C1[""PCb1""]
+ C2[""PCb2""]
+ C3[""PCb26""]
+ C4[""PCb3""]
+ C5[""PCb4""]
+ C6[""PCb5""]
+ C7[""PCb6""]
+ end
+
+
+【问题 1】如果每台服务器都分配不同的 IP 地址，服务器区最多可以配置 (1) 台服务器。
+
+【问题2】人力资源部是部门A还是部门B?
+
+【问题 3 】为人力资源部的某台 PC 配置 Internet 协议属性参数
+
+IP 地址: (2)；子网掩码: (3)；默认网关: (4);
+
+【问题4】为路由器1的s0口配置Internet协议属性参数。
+
+IP 地址: (5)；子网掩码: (6)；
+
+【问题 5】若交换机和 PC 之间传输介质采用 5 类 UTP，如果 PC 端采用线序满足 EIA/TIA 568B 标准，则交换机端线序满足 ____。","{'A': 'EIA/TIA 568B', 'B': 'EIA/TIA 568A'}"
+342247,left_manual,option_json,5,False,single_choice,1,IP 地址难于记忆，（DNS）给主机赋予字符串名字并负责 IP 地址与名字之间的转换,A,,medium,correct 明确指向 DNS，对应 A；题干问“为什么”但选项为系统名，题干表述质量差，建议人工润色,为什么要给主机赋予字符串名字（域名的由来）？,"{'A': 'DNS', 'B': 'Windows NT', 'C': 'UNIX', 'D': 'FTP'}"
+359513,left_manual,option_json,4,False,verify,4,C；255.255.255.0；254；192.18.26.254,C；255.255.255.0；254；192.18.26.254,,medium,无真实选项，options中A、B是带空格标记的题干分段，应拼回题干后按4空填空处理,某计算机网络拓扑结构及 IP 配置如图 73 图所示，已知路由器接口 A 和 B 的 IP 地址中主机号相同。,"{'A': '路由器右侧网络属于_ 类网络，其子网掩码是_ ，接口 B 的主机号是_ ；', 'B': '图中★标记处路由器接口A 的 IP 地址是_ 。 题 73 图'}"
+368620,left_manual,option_json,4,False,verify,4,D,D,,low,OCR 将四个选项全部合并进 A，题干里也重复了一份相同内容；按重复的配置段落拆为 A-D，但第 3、4 段文本几乎相同，C/D 需人工核对；correct=D 对应专用与公用网络都勾选“阻止所有传入连接”的配置,"在 Windows 10 上，如果对计算机的安全要求很高，则可以阻止所有入站连接，如下哪个是正确的配置（）
+
+专用网络设置
+
+
+⑥启用 Windows Defender 防火墙
+
+阻止所有待入连接，包括位于允许应用列表中的应用
+
+Windows Defender 防火墙阻止新应用时通知我
+
+
+○ 关闭 Windows Defender 防火墙(不推荐)
+
+公用网络设置
+
+
+⑥启用 Windows Defender 防火墙
+
+□阻止所有传入连接，包括位于允许应用列表中的应用
+
+Windows Defender 防火墙阻止新应用时通知我
+
+
+○ 关闭 Windows Defender 防火墙(不推荐)",{'A': '你可以修改使用的每种类型的网络的防火墙设置。<br/><br/>专用网络设置<br/><br/><br/>启用 Windows Defender 防火墙<br/><br/>☑ 阻止所有传入连接，包括位于允许应用列表中的应用<br/><br/>Windows Defender 防火墙阻止新应用时通知我<br/><br/><br/>关闭 Windows Defender 防火墙(不推断)<br/><br/>公用网络设置<br/><br/><br/>☐ 启用 Windows Defender 防火墙<br/><br/>阻止所有传入连接，包括位于允许应用列表中的应用<br/><br/>Windows Defender 防火墙阻止新应用时通知我<br/><br/><br/>⑥ 关闭 Windows Defender 防火墙(不推荐)<br/><br/>## 你可以修改使用的两种类型的两轴的切天增设重。<br/><br/>专用网络设置<br/><br/>启用 Windows Defender 防火墙<br/><br/>☑阻止所有传入连接，包括位于允许应用列表中的应用<br/><br/>Windows Defender 防火墙阻止新应用时通知钱<br/><br/><br/>○ 关闭 Windows Defender 防火墙(不推荐)<br/><br/>公用网络设置<br/><br/><br/>启用 Windows Defender 防火墙<br/><br/>□阻止所有传入连接，包括位于允许应用列表中的应用<br/><br/>Windows Defender 防大墙阻止新应用时通知我<br/><br/><br/>关闭 Windows Defender 防火墙(不推荐)<br/><br/>你可以修改使用的每种类型的网络防火墙设置。<br/><br/>专用网络设置<br/><br/><br/>启用 Windows Defender 防火墙<br/><br/>☑ 固止所有传入连接，包括位于允许应用列表中的应用<br/><br/>Windows Defender 防火墙阻止新应用时通知我<br/><br/><br/>○ 关闭 Windows Defender 防火墙(不推荐)<br/><br/>公用网络设置<br/><br/><br/>启用 Windows Defender 防火墙<br/><br/>☑ 固止所有传入连接，包括位于允许应用列表中的应用<br/><br/>Windows Defender 防火墙阻止新应用时通知晚<br/><br/><br/>○ 关闭 Windows Defender 励火墙(不操控)'}
+377437,left_manual,option_json,4,False,single_choice,1,20~40,D,,medium,选项只余 C、D，A/B 缺失；并运算元组数 20~40，对应 D，建议补齐 A/B 选项,"关系 R 和关系 S 有相同的模式，且各有 20 个元组，若这两个关系进行""并""运算，运算后所产生的元组个数为____个。","{'C': '任意', 'D': '大于等于 20，小于等于 40'}"
+389898,left_manual,option_json,4,False,verify,4,操作系统,操作系统,,medium,options 为图片/HTML 残片（--> D/E、<br/>、</details>），无法还原 A-D；题干依赖题73图，答案文本为“操作系统”，需人工核对,题 73 图为计算机软件系统关系图。图中★标识的软件是____。,"{'A': '--> D', 'B': '--> E', 'C': '--> E', 'D': '--> E<br/>```<br/></details><br/><br/>题73图'}"

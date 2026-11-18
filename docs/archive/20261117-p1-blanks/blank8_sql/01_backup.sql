@@ -1,0 +1,5 @@
+-- 空线 8 道高置信修复备份
+BEGIN;
+CREATE TABLE t_question_backup_20261117_blank8 AS SELECT * FROM t_question WHERE id IN (337155,341721,347713,370012,370027,373276,376622,381367);
+DO $$ DECLARE n int; BEGIN SELECT count(*) INTO n FROM t_question_backup_20261117_blank8; IF n<>8 THEN RAISE EXCEPTION '备份应为8，实际%',n; END IF; END $$;
+COMMIT;
