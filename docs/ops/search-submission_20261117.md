@@ -2,6 +2,14 @@
 
 站点：`https://quiz.teacher-wishes.asia`（HTTPS，已备案：苏ICP/公安联网备案已在页脚）。
 
+## 零、执行状态（2026-11-18）
+
+| 平台 | 状态 | 记录 |
+| :--- | :--- | :--- |
+| 百度搜索资源平台 | **站点已验证** | 文件验证 `baidu_verify_codeva-KvJGaqPSnt.html` 已上线；主体备案号已填（苏ICP备2026082091号）；API 推送 5 个核心 URL 成功。sitemap 配额暂为 0（次日/关联主体后重试）。 |
+| Bing Webmaster Tools | **站点已验证 + sitemap 已提交** | `BingSiteAuth.xml` 已上线；`https://quiz.teacher-wishes.asia/sitemap.xml` 状态 Processing。 |
+| Google Search Console | **未完成** | 本机直连与 10808 代理均不可达，待代理启动后补做。 |
+
 ## 一、当前技术状态（已验证）
 
 | 项目 | 状态 |
