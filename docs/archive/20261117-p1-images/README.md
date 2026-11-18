@@ -67,4 +67,4 @@
 复核发现首轮关键词“图中”会命中“视图中/图形中”等词，导致部分 Word/PowerPoint 视图题、MySQL 视图题被误列入缺图清单。
 
 - 新增 [`FALSE_POSITIVES2.csv`](FALSE_POSITIVES2.csv)：**52 道**，题干不依赖配图；
-- 新增 [`MISSING_IMAGES_REFINED.csv`](MISSING_IMAGES_REFINED.csv)：剔除后实际需配图 **181 道**（截至 2026-11-18 已补 40 道，剩余 181 道待补）。
+- 新增 [`MISSING_IMAGES_REFINED.csv`](MISSING_IMAGES_REFINED.csv)：剔除后实际需配图 **221 道**（截至 2026-11-18 已补 42 道，剩余 **179 道**待补）。
