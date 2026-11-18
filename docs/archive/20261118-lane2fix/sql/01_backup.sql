@@ -1,0 +1,9 @@
+BEGIN;
+CREATE TABLE t_question_backup_20261118_lane2fix AS SELECT * FROM t_question WHERE id IN (336918,353288,368359,370356,377027,378954,379702,379870,389515);
+CREATE TABLE t_text_content_backup_20261118_lane2fix AS SELECT * FROM t_text_content WHERE id IN (337158,353528,368599,370596,377267,379194,379942,380110,389792);
+DO $$ DECLARE n int; BEGIN
+ SELECT count(*) INTO n FROM t_question_backup_20261118_lane2fix; IF n<>9 THEN RAISE EXCEPTION '题目备份应为9'; END IF;
+ SELECT count(*) INTO n FROM t_text_content_backup_20261118_lane2fix; IF n<>9 THEN RAISE EXCEPTION '文本备份应为9'; END IF;
+ SELECT count(*) INTO n FROM t_question_backup_20261118_lane2fix WHERE is_golden; IF n<>0 THEN RAISE EXCEPTION '含金标'; END IF;
+END $$;
+COMMIT;
