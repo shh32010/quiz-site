@@ -1,6 +1,6 @@
 # `docs/` 目录索引
 
-**最后整理**：2026-11-17
+**最后整理**：2026-11-18
 
 ---
 
@@ -76,26 +76,57 @@ docs/
 
 ## 5. 历史一次性数据修复归档（`docs/archive/`）
 
-- **[`archive/20261116-kb-rebuild/`](archive/20261116-kb-rebuild/)**：2026-11-16 全库 52 章 / 232 节点按 24 版教材并行重建的逐章 SQL（A1–S6）。
-- **[`archive/20261117-feedback/`](archive/20261117-feedback/README.md)**：2026-11-17 题库反馈 63–75 批量修复、同题簇合并与系统性审计记录。
-- **[`archive/20261117-p0/`](archive/20261117-p0/)**：P0 题库整改 dry-run、试点与执行报告（含对比 CSV 与重写稿）。
-- **[`archive/20261117-p0b/`](archive/20261117-p0b/)**：P0-B 54 道填空字母与 13 道多选单字母修复。
-- **[`archive/20261117-p0c/`](archive/20261117-p0c/)**：P0-C 批量执行报告与 SQL。
-- **[`archive/20261117-manual80/`](archive/20261117-manual80/)**：80 道人工/分歧题多轮盲答复核与执行记录。
-- **[`archive/20261117-kb-color/`](archive/20261117-kb-color/README.md)**：知识库全量颜色精读与 471 条内容问题修复总结（含回滚说明）。
-- **[`archive/20261117-kp-link/`](archive/20261117-kp-link/README.md)**：题库知识点补挂（2,003 题 / 3,013 条链接，high 抽检 95%）。
-- **[`archive/20261117-kp-orphans/`](archive/20261117-kp-orphans/README.md)**：清理 12,706 条指向软删题的孤儿知识点链接（最终 106,922）。
-- **[`archive/20261102-data-fixes/data_write_audit_fix_20261102.sql`](archive/20261102-data-fixes/data_write_audit_fix_20261102.sql)**：2026-11-02 题库四大专项治理（22 组重复题复核合并、229 道题型错标恢复、S1 C 语言 48 `error` + 16 `quarantined` 深复核、X9 47 题与 18 知识点清零）。
-- **[`archive/20261111-announcement/data_write_announcement_20261111.sql`](archive/20261111-announcement/data_write_announcement_20261111.sql)**：2026-11-11 公告卡片固定为 4 条（最新两条 + 部署/题库两条常驻），其余更新只保留在更新历史。
-- **[`archive/20261111-renumber/data_write_kb_renumber_20261111.sql`](archive/20261111-renumber/data_write_kb_renumber_20261111.sql)**：2026-11-11 知识库 92 篇首号非 1 的讲义按“目”重排顶层序号；旧 revision 保留。
-- **[`archive/20261111-kb-image-position/data_write_kb_image_position_20261111.sql`](archive/20261111-kb-image-position/data_write_kb_image_position_20261111.sql)**：2026-11-11 node 40（A1-1.1.1）第 7 项“如下图所示：”后紧接配图，后续编号项移到图片下方。
-- **[`archive/20261111-kb-move-items/data_write_kb_move_items_20261111.sql`](archive/20261111-kb-move-items/data_write_kb_move_items_20261111.sql)**：2026-11-11 A1-1.1.2 保留第 1–7 项；第 8 项总线（按 PDF 原文）及第 9–14 项移到 A1-1.1.3，并与总线子项合并。
-- **[`archive/20261111-kb-address-bus/data_write_kb_address_bus_20261111.sql`](archive/20261111-kb-address-bus/data_write_kb_address_bus_20261111.sql)**：2026-11-11 恢复第 8 项总线原文，合并地址总线 2^16/2^20 示例并删除 OCR 残片。
-- **[`archive/20261111-kb-reclass/`](archive/20261111-kb-reclass/)**：2026-11-11 知识点 1.1–1.3 精修：1.1.2/1.1.3/1.1.4 与 1.2.1/1.2.2 按节标题重新归类去重，1.3.1–1.3.4 重建并校正配图位置；含各类分行与标记修正 SQL 及回滚说明。
-- **[`archive/20261028-knowledge/`](archive/20261028-knowledge/)**：2026-10-28 全站 124 个章节知识点首轮文本清洗 SQL。
-- **[`archive/202610-data-fixes/`](archive/202610-data-fixes/)**：2026-10-20 至 10-30 期间所有已执行完毕的一次性题目归位、反馈修复、探测账号清理 SQL 与过程目录。
+### 知识库与讲义
+- [`archive/20261028-knowledge/`](archive/20261028-knowledge/README.md)：2026-10-28 知识点清洗 SQL（历史归档）
+- [`archive/20261111-kb-address-bus/`](archive/20261111-kb-address-bus/README.md)：地址总线原文恢复（2026-11-11）
+- [`archive/20261111-kb-image-position/`](archive/20261111-kb-image-position/README.md)：node40 配图位置修正（2026-11-11）
+- [`archive/20261111-kb-move-items/`](archive/20261111-kb-move-items/README.md)：A1-1.1.2 条目迁移（2026-11-11）
+- [`archive/20261111-kb-reclass/`](archive/20261111-kb-reclass/README.md)：2026-11-11 知识点精修记录（1.1–1.3）
+- [`archive/20261111-renumber/`](archive/20261111-renumber/README.md)：讲义顶层序号重排（2026-11-11）
+- [`archive/20261116-kb-rebuild/`](archive/20261116-kb-rebuild/README.md)：全库 52 章 232 节点重建 SQL（2026-11-16）
+- [`archive/20261117-kb-color/`](archive/20261117-kb-color/README.md)：知识库全量颜色精读与内容修复（2026-11-17）
+- [`archive/20261117-kp-link/`](archive/20261117-kp-link/README.md)：题库知识点补挂（2026-11-17）
+- [`archive/20261117-kp-orphans/`](archive/20261117-kp-orphans/README.md)：知识点孤儿链接清理（2026-11-17）
 
----
+### 题库治理 2026-11-17
+- [`archive/20261117-feedback/`](archive/20261117-feedback/README.md)：2026-11-17 题库反馈批量修复
+- [`archive/20261117-p0/`](archive/20261117-p0/README.md)：P0 题库整改归档（2026-11-17）
+- [`archive/20261117-p0b/`](archive/20261117-p0b/README.md)：P0-B 题库整改归档（2026-11-17）
+- [`archive/20261117-p0c/`](archive/20261117-p0c/README.md)：P0-C 题库整改归档（2026-11-17）
+- [`archive/20261117-p0-data/`](archive/20261117-p0-data/README.md)：P0 数据核对与干跑（2026-11-17）
+- [`archive/20261117-manual80/`](archive/20261117-manual80/README.md)：人工题 80 道盲答复核归档（2026-11-17）
+- [`archive/20261117-judge/`](archive/20261117-judge/README.md)：20261117-judge
+- [`archive/20261117-comp/`](archive/20261117-comp/README.md)：综合 10 道执行报告（2026-11-17）
+- [`archive/20261117-fill/`](archive/20261117-fill/README.md)：填空 122 道执行报告（2026-11-17）
+- [`archive/20261117-multi/`](archive/20261117-multi/README.md)：多选 98 道执行报告（2026-11-17）
+- [`archive/20261117-p1-blanks/`](archive/20261117-p1-blanks/README.md)：P1 填空空线规范化（2026-11-17）
+- [`archive/20261117-p1-images/`](archive/20261117-p1-images/README.md)：P1 缺图题分类（2026-11-17）
+- [`archive/20261117-p2/`](archive/20261117-p2/README.md)：P2 机械修复执行报告（2026-11-17）
+- [`archive/20261117-p3-dupes/`](archive/20261117-p3-dupes/README.md)：P3 严格重复题 dry-run（2026-11-17）
+- [`archive/20261117-p3-near/`](archive/20261117-p3-near/README.md)：近重复题审计清单（2026-11-17）
+- [`archive/20261117-p3-type45/`](archive/20261117-p3-type45/README.md)：P3 题型 4/5 带选项分类（2026-11-17）
+
+### 题库治理 2026-11-18
+- [`archive/20261118-368620/`](archive/20261118-368620/README.md)：368620 题处理（2026-11-18）
+- [`archive/20261118-blank361828/`](archive/20261118-blank361828/README.md)：361828 填空空线修复（2026-11-18）
+- [`archive/20261118-blank6/`](archive/20261118-blank6/README.md)：填空第 6 批修复（2026-11-18）
+- [`archive/20261118-blank7/`](archive/20261118-blank7/README.md)：填空第 7 批修复（2026-11-18）
+- [`archive/20261118-dupes-analysis/`](archive/20261118-dupes-analysis/README.md)：44 组严格重复题逐组分析（2026-11-18）
+- [`archive/20261118-golden6/`](archive/20261118-golden6/README.md)：P2 金标 6 道受控修复（2026-11-18）
+- [`archive/20261118-imgpilot/`](archive/20261118-imgpilot/README.md)：题目配图试点：7 张上线（2026-11-18）
+- [`archive/20261118-imgpilot2/`](archive/20261118-imgpilot2/README.md)：题目配图第二批候选（2026-11-18）
+- [`archive/20261118-imgpilot3/`](archive/20261118-imgpilot3/README.md)：题目配图第二批：5 张上线（2026-11-18）
+- [`archive/20261118-imgpilot4/`](archive/20261118-imgpilot4/README.md)：题目配图第三批：28 张上线（2026-11-18）
+- [`archive/20261118-imgpilot5/`](archive/20261118-imgpilot5/README.md)：题目配图第二轮候选：2 张上线（2026-11-18）
+- [`archive/20261118-lane3/`](archive/20261118-lane3/README.md)：空线题 + 368620 并行处理（2026-11-18）
+- [`archive/20261118-p0-blind11/`](archive/20261118-p0-blind11/README.md)：P0 十一题三路盲答复核（2026-11-18）
+- [`archive/20261118-p0-source3/`](archive/20261118-p0-source3/README.md)：P0 三道保留题的源答案确认（2026-11-18）
+- [`archive/20261118-type45-manual/`](archive/20261118-type45-manual/README.md)：题型 4/5 人工题再处理（2026-11-18）
+
+### 数据修复与运维
+- [`archive/202610-data-fixes/`](archive/202610-data-fixes/README.md)：章直属题归位（2026-10-21）
+- [`archive/20261102-data-fixes/`](archive/20261102-data-fixes/README.md)：题库四大专项治理（2026-11-02）
+- [`archive/20261111-announcement/`](archive/20261111-announcement/README.md)：公告卡片固定 4 条（2026-11-11）
 
 ## 6. SQL 编写与执行规范
 
