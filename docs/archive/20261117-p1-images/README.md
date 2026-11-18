@@ -73,9 +73,9 @@
 
 lane1 对 176 道剩余题逐题核图（4 个 agent + 1 个补查 agent）：
 
-- **accept 14**：13 张已上线，376028 为金标暂不写；
-- **no_image 155**：题干不需要配图，或图表已被 OCR 转成 Markdown/HTML 表格，列入 [`FALSE_POSITIVES3.csv`](FALSE_POSITIVES3.csv)；
-- **reject 7**：365788、366532、374867、375143、375249、375492、385549，邻近图均为相邻题/水印，未找到正确图；
+- **accept 14**：14 张已上线（含 376028 金标受控补图）；
+- **no_image 162**：题干不需要配图，或图表已被 OCR 转成 Markdown/HTML 表格，列入 [`FALSE_POSITIVES3.csv`](FALSE_POSITIVES3.csv)；
+- **reject 0**：原 7 道复核后确认是“顺序图中/用例图中/对象图中/E-R 图中”概念题，归入误报；
 - **unsure 1**：389958，R/S 被拆成两张图，单张不完整；
 - **无本地源 3**：390599、390600、390601。
 
