@@ -87,6 +87,7 @@ docs/
 - [`archive/20261117-kb-color/`](archive/20261117-kb-color/README.md)：知识库全量颜色精读与内容修复（2026-11-17）
 - [`archive/20261117-kp-link/`](archive/20261117-kp-link/README.md)：题库知识点补挂（2026-11-17）
 - [`archive/20261117-kp-orphans/`](archive/20261117-kp-orphans/README.md)：知识点孤儿链接清理（2026-11-17）
+- [`archive/20261118-kp-medium/`](archive/20261118-kp-medium/README.md)：medium 三轮共识补挂 + no_match 高频知识点（2026-11-18）
 
 ### 题库治理 2026-11-17
 - [`archive/20261117-feedback/`](archive/20261117-feedback/README.md)：2026-11-17 题库反馈批量修复
