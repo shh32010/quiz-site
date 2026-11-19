@@ -2,13 +2,13 @@
 
 站点：`https://quiz.teacher-wishes.asia`（HTTPS，已备案：苏ICP/公安联网备案已在页脚）。
 
-## 零、执行状态（2026-11-18）
+## 零、执行状态（2026-11-19）
 
 | 平台 | 状态 | 记录 |
 | :--- | :--- | :--- |
 | 百度搜索资源平台 | **站点已验证** | 文件验证 `baidu_verify_codeva-KvJGaqPSnt.html` 已上线；主体备案号已填（苏ICP备2026082091号）；API 推送 5 个核心 URL 成功。sitemap 配额暂为 0（次日/关联主体后重试）。 |
-| Bing Webmaster Tools | **站点已验证 + sitemap 已提交** | `BingSiteAuth.xml` 已上线；`https://quiz.teacher-wishes.asia/sitemap.xml` 状态 Processing。 |
-| Google Search Console | **未完成** | 本机直连与 10808 代理均不可达，待代理启动后补做。 |
+| Bing Webmaster Tools | **站点已验证 + sitemap 已提交** | `BingSiteAuth.xml` 已上线；`https://quiz.teacher-wishes.asia/sitemap.xml` 状态 Processing（2026-11-19 `bingbot` 已抓取返回 200）。 |
+| Google Search Console | **网域已验证 + sitemap 已提交** | 2026-11-19 通过阿里云 DNS TXT（`@` 与 `quiz`：`google-site-verification=6LCPZ0BWgRI2NhUu0nJkEn5LPhS9Xj1jMaRQ_cLgP4M`）完成 `sc-domain:teacher-wishes.asia` 验证；已提交 `https://quiz.teacher-wishes.asia/sitemap.xml`，首页确认已编入索引，`/knowledge` 已加入优先抓取队列。 |
 
 ## 一、当前技术状态（已验证）
 
