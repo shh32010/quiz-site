@@ -6,7 +6,7 @@ definePageMeta({ middleware: 'auth' })
 useHead({ title: '做题历史详情' })
 const api = useApi()
 const route = useRoute()
-const sessionId = Number(route.params.id)
+const sessionId = computed(() => Number(route.params.id))
 const session = ref<any>(null)
 const rows = ref<any[]>([])
 const total = ref(0)
@@ -33,22 +33,31 @@ function openLightbox(a: any, i: number) {
 }
 
 async function load(p = page.value) {
+  const sid = sessionId.value
+  if (!Number.isFinite(sid) || sid <= 0) {
+    error.value = '无效的练习记录编号'
+    loading.value = false
+    return
+  }
   loading.value = true
   error.value = ''
   try {
-    const r = await api.get<any>(`/api/practice/history/${sessionId}?page=${p}&size=${size}`)
+    const r = await api.get<any>(`/api/practice/history/${sid}?page=${p}&size=${size}`)
+    if (sessionId.value !== sid) return
     session.value = r.session
     // 预计算图片数组，避免模板里每行重复 split
     rows.value = (r.rows ?? []).map((row: any) => ({ ...row, images: imgs(row) }))
     total.value = r.total ?? 0
     page.value = r.page ?? p
   } catch (e: any) {
+    if (sessionId.value !== sid) return
     error.value = e.message ?? '加载失败'
   } finally {
-    loading.value = false
+    if (sessionId.value === sid) loading.value = false
   }
 }
 
+watch(sessionId, () => load(1))
 onMounted(() => load(1))
 </script>
 

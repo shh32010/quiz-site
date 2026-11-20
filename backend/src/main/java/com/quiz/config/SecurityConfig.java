@@ -50,8 +50,15 @@ public class SecurityConfig {
                     res.getWriter().write("{\"message\":\"无权访问\"}");
                 }))
             .authorizeHttpRequests(auth -> auth
-                // 公开
-                .requestMatchers("/api/health", "/api/auth/**", "/actuator/**").permitAll()
+                // 公开入口：仅放行明确无需登录的认证接口与健康探针
+                .requestMatchers("/api/health", "/actuator/health",
+                        "/api/auth/register", "/api/auth/login",
+                        "/api/auth/forgot", "/api/auth/reset",
+                        "/api/auth/email/verify").permitAll()
+                // 其余认证接口（/me、/email、/password、/email/resend 等）强制需登录
+                .requestMatchers("/api/auth/**").authenticated()
+                // 其余 Actuator 端点仅管理员可访问
+                .requestMatchers("/actuator/**").hasRole("ADMIN")
                 // 知识点阅读进度需登录（置于 /api/knowledge/** 之前）
                 .requestMatchers("/api/knowledge/progress/**").authenticated()
                 .requestMatchers("/api/chapters/**", "/api/courses", "/api/papers/**", "/api/questions/**",

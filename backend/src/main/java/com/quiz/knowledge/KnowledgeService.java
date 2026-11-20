@@ -4,6 +4,8 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.quiz.chapter.Chapter;
 import com.quiz.chapter.ChapterRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -22,6 +24,8 @@ import java.util.UUID;
  */
 @Service
 public class KnowledgeService {
+
+    private static final Logger log = LoggerFactory.getLogger(KnowledgeService.class);
 
     private final ChapterRepository chapterRepo;
     private final JdbcTemplate jdbc;
@@ -224,6 +228,7 @@ public class KnowledgeService {
             }
             return out;
         } catch (Exception e) {
+            log.warn("加载小节 {} 讲义失败: {}", sectionId, e.getMessage(), e);
             return List.of();
         }
     }
@@ -270,13 +275,13 @@ public class KnowledgeService {
         int safeSize = Math.min(Math.max(size, 1), 200);
         int offset = Math.max(0, (page - 1) * safeSize);
         String kw = q == null ? "" : q.trim();
-        String like = "%" + kw + "%";
+        String like = "%" + escapeLike(kw) + "%";
 
         String where = """
                  where e.status = 'published'
                    and not c.deleted
                 """ + extraCondition + """
-                   and (? = '' or c.name ilike ? or c.code ilike ? or r.search_text ilike ?)
+                   and (? = '' or c.name ilike ? escape '\\' or c.code ilike ? escape '\\' or r.search_text ilike ? escape '\\')
                 """;
 
         List<Object> countArgs = new ArrayList<>(extraParams);
@@ -324,8 +329,8 @@ public class KnowledgeService {
                  order by
                    case when ? = '' then 0
                         when lower(c.code) = lower(?) then 0
-                        when c.code ilike ? then 1
-                        when c.name ilike ? then 2
+                        when c.code ilike ? escape '\\' then 1
+                        when c.name ilike ? escape '\\' then 2
                         else 3 end,
                    case when ? = '' then 0
                         else coalesce(nullif(strpos(lower(r.search_text), lower(?)), 0), 999999) end,
@@ -405,10 +410,15 @@ public class KnowledgeService {
         return Map.of("rows", rows);
     }
 
-    /** 保存/更新当前用户在某节的阅读进度或已学标记 */
+    /** 转义 SQL ILIKE 通配符，防止用户输入 % / _ / \ 引发全表误匹配 */
+    private static String escapeLike(String kw) {
+        return kw.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_");
+    }
+
+    /** 保存/更新当前用户在某节的阅读进度或已学标记，并返回数据库真实落库值 */
     public Map<String, Object> saveProgress(UUID uid, int sectionId, Integer progressPct, Boolean learned, Integer lastKpId) {
         Integer safePct = progressPct == null ? null : Math.max(0, Math.min(100, progressPct));
-        jdbc.update("""
+        List<Map<String, Object>> rows = jdbc.queryForList("""
                 insert into user_knowledge_progress (user_id, section_id, progress_pct, learned, last_kp_id, updated_at)
                 values (?, ?, coalesce(?, 0), coalesce(?, false), ?, now())
                 on conflict (user_id, section_id) do update
@@ -416,12 +426,19 @@ public class KnowledgeService {
                     learned = coalesce(?, user_knowledge_progress.learned),
                     last_kp_id = coalesce(?, user_knowledge_progress.last_kp_id),
                     updated_at = now()
+                returning progress_pct as "progressPct", learned
                 """, uid, sectionId, safePct, learned, lastKpId, safePct, learned, lastKpId);
+        Map<String, Object> persisted = rows.isEmpty() ? Map.of() : rows.getFirst();
+        Object pctVal = persisted.get("progressPct");
+        int actualPct = pctVal instanceof Number n ? n.intValue() : (safePct == null ? 0 : safePct);
+        boolean actualLearned = persisted.containsKey("learned")
+                ? Boolean.TRUE.equals(persisted.get("learned"))
+                : Boolean.TRUE.equals(learned);
         return Map.of(
                 "ok", true,
                 "sectionId", sectionId,
-                "progressPct", safePct == null ? 0 : safePct,
-                "learned", Boolean.TRUE.equals(learned)
+                "progressPct", actualPct,
+                "learned", actualLearned
         );
     }
 }

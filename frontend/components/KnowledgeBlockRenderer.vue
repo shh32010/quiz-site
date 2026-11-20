@@ -1,6 +1,5 @@
-<script setup lang="ts">
-// 结构化讲义块渲染器：支持列表、段落、自适应表格、代码卡片、可折叠树图、配图与全新现代质感易错/复习提示卡片
-import { computed, ref } from 'vue'
+<script lang="ts">
+// 模块级只注册一次 highlight.js 语言，避免每个渲染器实例挂载时重复注册
 import hljs from 'highlight.js/lib/core'
 import cLang from 'highlight.js/lib/languages/c'
 import cppLang from 'highlight.js/lib/languages/cpp'
@@ -10,18 +9,6 @@ import bashLang from 'highlight.js/lib/languages/bash'
 import xmlLang from 'highlight.js/lib/languages/xml'
 import jsLang from 'highlight.js/lib/languages/javascript'
 import plainLang from 'highlight.js/lib/languages/plaintext'
-import { calloutTheme, filterKbBlocks, FRONTIER_THEME, importanceBadgeMeta, renderInlineMarkup, type KbBlock } from '~/utils/knowledge'
-import UiBadge from '~/components/ui/UiBadge.vue'
-import UiImageLightbox from '~/components/ui/UiImageLightbox.vue'
-
-const props = withDefaults(defineProps<{
-  blocks: KbBlock[]
-  coreOnly?: boolean
-  highlightKeyword?: string
-}>(), {
-  coreOnly: false,
-  highlightKeyword: '',
-})
 
 hljs.registerLanguage('c', cLang)
 hljs.registerLanguage('cpp', cppLang)
@@ -36,12 +23,29 @@ hljs.registerLanguage('js', jsLang)
 hljs.registerLanguage('plaintext', plainLang)
 hljs.registerLanguage('text', plainLang)
 hljs.registerLanguage('txt', plainLang)
+</script>
+
+<script setup lang="ts">
+// 结构化讲义块渲染器：支持列表、段落、自适应表格、代码卡片、可折叠树图、配图与全新现代质感易错/复习提示卡片
+import { computed, ref } from 'vue'
+import { calloutTheme, filterKbBlocks, FRONTIER_THEME, importanceBadgeMeta, renderInlineMarkup, type KbBlock } from '~/utils/knowledge'
+import UiBadge from '~/components/ui/UiBadge.vue'
+import UiImageLightbox from '~/components/ui/UiImageLightbox.vue'
+
+const props = withDefaults(defineProps<{
+  blocks: KbBlock[]
+  coreOnly?: boolean
+  highlightKeyword?: string
+}>(), {
+  coreOnly: false,
+  highlightKeyword: '',
+})
 
 const codeCache = new Map<string, string>()
 function codeHtml(block: KbBlock): string {
   const code = block.code ?? ''
   const lang = (block.lang || 'plaintext').toLowerCase()
-  const key = `${block.id}|${lang}|${code.length}`
+  const key = `${block.id}|${lang}|${code}`
   const cached = codeCache.get(key)
   if (cached !== undefined) return cached
   let html = ''
@@ -52,6 +56,7 @@ function codeHtml(block: KbBlock): string {
   } catch {
     html = code.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
   }
+  if (codeCache.size > 200) codeCache.clear()
   codeCache.set(key, html)
   return html
 }

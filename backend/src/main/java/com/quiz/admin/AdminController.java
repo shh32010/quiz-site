@@ -45,14 +45,20 @@ public class AdminController {
     @PostMapping("/feedback/{id}/resolve")
     public Map<String, Object> resolve(@PathVariable long id, @RequestBody(required = false) Map<String, String> body) {
         String note = body == null ? null : body.get("note");
+        if (note != null && note.length() > 500) {
+            throw new IllegalArgumentException("处理备注不能超过 500 字");
+        }
         int n = jdbc.update("update feedback set status = 'handled', admin_note = ?, handled_at = now() where id = ?",
                 note, id);
         return Map.of("updated", n);
     }
 
-    /** 用户列表（含最近登录 IP / 时间） */
+    /** 用户列表（含最近登录 IP / 时间，支持分页与单页上限防止全表拖垮） */
     @GetMapping("/users")
-    public Map<String, Object> users() {
+    public Map<String, Object> users(@RequestParam(defaultValue = "1") int page,
+                                     @RequestParam(defaultValue = "200") int size) {
+        int p = Math.max(page, 1);
+        int s = Math.min(Math.max(size, 1), 500);
         List<Map<String, Object>> rows = jdbc.queryForList("""
                 select p.id, p.username, coalesce(p.email, '') as email, p.role,
                        p.created_at as "createdAt",
@@ -61,8 +67,9 @@ public class AdminController {
                        (select count(*) from practice_answer a where a.user_id = p.id and a.deleted_at is null) as "answers"
                   from profiles p
                  order by p.created_at desc
-                """);
-        return Map.of("rows", rows);
+                 limit ? offset ?
+                """, s, (p - 1) * s);
+        return Map.of("rows", rows, "page", p, "size", s);
     }
 
     /** 概览统计 */

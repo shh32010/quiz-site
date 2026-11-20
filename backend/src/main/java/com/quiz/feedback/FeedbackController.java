@@ -1,5 +1,7 @@
 package com.quiz.feedback;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,9 +22,16 @@ public class FeedbackController {
     public record Req(Integer questionId, String type, String content) {}
 
     private final JdbcTemplate jdbc;
+    private final ObjectMapper mapper;
 
     public FeedbackController(JdbcTemplate jdbc) {
+        this(jdbc, new ObjectMapper());
+    }
+
+    @Autowired
+    public FeedbackController(JdbcTemplate jdbc, ObjectMapper mapper) {
         this.jdbc = jdbc;
+        this.mapper = mapper;
     }
 
     /** 当前登录用户的反馈记录与处理状态（含管理员回复） */
@@ -51,8 +60,8 @@ public class FeedbackController {
                 req.questionId(), req.type() == null ? "other" : req.type(),
                 req.content() == null ? "" : req.content(), null);
         try {
-            Map<String, Object> result = new LinkedHashMap<>(
-                    new com.fasterxml.jackson.databind.ObjectMapper().readValue(json, Map.class));
+            @SuppressWarnings("unchecked")
+            Map<String, Object> result = new LinkedHashMap<>(mapper.readValue(json, Map.class));
             if (req.questionId() != null) {
                 result.put("similarCount", similarCount(req.questionId()));
             }

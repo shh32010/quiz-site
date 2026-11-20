@@ -22,7 +22,18 @@ export function useAuth() {
     sync()
   }
 
-  function saveToken(token: string) {
+  /** 切换账号或登出时清理本地阅读进度缓存，防止共用设备账号间串数据 */
+  function clearUserLocalCache() {
+    if (typeof localStorage === 'undefined') return
+    try {
+      localStorage.removeItem('quiz_learned')
+      localStorage.removeItem('quiz_reader_progress')
+      localStorage.removeItem('quiz_last_section')
+    } catch { /* 忽略 */ }
+  }
+
+  function saveToken(token: string, preserveCache = false) {
+    if (!preserveCache) clearUserLocalCache()
     api.setToken(token)
     loggedIn.value = true
     initialized.value = true
@@ -30,6 +41,7 @@ export function useAuth() {
 
   function clear() {
     api.clearToken()
+    clearUserLocalCache()
     loggedIn.value = false
     initialized.value = true
   }
@@ -41,6 +53,7 @@ export function useAuth() {
 
   /** 带 token 的请求收到 401：清状态并回登录页，保留当前地址 */
   function onAuthExpired() {
+    clearUserLocalCache()
     loggedIn.value = false
     initialized.value = true
     if (import.meta.server || route.path === '/login') return

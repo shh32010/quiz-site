@@ -1,6 +1,7 @@
 <script setup lang="ts">
-/** 基础弹窗：Teleport + Esc 关闭 + 锁定页面滚动 + 初始焦点/Tab 焦点陷阱/关闭焦点归还 */
-import { nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
+/** 基础弹窗：Teleport + Esc 关闭 + 引用计数滚动锁 + 初始焦点/Tab 焦点陷阱/关闭焦点归还 */
+import { nextTick, onMounted, onUnmounted, ref, toRef, watch } from 'vue'
+import { useOverlayScrollLock } from '~/composables/useOverlayScrollLock'
 
 const props = withDefaults(defineProps<{
   modelValue: boolean
@@ -54,9 +55,10 @@ function onKeydown(e: KeyboardEvent) {
   }
 }
 
-function syncBody(open: boolean) {
+useOverlayScrollLock(toRef(props, 'modelValue'))
+
+function syncFocus(open: boolean) {
   if (typeof document === 'undefined') return
-  document.body.style.overflow = open ? 'hidden' : ''
   if (open) {
     lastFocused = document.activeElement as HTMLElement | null
     nextTick(() => {
@@ -71,11 +73,11 @@ function syncBody(open: boolean) {
   }
 }
 
-watch(() => props.modelValue, syncBody, { immediate: true })
+watch(() => props.modelValue, syncFocus, { immediate: true })
 onMounted(() => window.addEventListener('keydown', onKeydown))
 onUnmounted(() => {
   window.removeEventListener('keydown', onKeydown)
-  syncBody(false)
+  syncFocus(false)
 })
 
 const widths: Record<string, string> = {

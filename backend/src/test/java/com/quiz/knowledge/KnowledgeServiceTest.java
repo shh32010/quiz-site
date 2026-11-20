@@ -57,19 +57,23 @@ class KnowledgeServiceTest {
     }
 
     @Test
-    void saveProgressUpsertsUserKnowledgeProgress() {
+    void saveProgressUpsertsAndReturnsPersistedValues() {
         ChapterRepository chapterRepo = mock(ChapterRepository.class);
         JdbcTemplate jdbc = mock(JdbcTemplate.class);
         UUID uid = UUID.randomUUID();
 
+        // 部分更新只传 learned=true、progressPct=null 时，应返回数据库保留的真实 progressPct=85
+        when(jdbc.queryForList(contains("insert into user_knowledge_progress"), any(Object[].class)))
+                .thenReturn(List.of(Map.of("progressPct", 85, "learned", true)));
+
         KnowledgeService service = new KnowledgeService(chapterRepo, jdbc, new ObjectMapper());
-        Map<String, Object> res = service.saveProgress(uid, 238, 85, true, 30314);
+        Map<String, Object> res = service.saveProgress(uid, 238, null, true, 30314);
 
         assertThat(res.get("ok")).isEqualTo(true);
         assertThat(res.get("sectionId")).isEqualTo(238);
         assertThat(res.get("progressPct")).isEqualTo(85);
         assertThat(res.get("learned")).isEqualTo(true);
-        verify(jdbc).update(contains("insert into user_knowledge_progress"), any(Object[].class));
+        verify(jdbc).queryForList(contains("returning progress_pct"), any(Object[].class));
     }
 
     @Test
@@ -216,5 +220,22 @@ class KnowledgeServiceTest {
         assertThat(res.get("total")).isEqualTo(1);
         List<Map<String, Object>> rows = (List<Map<String, Object>>) res.get("rows");
         assertThat(String.valueOf(rows.get(0).get("content"))).startsWith("…").contains("二分查找");
+    }
+
+    @Test
+    void searchEscapesLikeWildcards() {
+        ChapterRepository chapterRepo = mock(ChapterRepository.class);
+        JdbcTemplate jdbc = mock(JdbcTemplate.class);
+
+        when(jdbc.queryForObject(contains("escape '\\'"), eq(Integer.class), any(Object[].class)))
+                .thenReturn(0);
+        when(jdbc.queryForList(contains("escape '\\'"), any(Object[].class)))
+                .thenReturn(List.of());
+
+        KnowledgeService service = new KnowledgeService(chapterRepo, jdbc, new ObjectMapper());
+        service.search("100%_test", 1, 20);
+
+        verify(jdbc).queryForObject(contains("escape '\\'"), eq(Integer.class),
+                eq("100%_test"), eq("%100\\%\\_test%"), eq("%100\\%\\_test%"), eq("%100\\%\\_test%"));
     }
 }

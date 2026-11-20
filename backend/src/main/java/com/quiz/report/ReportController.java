@@ -77,7 +77,7 @@ public class ReportController {
         Map<String, Object> summary = jdbc.queryForMap("""
                 select count(*)                                            as "answered",
                        count(*) filter (where is_correct)                  as "correct",
-                       count(distinct date(answered_at))                   as "activeDays",
+                       count(distinct (answered_at at time zone 'Asia/Shanghai')::date) as "activeDays",
                        coalesce(sum(score_got), 0)                         as "score"
                   from practice_answer
                  where user_id = ? and deleted_at is null

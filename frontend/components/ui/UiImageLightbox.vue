@@ -4,6 +4,7 @@
  * 只负责展示，不修改题目数据；打开时锁页面滚动并管理焦点。
  */
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
+import { useOverlayScrollLock } from '~/composables/useOverlayScrollLock'
 
 const props = withDefaults(defineProps<{
   modelValue: boolean
@@ -22,7 +23,9 @@ const closeButton = ref<HTMLButtonElement | null>(null)
 let lastFocused: HTMLElement | null = null
 
 const total = computed(() => props.images.length)
+const visible = computed(() => props.modelValue && total.value > 0)
 const current = computed(() => props.images[index.value] ?? '')
+useOverlayScrollLock(visible)
 const imgStyle = computed(() => scale.value === 1
   ? { maxWidth: '100%', maxHeight: '100%' }
   : { width: `${Math.round(scale.value * 100)}%`, maxWidth: 'none', maxHeight: 'none' })
@@ -90,12 +93,11 @@ function onKeydown(e: KeyboardEvent) {
   }
 }
 
-/** 打开且有图时锁页面滚动、定位到点击的那张图并聚焦关闭按钮 */
+/** 打开且有图时定位到点击的那张图并聚焦关闭按钮（滚动锁由 useOverlayScrollLock 统一计数管理） */
 function sync(open: boolean) {
   if (typeof document === 'undefined') return
-  const visible = open && total.value > 0
-  document.body.style.overflow = visible ? 'hidden' : ''
-  if (visible) {
+  const isVisible = open && total.value > 0
+  if (isVisible) {
     index.value = Math.min(Math.max(0, props.startIndex), total.value - 1)
     scale.value = 1
     lastFocused = document.activeElement as HTMLElement | null

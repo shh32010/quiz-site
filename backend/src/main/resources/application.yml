@@ -72,10 +72,10 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info,metrics
+        include: health,info
   endpoint:
     health:
-      show-details: always
+      show-details: when_authorized
   health:
     # 未配置 SMTP 时不要让 /actuator/health 因 mail 一直 DOWN
     mail:
@@ -84,4 +84,4 @@ management:
 logging:
   level:
     root: INFO
-    com.quiz: DEBUG
+    com.quiz: ${QUIZ_LOG_LEVEL:INFO}

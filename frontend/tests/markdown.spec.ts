@@ -26,6 +26,27 @@ describe('markdown utils', () => {
     expect(html).toContain('&lt;script&gt;')
   })
 
+  it('Markdown 渲染拦截实体编码与前导空白伪装的危险协议链接和图片', () => {
+    const entityLink = renderMarkdown('[点我](&#106;avascript:alert(1))')
+    expect(entityLink).not.toMatch(/javascript:/i)
+    expect(entityLink).toContain('href="#"')
+
+    const spacedLink = renderMarkdown('[点我](  JaVaScRiPt:alert(1))')
+    expect(spacedLink).not.toMatch(/javascript:/i)
+    expect(spacedLink).toContain('href="#"')
+
+    const dataImg = renderMarkdown('![x](data:text/html,<script>alert(1)</script>)')
+    expect(dataImg).not.toMatch(/data:/i)
+
+    // 越界数字实体不会抛 RangeError 且仍拦截危险协议
+    const hugeEntity = renderMarkdown('[点我](&#9999999999;javascript:alert(1))')
+    expect(hugeEntity).not.toMatch(/javascript:/i)
+    expect(hugeEntity).toContain('href="#"')
+
+    const safeLink = renderMarkdown('[官网](https://quiz.teacher-wishes.asia/chapters)')
+    expect(safeLink).toContain('href="https://quiz.teacher-wishes.asia/chapters"')
+  })
+
   it('代码块里的尖括号只转义一次', () => {
     const html = renderMarkdown('```c\n#include <stdio.h>\n```')
     expect(html).toContain('#include &lt;stdio.h&gt;')

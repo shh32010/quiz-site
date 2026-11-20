@@ -22,21 +22,29 @@ import java.util.Map;
 public class AnnouncementController {
 
     private static final Logger log = LoggerFactory.getLogger(AnnouncementController.class);
+    /** 内存缓存 60 秒过期，保证运维直改 SQL 发布公告后也能自动生效 */
+    private static final long CACHE_TTL_MS = 60_000L;
 
     private final JdbcTemplate jdbc;
     private final ObjectMapper mapper;
     private volatile Map<String, Object> cached;
+    private volatile long cachedAt;
 
     public AnnouncementController(JdbcTemplate jdbc, ObjectMapper mapper) {
         this.jdbc = jdbc;
         this.mapper = mapper;
     }
 
+    /** 仅测试用：强制内存缓存过期 */
+    void expireCacheForTest() {
+        this.cachedAt = 0L;
+    }
+
     /** 公开获取当前站内公告 */
     @GetMapping("/api/announcement")
     public Map<String, Object> getAnnouncement() {
         Map<String, Object> local = cached;
-        if (local != null) {
+        if (local != null && (System.currentTimeMillis() - cachedAt) < CACHE_TTL_MS) {
             return local;
         }
         try {
@@ -57,6 +65,7 @@ public class AnnouncementController {
                 out.put("items", parseList(String.valueOf(r.getOrDefault("itemsJson", "[]"))));
                 out.put("history", parseList(String.valueOf(r.getOrDefault("historyJson", "[]"))));
                 cached = out;
+                cachedAt = System.currentTimeMillis();
                 return out;
             }
         } catch (Exception e) {
@@ -110,6 +119,7 @@ public class AnnouncementController {
         updated.put("items", itemsObj);
         updated.put("history", historyObj);
         cached = updated;
+        cachedAt = System.currentTimeMillis();
         return updated;
     }
 

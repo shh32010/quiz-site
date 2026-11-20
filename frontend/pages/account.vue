@@ -117,8 +117,8 @@ async function changePassword() {
   try {
     const r = await api.post<{ token?: string }>('/api/auth/password',
       { oldPassword: oldPwd.value, newPassword: newPwd.value })
-    // 当前会话换发新 token，其他设备的旧 token 已失效
-    if (r.token) auth.saveToken(r.token)
+    // 当前会话换发新 token（同一用户保留本地阅读缓存），其他设备的旧 token 已失效
+    if (r.token) auth.saveToken(r.token, true)
     pwdMsg.value = '密码已修改，其他设备已退出登录。'
     oldPwd.value = ''
     newPwd.value = ''

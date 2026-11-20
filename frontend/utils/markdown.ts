@@ -7,6 +7,37 @@ function escapeHtml(text: string): string {
     .replace(/>/g, '&gt;')
 }
 
+function escapeAttr(text: string): string {
+  return escapeHtml(text).replace(/"/g, '&quot;').replace(/'/g, '&#39;')
+}
+
+function safeCodePoint(code: number): string {
+  return Number.isInteger(code) && code >= 0 && code <= 0x10ffff
+    ? String.fromCodePoint(code)
+    : ''
+}
+
+/** 解码实体并剥离控制字符后校验 URL 协议白名单，阻断编码/空白伪装的 javascript:/data:/vbscript: XSS */
+function sanitizeUrl(raw: string | null | undefined, fallback: string): string {
+  const value = (raw ?? '').trim()
+  if (!value) return fallback
+  const decoded = value
+    .replace(/&#x([0-9a-f]+);?/gi, (_, hex) => safeCodePoint(parseInt(hex, 16)))
+    .replace(/&#(\d+);?/g, (_, dec) => safeCodePoint(parseInt(dec, 10)))
+    .replace(/&colon;/gi, ':')
+    .replace(/&tab;/gi, '\t')
+    .replace(/&newline;/gi, '\n')
+    .replace(/[\u0000-\u0020]+/g, '')
+    .toLowerCase()
+
+  // 允许单斜杠站内路径、锚点、相对路径；禁止协议相对 // 与非白名单 scheme
+  if (decoded.startsWith('//')) return fallback
+  if (/^[a-z][a-z0-9+.-]*:/.test(decoded)) {
+    if (!/^(https?:|mailto:)/.test(decoded)) return fallback
+  }
+  return value
+}
+
 /** 搜索关键词高亮（先转义 HTML，避免把用户输入当标签） */
 export function highlightText(text: string, keyword: string): string {
   const safe = escapeHtml(text)
@@ -18,17 +49,28 @@ export function highlightText(text: string, keyword: string): string {
 }
 
 /**
- * 知识点 Markdown 渲染：用 renderer 转义原始 HTML，避免先把代码块里的
- * `<stdio.h>` 转成 `&lt;` 后被 marked 再转义一次；表格外层支持横向滚动。
+ * 知识点 Markdown 渲染：用 renderer 转义原始 HTML，并对链接/图片执行协议白名单消毒；
+ * 避免先把代码块里的 `<stdio.h>` 转成 `&lt;` 后被 marked 再转义一次；表格外层支持横向滚动。
  */
 export function renderMarkdown(text: string): string {
   const renderer = new marked.Renderer()
   renderer.html = ({ text: raw }) => escapeHtml(raw)
+  renderer.link = function ({ href, title, tokens }) {
+    const safeHref = sanitizeUrl(href, '#')
+    const label = this.parser.parseInline(tokens)
+    const titleAttr = title ? ` title="${escapeAttr(title)}"` : ''
+    return `<a href="${escapeAttr(safeHref)}"${titleAttr}>${label}</a>`
+  }
+  renderer.image = function ({ href, title, text: alt }) {
+    const safeSrc = sanitizeUrl(href, '')
+    if (!safeSrc) return escapeHtml(alt ?? '')
+    const titleAttr = title ? ` title="${escapeAttr(title)}"` : ''
+    return `<img src="${escapeAttr(safeSrc)}" alt="${escapeAttr(alt ?? '')}"${titleAttr}>`
+  }
   const html = marked.parse(text ?? '', {
     async: false, gfm: true, breaks: true, renderer,
   }) as string
   return html
-    .replace(/\s(href|src)=["'](?:javascript|data|vbscript):[^"']*["']/gi, ' $1="#"')
     .replace(/<table>/g, '<div class="table-wrap"><table>')
     .replace(/<\/table>/g, '</table></div>')
 }

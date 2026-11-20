@@ -34,12 +34,18 @@ public class JwtService {
     public record TokenInfo(UUID uid, String role, int version) {}
 
     public String issue(User user) {
+        return issue(user.getId(), user.getUsername(), user.getRole(),
+                user.getTokenVersion() == null ? 0 : user.getTokenVersion());
+    }
+
+    /** 直接按字段签发 JWT（避免改密后为签发新 token 修改 JPA 托管实体触发多余全列 UPDATE） */
+    public String issue(UUID uid, String username, String role, int tokenVersion) {
         Instant now = Instant.now();
         return Jwts.builder()
-                .subject(user.getId().toString())
-                .claim("username", user.getUsername())
-                .claim("role", user.getRole())
-                .claim("ver", user.getTokenVersion() == null ? 0 : user.getTokenVersion())
+                .subject(uid.toString())
+                .claim("username", username)
+                .claim("role", role)
+                .claim("ver", tokenVersion)
                 .issuedAt(Date.from(now))
                 .expiration(Date.from(now.plusSeconds(expireSeconds)))
                 .signWith(key)

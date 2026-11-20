@@ -9,7 +9,7 @@ const { data } = await useFetch<any>(() => `/api/papers/${id.value}`)
 useHead(() => ({
   title: data.value?.paper?.name ? `${data.value.paper.name} · 历年真题` : '真题详情',
   script: data.value?.paper
-    ? [{ type: 'application/ld+json', innerHTML: JSON.stringify(buildPaperDetailJsonLd(data.value.paper)) }]
+    ? [{ type: 'application/ld+json', innerHTML: JSON.stringify(buildPaperDetailJsonLd(data.value.paper)).replace(/</g, '\\u003c') }]
     : [],
 }))
 </script>

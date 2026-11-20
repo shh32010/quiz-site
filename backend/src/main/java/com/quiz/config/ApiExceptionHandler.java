@@ -11,6 +11,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+import java.sql.SQLException;
 import java.util.Map;
 
 /**
@@ -47,14 +48,38 @@ public class ApiExceptionHandler {
 
     @ExceptionHandler(DataAccessException.class)
     public ResponseEntity<?> data(DataAccessException e) {
-        String msg = e.getMostSpecificCause().getMessage();
-        log.warn("数据库操作失败: {}", msg);
-        // plpgsql 主动 raise 的业务提示可以直接透出；SQL 细节不外泄
-        if (msg == null || msg.isBlank() || msg.length() > 80
-                || msg.contains("SQL") || msg.contains("relation") || msg.contains("column")) {
-            msg = "操作失败，请稍后重试";
+        Throwable root = e.getMostSpecificCause();
+        // 仅对 PostgreSQL 显式业务 RAISE EXCEPTION（P0001 / 28000）返回业务提示；其余基础设施/SQL 错误统一返回 500 脱敏
+        if (root instanceof SQLException sqlEx) {
+            String state = sqlEx.getSQLState();
+            if ("28000".equals(state)) {
+                return body(HttpStatus.UNAUTHORIZED, "未登录或登录已过期");
+            }
+            if ("P0001".equals(state)) {
+                String bizMsg = extractPgMessage(sqlEx);
+                log.warn("数据库业务校验拒绝: {}", bizMsg);
+                if (bizMsg == null || bizMsg.isBlank() || bizMsg.length() > 80) {
+                    bizMsg = "操作失败，请稍后重试";
+                }
+                return body(HttpStatus.BAD_REQUEST, bizMsg);
+            }
         }
-        return body(HttpStatus.BAD_REQUEST, msg);
+        log.error("数据库访问异常: {}", root.getMessage(), e);
+        return body(HttpStatus.INTERNAL_SERVER_ERROR, "服务器内部错误");
+    }
+
+    private static String extractPgMessage(SQLException sqlEx) {
+        String raw = sqlEx.getMessage();
+        if (raw == null) {
+            return null;
+        }
+        // 只取首行并去掉 PostgreSQL 默认的 "ERROR: " 前缀，避免透出 Where/Context 堆栈
+        int nl = raw.indexOf('\n');
+        String firstLine = (nl >= 0 ? raw.substring(0, nl) : raw).trim();
+        if (firstLine.startsWith("ERROR:")) {
+            firstLine = firstLine.substring("ERROR:".length()).trim();
+        }
+        return firstLine;
     }
 
     @ExceptionHandler(Exception.class)

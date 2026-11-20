@@ -278,4 +278,18 @@ describe('KnowledgeBlockRenderer Callout 样式渲染测试', () => {
     expect(bins).toContain('∘')
     expect(bins).toContain('∨')
   })
+
+  it('代码块同 id 等长内容变更时不会命中陈旧高亮缓存', async () => {
+    const wrapper = mount(KnowledgeBlockRenderer, {
+      props: {
+        blocks: [{ id: 'code-1', t: 'code', lang: 'c', code: 'int a = 1;' }],
+      },
+    })
+    expect(wrapper.find('pre code').text()).toBe('int a = 1;')
+
+    await wrapper.setProps({
+      blocks: [{ id: 'code-1', t: 'code', lang: 'c', code: 'int b = 2;' }],
+    })
+    expect(wrapper.find('pre code').text()).toBe('int b = 2;')
+  })
 })

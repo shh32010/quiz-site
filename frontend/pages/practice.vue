@@ -236,6 +236,8 @@ async function syncTimerTick(st: any, elapsedSinceSyncSec: number): Promise<bool
   overtimeSec.value = state.overtimeSec
   isOvertime.value = state.isOvertime
   if (state.shouldAutoSubmit) {
+    // 若当前正在提交某题，保留定时器待下一次 tick 自动交卷，避免自动交卷被 submitting 锁静默跳过
+    if (submitting.value) return false
     clearTimer()
     notice.value = '时间到，已自动交卷'
     await finishSession()
@@ -304,10 +306,11 @@ async function start() {
 
     if (!api.hasToken()) {
       guest.value = true
-      const qs = qmode === 'paper' ? `paper=${target}`
-        : qmode === 'course' ? `course=${target}`
-        : qmode === 'kp' ? `kp=${target}`
-        : qmode === 'single' ? `id=${target}` : `chapter=${target}`
+      const encodedTarget = encodeURIComponent(target)
+      const qs = qmode === 'paper' ? `paper=${encodedTarget}`
+        : qmode === 'course' ? `course=${encodedTarget}`
+        : qmode === 'kp' ? `kp=${encodedTarget}`
+        : qmode === 'single' ? `id=${encodedTarget}` : `chapter=${encodedTarget}`
       const guestSize = qmode === 'paper' ? 200 : 20
       const typeQuery = type ? `&type=${type}` : ''
       const r = await api.get<any>(`/api/questions?${qs}&size=${guestSize}${typeQuery}`)
@@ -565,12 +568,12 @@ function showGuestSavePrompt() {
 function leavePractice() {
   // 从知识点阅读器进入时，练完回到原节/原知识点锚点
   const returnTo = String(route.query.return || '')
-  if (returnTo.startsWith('/knowledge/section/')) {
+  if (returnTo.startsWith('/knowledge/section/') && !returnTo.includes('\\')) {
     router.push(returnTo)
     return
   }
   const from = String(route.query.from || '')
-  router.push(from.startsWith('/') && !from.startsWith('//') ? from : '/')
+  router.push(from.startsWith('/') && !from.startsWith('//') && !from.includes('\\') ? from : '/')
 }
 
 function exit() {

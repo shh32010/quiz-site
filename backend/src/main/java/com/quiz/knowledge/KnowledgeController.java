@@ -1,5 +1,7 @@
 package com.quiz.knowledge;
 
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -68,15 +70,23 @@ public class KnowledgeController {
 
     /** 节阅读器：GET /api/knowledge/section/123?page=1&size=60 */
     @GetMapping("/section/{id}")
-    public Map<String, Object> section(@PathVariable int id,
-                                       @RequestParam(defaultValue = "1") int page,
-                                       @RequestParam(defaultValue = "60") int size) {
-        return service.section(id, page, size);
+    public ResponseEntity<?> section(@PathVariable int id,
+                                     @RequestParam(defaultValue = "1") int page,
+                                     @RequestParam(defaultValue = "60") int size) {
+        Map<String, Object> data = service.section(id, page, size);
+        if (data == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "章节不存在"));
+        }
+        return ResponseEntity.ok(data);
     }
 
     /** 单条知识点：GET /api/knowledge/123 */
     @GetMapping("/{id}")
-    public Map<String, Object> detail(@PathVariable int id) {
-        return service.detail(id);
+    public ResponseEntity<?> detail(@PathVariable int id) {
+        Map<String, Object> data = service.detail(id);
+        if (data == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "知识点不存在"));
+        }
+        return ResponseEntity.ok(data);
     }
 }

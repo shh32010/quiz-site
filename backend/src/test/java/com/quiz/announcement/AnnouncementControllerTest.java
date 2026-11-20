@@ -57,4 +57,26 @@ class AnnouncementControllerTest {
                 eq("2026-11-02-3"), eq("新公告标题"), eq("副标题"),
                 eq("2026 年 11 月 2 日"), eq("底部说明"), anyString(), anyString());
     }
+
+    @Test
+    void getAnnouncementRefreshesAfterTtlExpires() {
+        when(jdbc.queryForList(anyString()))
+                .thenReturn(List.of(Map.of("version", "v1", "title", "旧公告", "subtitle", "", "date", "", "footnote", "",
+                        "itemsJson", "[]", "historyJson", "[]")))
+                .thenReturn(List.of(Map.of("version", "v2", "title", "新公告", "subtitle", "", "date", "", "footnote", "",
+                        "itemsJson", "[]", "historyJson", "[]")));
+
+        Map<String, Object> first = controller.getAnnouncement();
+        assertEquals("v1", first.get("version"));
+        // 缓存有效期内不重复查库
+        Map<String, Object> hit = controller.getAnnouncement();
+        assertEquals("v1", hit.get("version"));
+        verify(jdbc, times(1)).queryForList(anyString());
+
+        // 模拟 TTL 过期后重新查库
+        controller.expireCacheForTest();
+        Map<String, Object> refreshed = controller.getAnnouncement();
+        assertEquals("v2", refreshed.get("version"));
+        verify(jdbc, times(2)).queryForList(anyString());
+    }
 }

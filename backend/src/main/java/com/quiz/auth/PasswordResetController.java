@@ -5,6 +5,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -21,10 +22,12 @@ import java.util.HexFormat;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 
 /**
  * 邮箱找回密码。
- * - POST /forgot：输入邮箱，生成一次性令牌并发重置链接；始终返回 ok，避免暴露邮箱是否存在
+ * - POST /forgot：输入邮箱，生成一次性令牌并异步发重置链接；始终返回 ok，避免暴露邮箱是否存在与时序侧信道
  * - POST /reset：令牌 + 新密码
  * 邮件服务未配置或发送失败时，自动落 password_reset_request，由管理员后台兜底。
  */
@@ -35,6 +38,7 @@ public class PasswordResetController {
     private static final Logger log = LoggerFactory.getLogger(PasswordResetController.class);
     private static final SecureRandom RANDOM = new SecureRandom();
     private static final int TOKEN_MINUTES = 30;
+    private static final int COOLDOWN_SECONDS = 60;
 
     public record ForgotReq(String email) {}
 
@@ -46,18 +50,26 @@ public class PasswordResetController {
     private final UserRepository users;
     private final MailService mail;
     private final PasswordEncoder encoder;
+    private final Executor mailExecutor;
 
+    @Autowired
     public PasswordResetController(JdbcTemplate jdbc, UserRepository users,
                                    MailService mail, PasswordEncoder encoder) {
+        this(jdbc, users, mail, encoder, Executors.newVirtualThreadPerTaskExecutor());
+    }
+
+    PasswordResetController(JdbcTemplate jdbc, UserRepository users,
+                            MailService mail, PasswordEncoder encoder, Executor mailExecutor) {
         this.jdbc = jdbc;
         this.users = users;
         this.mail = mail;
         this.encoder = encoder;
+        this.mailExecutor = mailExecutor;
     }
 
     @PostMapping("/forgot")
     public Map<String, Object> forgot(@RequestBody ForgotReq req) {
-        String email = req.email() == null ? "" : req.email().trim().toLowerCase(Locale.ROOT);
+        String email = req == null || req.email() == null ? "" : req.email().trim().toLowerCase(Locale.ROOT);
         // 格式不对、找不到用户，都返回同样的结果
         if (!validEmail(email)) {
             return Map.of("ok", true);
@@ -76,11 +88,19 @@ public class PasswordResetController {
             return Map.of("ok", true);
         }
 
+        // 同一用户 60 秒内最多发一封，防止单邮箱被持续轰炸
+        Integer recent = jdbc.queryForObject("""
+                select count(*) from password_reset_token
+                 where profile_id = ? and created_at > now() - interval '%d seconds'
+                """.formatted(COOLDOWN_SECONDS), Integer.class, u.getId());
+        if (recent != null && recent > 0) {
+            return Map.of("ok", true);
+        }
+
         // 顺手清理 7 天前的旧令牌
         jdbc.update("delete from password_reset_token where created_at < now() - interval '7 days'");
 
-        boolean sent = false;
-        // 只有完成归属验证的邮箱才自动发重置链接；未验证走管理员兜底
+        // 只有完成归属验证的邮箱才自动发重置链接；SMTP 发信走异步执行，抹平响应时序差异
         if (mail.enabled()) {
             String raw = newToken();
             // 同一用户旧令牌作废
@@ -89,10 +109,20 @@ public class PasswordResetController {
                     insert into password_reset_token(profile_id, token_hash, expires_at)
                     values (?, ?, now() + interval '%d minutes')
                     """.formatted(TOKEN_MINUTES), u.getId(), sha256(raw));
-            sent = mail.sendResetLink(email, u.getUsername(), raw);
-        }
-        if (!sent) {
-            requestAdmin(u, email, "邮件服务未配置或发送失败，系统自动转人工");
+            User targetUser = u;
+            mailExecutor.execute(() -> {
+                try {
+                    boolean sent = mail.sendResetLink(email, targetUser.getUsername(), raw);
+                    if (!sent) {
+                        requestAdmin(targetUser, email, "邮件服务发送失败，系统自动转人工");
+                    }
+                } catch (Exception e) {
+                    log.warn("异步发送重置密码邮件异常: {}", e.getMessage());
+                    requestAdmin(targetUser, email, "邮件服务发送异常，系统自动转人工");
+                }
+            });
+        } else {
+            requestAdmin(u, email, "邮件服务未配置，系统自动转人工");
         }
         return Map.of("ok", true);
     }

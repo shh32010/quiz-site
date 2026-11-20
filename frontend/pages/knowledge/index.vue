@@ -35,20 +35,19 @@ onMounted(async () => {
     try {
       const remote = await api.get<any>('/api/knowledge/progress')
       const rows = Array.isArray(remote?.rows) ? remote.rows : []
-      if (rows.length > 0) {
-        for (const r of rows) {
-          if (r.learned && Number.isFinite(Number(r.sectionId))) {
-            localSet.add(Number(r.sectionId))
-          }
-        }
-        learnedCount.value = localSet.size
-        try { localStorage.setItem('quiz_learned', JSON.stringify([...localSet])) } catch { /* 忽略 */ }
-        if (!lastSection.value && rows[0]?.sectionId) {
-          lastSection.value = {
-            id: Number(rows[0].sectionId),
-            name: String(rows[0].sectionName ?? ''),
-            courseName: String(rows[0].courseName ?? ''),
-          }
+      for (const r of rows) {
+        const sid = Number(r.sectionId)
+        if (!Number.isFinite(sid)) continue
+        if (r.learned) localSet.add(sid)
+        else localSet.delete(sid)
+      }
+      learnedCount.value = localSet.size
+      try { localStorage.setItem('quiz_learned', JSON.stringify([...localSet])) } catch { /* 忽略 */ }
+      if (!lastSection.value && rows[0]?.sectionId) {
+        lastSection.value = {
+          id: Number(rows[0].sectionId),
+          name: String(rows[0].sectionName ?? ''),
+          courseName: String(rows[0].courseName ?? ''),
         }
       }
     } catch { /* 未登录或网络异常时退回本地记录 */ }

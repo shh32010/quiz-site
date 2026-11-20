@@ -78,5 +78,6 @@ class ReportControllerTest {
         assertThat(kps).hasSize(1);
         assertThat(kps.getFirst().get("nodeId")).isEqualTo(239);
         assertThat(kps.getFirst().get("sectionId")).isEqualTo(238);
+        org.mockito.Mockito.verify(jdbc).queryForMap(contains("at time zone 'Asia/Shanghai'"), eq(uid));
     }
 }

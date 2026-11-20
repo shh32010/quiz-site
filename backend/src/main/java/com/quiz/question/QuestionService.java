@@ -51,7 +51,7 @@ public class QuestionService {
             return Map.of("total", 0, "page", page, "size", size, "rows", List.of());
         }
         int offset = Math.max(0, (page - 1) * size);
-        String like = "%" + kw + "%";
+        String like = "%" + escapeLike(kw) + "%";
         String kpFilter = kpId == null ? "" : " and (chapter_id = ? or id in (select question_id from t_question_kp where kp_id = ?))";
         List<Object> args = new ArrayList<>();
         args.add(like);
@@ -61,14 +61,18 @@ public class QuestionService {
         }
 
         Integer total = jdbc.queryForObject(
-                "select count(*) from t_question where not deleted and review_status = 'ok' and stem ilike ?" + kpFilter,
+                "select count(*) from t_question where not deleted and review_status = 'ok' and stem ilike ? escape '\\'" + kpFilter,
                 Integer.class, args.toArray());
         args.add(size);
         args.add(offset);
         List<Map<String, Object>> rows = jdbc.queryForList(
-                "select " + COLS + " from v_question_public where review_status = 'ok' and stem ilike ?" + kpFilter
+                "select " + COLS + " from v_question_public where review_status = 'ok' and stem ilike ? escape '\\'" + kpFilter
                         + " order by id limit ? offset ?", args.toArray());
         return Map.of("total", total == null ? 0 : total, "page", page, "size", size, "rows", rows);
+    }
+
+    private static String escapeLike(String kw) {
+        return kw.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_");
     }
 
     /** 某章节（含全部子孙）/ 课程 / 试卷 / 知识点下的题；id 用于单题练习（游客） */
@@ -136,11 +140,16 @@ public class QuestionService {
                         + baseWhere + " group by question_type order by question_type",
                 baseArgs.toArray());
 
-        // 真题按卷面顺序；其他按 id
-        String orderBy = paperId == null ? " order by id "
-                : (" order by (select e.item_order from exam_paper_question e"
-                        + " where e.paper_id = %d and e.question_id = v_question_public.id and e.is_active)"
-                        + " nulls last, id ").formatted(paperId);
+        // 真题按卷面顺序（参数化绑定 paperId，避免污染 SQL 执行计划缓存）；其他按 id
+        String orderBy;
+        if (paperId == null) {
+            orderBy = " order by id ";
+        } else {
+            orderBy = " order by (select e.item_order from exam_paper_question e"
+                    + " where e.paper_id = ? and e.question_id = v_question_public.id and e.is_active)"
+                    + " nulls last, id ";
+            args.add(paperId);
+        }
         args.add(size);
         args.add(offset);
         List<Map<String, Object>> rows = jdbc.queryForList(

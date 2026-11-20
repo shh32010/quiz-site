@@ -38,24 +38,24 @@ onMounted(async () => {
     try {
       const remote = await api.get<any>('/api/knowledge/progress')
       const rows = Array.isArray(remote?.rows) ? remote.rows : []
-      if (rows.length > 0) {
-        const merged = new Set(learned.value)
-        const nextProg: Record<string, number> = { ...progressMap.value }
-        for (const r of rows) {
-          const sid = Number(r.sectionId)
-          if (!Number.isFinite(sid)) continue
-          if (r.learned) merged.add(sid)
-          if (typeof r.progressPct === 'number') {
-            nextProg[String(sid)] = Math.max(Number(nextProg[String(sid)] ?? 0), r.progressPct)
-          }
+      // 已登录以服务端记录为准，支持跨端取消「已学」同步
+      const merged = new Set(learned.value)
+      const nextProg: Record<string, number> = { ...progressMap.value }
+      for (const r of rows) {
+        const sid = Number(r.sectionId)
+        if (!Number.isFinite(sid)) continue
+        if (r.learned) merged.add(sid)
+        else merged.delete(sid)
+        if (typeof r.progressPct === 'number') {
+          nextProg[String(sid)] = Math.max(Number(nextProg[String(sid)] ?? 0), r.progressPct)
         }
-        learned.value = [...merged]
-        progressMap.value = nextProg
-        try {
-          localStorage.setItem('quiz_learned', JSON.stringify(learned.value))
-          localStorage.setItem('quiz_reader_progress', JSON.stringify(progressMap.value))
-        } catch { /* 忽略 */ }
       }
+      learned.value = [...merged]
+      progressMap.value = nextProg
+      try {
+        localStorage.setItem('quiz_learned', JSON.stringify(learned.value))
+        localStorage.setItem('quiz_reader_progress', JSON.stringify(progressMap.value))
+      } catch { /* 忽略 */ }
     } catch { /* 忽略 */ }
   }
 })

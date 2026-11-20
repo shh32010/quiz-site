@@ -234,10 +234,9 @@ public class AuthController {
         String hash = encoder.encode(req.newPassword());
         jdbc.update("update profiles set password_hash = ?, token_version = ? where id = ?", hash, newVersion, uid);
         jdbc.update("update password_reset_token set used_at = now() where profile_id = ? and used_at is null", uid);
-        // 当前会话换发新 token，其他设备上的旧 token 立即失效
-        u.setPasswordHash(hash);
-        u.setTokenVersion(newVersion);
-        return ResponseEntity.ok(Map.of("ok", true, "token", jwt.issue(u)));
+        // 当前会话换发新 token，其他设备上的旧 token 立即失效（不修改托管实体 u，避免 Hibernate 提交时二次全列 UPDATE）
+        String newToken = jwt.issue(u.getId(), u.getUsername(), u.getRole(), newVersion);
+        return ResponseEntity.ok(Map.of("ok", true, "token", newToken));
     }
 
     /** 登录/注册成功后记录最近 IP 与时间；记录失败不影响主流程 */

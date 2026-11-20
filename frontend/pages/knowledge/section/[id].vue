@@ -309,10 +309,14 @@ function isLearned(sectionId: number) {
 async function syncProgressToServer(learnedVal: boolean, progressPctVal: number) {
   if (!api.hasToken() || !id.value) return
   try {
+    // 导读虚拟节点 ID（-999）不落库，只上报真实正整数考纲节点 ID
+    const validKpId = activeEntryNode.value !== null && activeEntryNode.value > 0
+      ? activeEntryNode.value
+      : null
     await api.put(`/api/knowledge/progress/${id.value}`, {
       learned: learnedVal,
       progressPct: progressPctVal,
-      lastKpId: activeEntryNode.value ?? null,
+      lastKpId: validKpId,
     })
   } catch { /* 网络或鉴权异常时静默降级为本地存储 */ }
 }
@@ -338,16 +342,16 @@ async function loadPreferences() {
     try {
       const remote = await api.get<any>('/api/knowledge/progress')
       const rows = Array.isArray(remote?.rows) ? remote.rows : []
-      if (rows.length > 0) {
-        const merged = new Set(learnedSections.value)
-        for (const r of rows) {
-          if (r.learned && Number.isFinite(Number(r.sectionId))) {
-            merged.add(Number(r.sectionId))
-          }
-        }
-        learnedSections.value = [...merged]
-        try { localStorage.setItem('quiz_learned', JSON.stringify(learnedSections.value)) } catch { /* 忽略 */ }
+      // 已登录以服务端进度记录为权威源，确保另一端取消「已学」也能同步生效
+      const merged = new Set(learnedSections.value)
+      for (const r of rows) {
+        const sid = Number(r.sectionId)
+        if (!Number.isFinite(sid)) continue
+        if (r.learned) merged.add(sid)
+        else merged.delete(sid)
       }
+      learnedSections.value = [...merged]
+      try { localStorage.setItem('quiz_learned', JSON.stringify(learnedSections.value)) } catch { /* 忽略 */ }
     } catch { /* 忽略 */ }
   }
 }
@@ -525,7 +529,7 @@ onUnmounted(() => {
 })
 
 watch(section, (value) => {
-  if (!value) return
+  if (!value || typeof localStorage === 'undefined') return
   try {
     localStorage.setItem('quiz_last_section', JSON.stringify({
       id: value.id, name: value.name, courseName: courseInfo.value?.name ?? value.courseName ?? '',
@@ -543,7 +547,7 @@ watch(section, (value) => {
     <!-- 移动端顶部栏 -->
     <header class="sticky top-0 z-20 border-b border-line-subtle bg-surface-glass backdrop-blur lg:hidden">
       <div class="flex items-center gap-2 px-3 py-2">
-        <NuxtLink :to="`/knowledge/course/${courseCode}`"
+        <NuxtLink :to="courseCode ? `/knowledge/course/${courseCode}` : '/knowledge'"
                   class="flex min-h-11 min-w-11 items-center justify-center rounded-lg text-sm text-fg-secondary hover:bg-surface-muted"
                   aria-label="返回目录">←</NuxtLink>
         <div class="min-w-0 flex-1">
@@ -564,7 +568,7 @@ watch(section, (value) => {
       <!-- 桌面左侧目录 -->
       <aside class="hidden lg:block">
         <div class="sticky top-20 max-h-[calc(100vh-6rem)] overflow-auto pr-2">
-          <NuxtLink :to="`/knowledge/course/${courseCode}`"
+          <NuxtLink :to="courseCode ? `/knowledge/course/${courseCode}` : '/knowledge'"
                     class="mb-3 inline-flex text-xs text-brand hover:underline">← {{ courseInfo?.name }}目录</NuxtLink>
           <div v-for="chapter in chapters" :key="chapter.code ?? chapter.name" class="mb-4">
             <p class="mb-1 flex items-center gap-1.5 text-xs font-medium text-fg-muted">
@@ -582,7 +586,7 @@ watch(section, (value) => {
 
       <main ref="mainContentRef" class="min-w-0 lg:max-w-3xl 2xl:max-w-4xl 2xl:justify-self-center">
         <div v-if="loadError || !section" class="rounded-xl border border-line-subtle bg-surface-card px-5 py-8 text-sm text-fg-secondary">
-          没有找到这一节。<NuxtLink :to="`/knowledge/course/${courseCode}`" class="text-brand hover:underline">返回目录</NuxtLink>
+          没有找到这一节。<NuxtLink :to="courseCode ? `/knowledge/course/${courseCode}` : '/knowledge'" class="text-brand hover:underline">返回目录</NuxtLink>
         </div>
 
         <template v-else>
@@ -758,7 +762,7 @@ watch(section, (value) => {
           <p class="mb-2 text-xs font-medium text-fg-muted">本节目录</p>
           <a v-for="row in tocRows"
              :key="row.key"
-             :href="`#group-${row.nodeId}`"
+             :href="`#${row.key}`"
              class="block border-l-2 py-1.5 pl-2 transition-all duration-150"
              :class="activeGroupId === row.nodeId
                ? 'border-brand font-semibold text-brand bg-brand-soft/20 rounded-r'
@@ -794,7 +798,7 @@ watch(section, (value) => {
       <div class="space-y-0.5">
         <a v-for="row in tocRows"
            :key="row.key"
-           :href="`#group-${row.nodeId}`"
+           :href="`#${row.key}`"
            class="flex min-h-11 items-start gap-2 rounded-lg px-2 py-2"
            :class="activeGroupId === row.nodeId ? 'bg-brand-soft text-brand-on-soft' : 'text-fg-secondary hover:bg-surface-muted'"
            @click.prevent="jumpToGroup(row.nodeId)">

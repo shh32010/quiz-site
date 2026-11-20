@@ -57,6 +57,7 @@ public class PaperService {
                 """, paperId);
     }
 
+    @Cacheable(value = "paperDetail", key = "#paperId", unless = "#result == null")
     public Map<String, Object> detail(int paperId) {
         List<Map<String, Object>> papers = jdbc.queryForList("""
                 select p.id, p.name, p.subject_id as "subjectId", p.score,

@@ -1,8 +1,8 @@
-import type { Ref } from 'vue'
+import { onUnmounted, watch, type Ref } from 'vue'
 
 /**
- * 多个弹层共用 body 滚动锁：用计数避免一个弹层关闭时把另一个弹层的锁解掉。
- * 只在客户端生效；组件卸载时自动释放自己持有的锁。
+ * 多个弹层共用 body 滚动锁：用计数避免一个弹层关闭或卸载时把另一个弹层的锁解掉。
+ * 仅在浏览器/DOM 环境生效；组件卸载时自动释放自己持有的锁。
  */
 let lockCount = 0
 
@@ -21,7 +21,7 @@ export function useOverlayScrollLock(active: Ref<boolean>) {
     applyLock()
   }
 
-  if (import.meta.client) {
+  if (typeof document !== 'undefined') {
     watch(active, sync, { immediate: true })
     onUnmounted(() => sync(false))
   }
