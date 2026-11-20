@@ -22,7 +22,9 @@ class PracticeServiceTest {
         JdbcTemplate jdbc = mock(JdbcTemplate.class);
         UUID uid = UUID.randomUUID();
 
-        when(jdbc.queryForObject(startsWith("select count(*)"), eq(Integer.class), eq(10L), eq(1001)))
+        when(jdbc.queryForList(contains("from practice_session where id = ? and user_id = ?"), eq(10L), eq(uid)))
+                .thenReturn(List.of(Map.of("finished", false)));
+        when(jdbc.queryForObject(contains("from session_question sq"), eq(Integer.class), eq(10L), eq(1001)))
                 .thenReturn(1);
         when(jdbc.queryForObject(eq("select role from profiles where id = ?"), eq(String.class), eq(uid)))
                 .thenReturn("user");
@@ -43,7 +45,9 @@ class PracticeServiceTest {
         JdbcTemplate jdbc = mock(JdbcTemplate.class);
         UUID uid = UUID.randomUUID();
 
-        when(jdbc.queryForObject(startsWith("select count(*)"), eq(Integer.class), eq(10L), eq(1001)))
+        when(jdbc.queryForList(contains("from practice_session where id = ? and user_id = ?"), eq(10L), eq(uid)))
+                .thenReturn(List.of(Map.of("finished", false)));
+        when(jdbc.queryForObject(contains("from session_question sq"), eq(Integer.class), eq(10L), eq(1001)))
                 .thenReturn(1);
         when(jdbc.queryForObject(eq("select role from profiles where id = ?"), eq(String.class), eq(uid)))
                 .thenReturn("unlimited");
@@ -57,6 +61,41 @@ class PracticeServiceTest {
 
         assertThat(res.get("is_correct")).isEqualTo(true);
         verify(jdbc, never()).queryForObject(contains("count(distinct question_id)"), eq(Integer.class), any(), any());
+    }
+
+    @Test
+    void submitRejectsForeignSessionBeforeCheckingQuestionMembership() {
+        JdbcTemplate jdbc = mock(JdbcTemplate.class);
+        UUID attacker = UUID.randomUUID();
+
+        when(jdbc.queryForList(contains("from practice_session where id = ? and user_id = ?"), eq(999L), eq(attacker)))
+                .thenReturn(List.of());
+
+        PracticeService service = new PracticeService(jdbc);
+        assertThatThrownBy(() -> service.submit(999L, 1001, "A", attacker))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessage("会话无效");
+        // 未通过归属校验时，绝不能再去查 session_question，防止探测他人会话题目
+        verify(jdbc, never()).queryForObject(contains("from session_question"), eq(Integer.class), any(), any());
+    }
+
+    @Test
+    void nextExcludesSoftDeletedAnswersFromAnsweredCount() {
+        JdbcTemplate jdbc = mock(JdbcTemplate.class);
+        UUID uid = UUID.randomUUID();
+
+        when(jdbc.queryForObject(startsWith("select count(*) from practice_session"), eq(Integer.class), eq(10L), eq(uid)))
+                .thenReturn(1);
+        when(jdbc.queryForList(contains("from session_question sq"), eq(10L)))
+                .thenReturn(List.of());
+
+        PracticeService service = new PracticeService(jdbc);
+        Map<String, Object> res = service.next(10L, uid);
+
+        assertThat(res.get("kind")).isEqualTo("done");
+        verify(jdbc).queryForList(
+                contains("select count(*) from practice_answer a where a.session_id = sq.session_id and a.deleted_at is null"),
+                eq(10L));
     }
 
     @Test

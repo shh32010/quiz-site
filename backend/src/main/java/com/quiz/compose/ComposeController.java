@@ -32,7 +32,7 @@ public class ComposeController {
         return compose.start(uid, subject);
     }
 
-    /** 章节内随机组卷：理论默认/可选 40/80 题，实操固定 40 题 */
+    /** 章节内随机组卷：由服务端按章节层级与学科决定题量（一级理论 80 题、一级实操/二级 40 题） */
     @PostMapping("/chapter")
     public Map<String, Object> startChapter(@AuthenticationPrincipal UUID uid,
                                             @Valid @RequestBody ChapterReq req) {

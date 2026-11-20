@@ -86,8 +86,8 @@ public class PracticeHistoryController {
                        (select count(*) from session_question x where x.session_id = s.id) as "questionCount",
                        coalesce(s.elapsed_sec,
                                 extract(epoch from (coalesce(s.finished_at, now()) - s.started_at))::int) as "elapsedSec",
-                       (select count(*) from practice_answer a where a.session_id = s.id) as "answeredCount",
-                       (select count(*) from practice_answer a where a.session_id = s.id and a.is_correct) as "correctCount",
+                       (select count(*) from practice_answer a where a.session_id = s.id and a.deleted_at is null) as "answeredCount",
+                       (select count(*) from practice_answer a where a.session_id = s.id and a.is_correct and a.deleted_at is null) as "correctCount",
                        %s as "targetName"
                   from practice_session s
                  where s.user_id = ? and s.deleted_at is null%s

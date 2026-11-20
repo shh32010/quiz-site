@@ -93,15 +93,15 @@ public class ComposeService {
         }
 
         List<Integer> picked = new ArrayList<>();
-        Map<Integer, Integer> seen = new LinkedHashMap<>();
 
         for (Section sec : plan) {
             for (Bucket b : sec.buckets()) {
+                int before = picked.size();
                 for (int[] dn : splitByDifficulty(b.n())) {
                     pick(uid, subject, sec.type(), b.codes(), dn[1], dn[0], picked);
                 }
-                // 该桶按配比没抽满 → 不限难度回填
-                int got = countOfType(subject, sec.type(), b.codes(), picked);
+                // 按当前桶实际新增题数计算缺口，避免同题型前序桶干扰回填判断
+                int got = picked.size() - before;
                 int need = b.n() - got;
                 if (need > 0) {
                     pick(uid, subject, sec.type(), b.codes(), need, null, picked);
@@ -156,7 +156,7 @@ public class ComposeService {
         }
         Integer typeFilter = (type != null && type >= 1 && type <= 5) ? type : null;
 
-        int available = countChapterQuestions(chapterId, typeFilter);
+        int available = countChapterQuestions(subject, chapterId, typeFilter);
         if (available == 0) {
             throw new IllegalStateException("本章没有可练习题");
         }
@@ -196,8 +196,27 @@ public class ComposeService {
                 "chapterId", chapterId, "requested", n, "shortfall", n - picked.size());
     }
 
-    /** 章节子树内可练习题数（可按题型） */
-    private int countChapterQuestions(int chapterId, Integer type) {
+    /** 未删除章节子树递归 CTE（统计与抽题统一口径） */
+    private static final String CHAPTER_SUBTREE_CTE = """
+            with recursive sub as (
+              select id from t_chapter where id = ? and not deleted
+              union all
+              select c.id from t_chapter c join sub s on c.parent_id = s.id where not c.deleted
+            )
+            """;
+
+    /** 大纲标准分值过滤（保证整卷总分稳定 150/80，统计与抽题统一口径） */
+    private static final String STANDARD_SCORE_FILTER = """
+             and q.score = case
+               when ? = 4 then case q.question_type
+                 when 3 then 1 when 1 then 2 when 2 then 2 when 4 then 2 else q.score end
+               when ? = 5 then case q.question_type
+                 when 3 then 1 when 1 then 2 when 4 then 2 when 5 then 6 else q.score end
+               else q.score end
+            """;
+
+    /** 章节子树内符合标准分值的可练习题数（可按题型） */
+    private int countChapterQuestions(int subject, int chapterId, Integer type) {
         List<Object> args = new ArrayList<>();
         args.add(chapterId);
         String typeFilter = "";
@@ -205,17 +224,14 @@ public class ComposeService {
             typeFilter = " and q.question_type = ?";
             args.add(type);
         }
-        Integer n = jdbc.queryForObject("""
-                with recursive sub as (
-                  select id from t_chapter where id = ?
-                  union all
-                  select c.id from t_chapter c join sub s on c.parent_id = s.id
-                )
+        args.add(subject);
+        args.add(subject);
+        Integer n = jdbc.queryForObject(CHAPTER_SUBTREE_CTE + """
                 select count(*)
                   from t_question q
                   join sub on sub.id = q.chapter_id
                  where not q.deleted and q.review_status = 'ok'
-                """ + typeFilter, Integer.class, args.toArray());
+                """ + typeFilter + STANDARD_SCORE_FILTER, Integer.class, args.toArray());
         return n == null ? 0 : n;
     }
 
@@ -232,15 +248,6 @@ public class ComposeService {
             typeFilter = " and q.question_type = ?";
             args.add(type);
         }
-        // 只抽符合大纲分值的题，保证整卷总分稳定 150/80
-        String scoreFilter = """
-                 and q.score = case
-                   when ? = 4 then case q.question_type
-                     when 3 then 1 when 1 then 2 when 2 then 2 when 4 then 2 else q.score end
-                   when ? = 5 then case q.question_type
-                     when 3 then 1 when 1 then 2 when 4 then 2 when 5 then 6 else q.score end
-                   else q.score end
-                """;
         args.add(subject);
         args.add(subject);
         String excludeFilter = "";
@@ -251,17 +258,12 @@ public class ComposeService {
         args.add(uid);
         args.add(limit);
 
-        return jdbc.queryForList("""
-                with recursive sub as (
-                  select id from t_chapter where id = ?
-                  union all
-                  select c.id from t_chapter c join sub s on c.parent_id = s.id
-                )
+        return jdbc.queryForList(CHAPTER_SUBTREE_CTE + """
                 select q.id
                   from t_question q
                   join sub on sub.id = q.chapter_id
                  where not q.deleted and q.review_status = 'ok'
-                """ + typeFilter + scoreFilter + excludeFilter + """
+                """ + typeFilter + STANDARD_SCORE_FILTER + excludeFilter + """
                  order by exists (
                      select 1 from practice_answer pa
                       where pa.user_id = ? and pa.question_id = q.id and pa.deleted_at is null
@@ -320,18 +322,6 @@ public class ComposeService {
             out.merge(types[idx], 1, Integer::sum);
         }
         return out;
-    }
-
-    private int countOfType(int subject, int type, String[] codes, List<Integer> picked) {
-        if (picked.isEmpty()) {
-            return 0;
-        }
-        Integer n = jdbc.queryForObject("""
-                select count(*) from t_question q
-                  join t_chapter c on c.id = q.chapter_id
-                 where q.id = any(?) and q.question_type = ?
-                """, Integer.class, picked.toArray(new Integer[0]), type);
-        return n == null ? 0 : n;
     }
 
     private void pick(UUID uid, int subject, int type, String[] codes, int count,

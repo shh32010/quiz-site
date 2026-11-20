@@ -1,5 +1,7 @@
 package com.quiz.practice;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,9 +24,16 @@ public class PracticeService {
     private static final int DAILY_QUESTION_LIMIT = 200;
 
     private final JdbcTemplate jdbc;
+    private final ObjectMapper mapper;
 
     public PracticeService(JdbcTemplate jdbc) {
+        this(jdbc, new ObjectMapper());
+    }
+
+    @Autowired
+    public PracticeService(JdbcTemplate jdbc, ObjectMapper mapper) {
         this.jdbc = jdbc;
+        this.mapper = mapper;
     }
 
     /**
@@ -206,7 +215,7 @@ public class PracticeService {
                           from anc) as "chapterPath",
                        sq.item_order as "itemOrder",
                        (select count(*) from session_question x where x.session_id = sq.session_id) as "total",
-                       (select count(*) from practice_answer a where a.session_id = sq.session_id) as "answered"
+                       (select count(*) from practice_answer a where a.session_id = sq.session_id and a.deleted_at is null) as "answered"
                   from session_question sq
                   join practice_session ps on ps.id = sq.session_id and ps.finished_at is null and ps.deleted_at is null
                   join t_question q on q.id = sq.question_id
@@ -349,20 +358,31 @@ public class PracticeService {
     @SuppressWarnings("unchecked")
     private Map<String, Object> readJson(String json) {
         try {
-            return new com.fasterxml.jackson.databind.ObjectMapper().readValue(json, Map.class);
+            return mapper.readValue(json, Map.class);
         } catch (Exception e) {
-            throw new IllegalStateException("解析函数返回值失败: " + e.getMessage());
+            throw new IllegalStateException("解析函数返回值失败");
         }
     }
 
     /** 提交作答并判分；返回 is_correct / score_got / max_score */
     @Transactional
     public Map<String, Object> submit(long sessionId, int questionId, String answer, UUID uid) {
+        // 先校验会话归属与状态，避免跨用户通过不同报错探测他人会话题目（IDOR）
+        List<Map<String, Object>> sessions = jdbc.queryForList("""
+                select (finished_at is not null) as finished
+                  from practice_session where id = ? and user_id = ? and deleted_at is null
+                """, sessionId, uid);
+        if (sessions.isEmpty()) {
+            throw new IllegalStateException("会话无效");
+        }
+        if (Boolean.TRUE.equals(sessions.getFirst().get("finished"))) {
+            throw new IllegalStateException("会话已结束");
+        }
+
         // 只允许提交当前会话内的可练习题，防止借任意 questionId 套取答案解析
         Integer inSession = jdbc.queryForObject("""
                 select count(*)
                   from session_question sq
-                  join practice_session ps on ps.id = sq.session_id and ps.deleted_at is null
                   join t_question q on q.id = sq.question_id
                  where sq.session_id = ? and sq.question_id = ?
                    and not q.deleted and q.review_status = 'ok'
