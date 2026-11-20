@@ -164,7 +164,7 @@ async function composeChapter() {
         <NuxtLink :to="`/practice?mode=single&target=${q.id}&from=${encodeURIComponent(route.fullPath)}`" title="点击做这道题"
                   class="flex min-h-14 items-start gap-3 px-4 py-3 hover:bg-surface-muted">
           <UiBadge class="mt-0.5 shrink-0">{{ TYPE_LABEL[q.questionType] ?? q.questionType }}</UiBadge>
-          <span class="min-w-0 flex-1 text-sm leading-6 text-fg-primary">{{ formatText(q.stem) }}</span>
+          <span class="min-w-0 flex-1 text-sm leading-6 text-fg-primary" v-html="renderMathText(q.stem)"></span>
           <UiBadge v-if="wrongMap[q.id]" :tone="wrongMap[q.id].resolved ? 'green' : 'red'" class="shrink-0">
             {{ wrongMap[q.id].resolved ? '错题已掌握' : `错 ${wrongMap[q.id].wrongCount} 次` }}
           </UiBadge>

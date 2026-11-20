@@ -2,7 +2,7 @@
 // 知识点内嵌自测：不落地、不记错题，复用游客判分接口
 import { TYPE_LABEL } from '~/utils/constants'
 import { parseQuestionOptions } from '~/utils/question'
-import { formatText } from '~/composables/format'
+import { renderMathText } from '~/utils/math'
 
 const props = defineProps<{ question: any }>()
 const api = useApi()
@@ -89,14 +89,14 @@ function reset() {
       <span>{{ question.score }} 分</span>
       <span class="text-fg-muted">自测不计入学习进度</span>
     </div>
-    <p class="mt-2 whitespace-pre-wrap text-sm leading-6 text-fg-secondary">{{ formatText(question.stem) }}</p>
+    <p class="mt-2 whitespace-pre-wrap text-sm leading-6 text-fg-secondary" v-html="renderMathText(question.stem)"></p>
 
     <div v-if="isChoice" class="mt-2 space-y-1.5">
       <button v-for="[key, text] in options" :key="key" type="button"
               class="flex min-h-11 w-full items-start gap-2 rounded-lg border p-2.5 text-left text-sm"
               :class="optionClass(key)" :aria-pressed="selected(key)" @click="choose(key)">
         <span class="shrink-0 font-medium">{{ key }}.</span>
-        <span class="min-w-0 flex-1 whitespace-pre-wrap">{{ formatText(text) }}</span>
+        <span class="min-w-0 flex-1 whitespace-pre-wrap" v-html="renderMathText(text)"></span>
         <span v-if="feedback && correctKeys.includes(key.toUpperCase())" class="shrink-0 text-success-fg">✓</span>
         <span v-else-if="feedback && selected(key)" class="shrink-0 text-danger-fg">✗</span>
       </button>
@@ -112,8 +112,8 @@ function reset() {
     <div v-if="feedback" class="mt-2 rounded-lg border px-3 py-2 text-xs leading-5"
          :class="feedback.is_correct ? 'border-success-border bg-success-bg text-success-fg' : 'border-danger-border bg-danger-bg text-danger-fg'">
       <p class="font-medium">{{ feedback.is_correct ? '✓ 答对' : '✗ 答错' }}</p>
-      <p v-if="!feedback.is_correct">正确答案：{{ formatText(feedback.correct) }}</p>
-      <p v-if="feedback.analysis" class="mt-1 whitespace-pre-wrap text-fg-secondary">解析：{{ formatText(feedback.analysis) }}</p>
+      <p v-if="!feedback.is_correct">正确答案：<span v-html="renderMathText(feedback.correct)"></span></p>
+      <p v-if="feedback.analysis" class="mt-1 whitespace-pre-wrap text-fg-secondary">解析：<span v-html="renderMathText(feedback.analysis)"></span></p>
       <p v-if="feedback.qcGrade === 'error'" class="mt-1 text-warn-fg">本题解析可能不准确，建议结合教材核对。</p>
     </div>
 

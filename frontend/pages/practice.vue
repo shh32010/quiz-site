@@ -119,7 +119,7 @@ const remainText = computed(() => formatPracticeTimerText({
 const options = computed<[string, string][]>(() => {
   try {
     return (Object.entries(JSON.parse(question.value?.optionJson || '{}')) as [string, string][])
-      .map(([k, v]) => [k, formatText(v)] as [string, string])
+      .map(([k, v]) => [k, renderMathText(v)] as [string, string])
       // 题库源数据存在 A,C,B,D 的 JSON 键顺序；展示统一按字母排序，答案仍按原键判分
       .sort(([a], [b]) => a.localeCompare(b, 'en', { numeric: true }))
   } catch { return [] }
@@ -726,7 +726,7 @@ onUnmounted(() => {
             {{ question.chapterPath || ((question.chapterCode ? question.chapterCode + ' ' : '') + question.chapterName) }}
           </p>
 
-          <p class="mt-4 whitespace-pre-wrap break-words text-base leading-7 text-fg-primary md:text-[17px]">{{ formatText(question.stem) }}</p>
+          <p class="mt-4 whitespace-pre-wrap break-words text-base leading-7 text-fg-primary md:text-[17px]" v-html="renderMathText(question.stem)"></p>
           <div v-if="images.length" class="mt-3 space-y-2">
             <button v-for="(src, i) in images" :key="i" type="button"
                     class="block w-fit max-w-full cursor-zoom-in text-left"

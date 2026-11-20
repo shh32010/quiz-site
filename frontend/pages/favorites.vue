@@ -32,7 +32,7 @@ onMounted(load)
         <li v-for="q in data?.rows ?? []" :key="q.questionId" class="flex items-start gap-3 px-5 py-3">
           <UiBadge class="mt-0.5 shrink-0">{{ TYPE_LABEL[q.questionType] ?? q.questionType }}</UiBadge>
           <div class="min-w-0 flex-1">
-            <span class="text-sm leading-6 text-fg-primary">{{ formatText(q.stem) }}</span>
+            <span class="text-sm leading-6 text-fg-primary" v-html="renderMathText(q.stem)"></span>
             <p v-if="q.kps" class="mt-0.5 text-xs text-fg-muted">知识点：{{ q.kps }}</p>
           </div>
           <NuxtLink :to="`/practice?mode=single&target=${q.questionId}&from=/favorites`"

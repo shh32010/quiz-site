@@ -51,7 +51,7 @@ function toggleMulti(key: string) {
            :class="optionClass(k)">
       <input :checked="answer === k" type="radio" :value="k" :disabled="hasFeedback"
              class="mt-1" @change="emit('select-option', k)" />
-      <span class="min-w-0 flex-1"><b class="mr-1">{{ k }}.</b>{{ v }}</span>
+      <span class="min-w-0 flex-1"><b class="mr-1">{{ k }}.</b><span v-html="v"></span></span>
       <span v-if="optionIsCorrect(k)" class="text-success-fg">✓</span>
       <span v-else-if="hasFeedback && optionSelected(k)" class="text-danger-fg">✗</span>
     </label>
@@ -63,7 +63,7 @@ function toggleMulti(key: string) {
            :class="optionClass(k)">
       <input :checked="multi.includes(k)" type="checkbox" :value="k" :disabled="hasFeedback"
              class="mt-1" @change="toggleMulti(k)" />
-      <span class="min-w-0 flex-1"><b class="mr-1">{{ k }}.</b>{{ v }}</span>
+      <span class="min-w-0 flex-1"><b class="mr-1">{{ k }}.</b><span v-html="v"></span></span>
       <span v-if="optionIsCorrect(k)" class="text-success-fg">✓</span>
       <span v-else-if="hasFeedback && optionSelected(k)" class="text-danger-fg">✗</span>
     </label>

@@ -108,7 +108,7 @@ onMounted(() => load(1))
             <span class="text-fg-muted">得分 {{ a.scoreGot }} / {{ a.score }}</span>
           </div>
 
-          <p class="mt-2 whitespace-pre-wrap break-words text-sm leading-6 text-fg-primary">{{ formatText(a.stem) }}</p>
+          <p class="mt-2 whitespace-pre-wrap break-words text-sm leading-6 text-fg-primary" v-html="renderMathText(a.stem)"></p>
           <div v-if="a.images.length" class="mt-2 flex flex-wrap items-start gap-2">
             <button v-for="(src, i) in a.images" :key="i" type="button"
                     class="cursor-zoom-in" :aria-label="`放大第 ${i + 1} 张题目配图`"
@@ -122,12 +122,12 @@ onMounted(() => load(1))
             <p class="rounded-lg bg-surface-muted px-3 py-2 break-words text-fg-secondary">
               <span class="text-xs text-fg-muted">你的答案：</span>
               <span :class="a.isCorrect ? 'text-success-fg' : 'text-danger-fg'">
-                {{ formatText(a.userAnswer || '未作答') }}
+                <span v-html="renderMathText(a.userAnswer || '未作答')"></span>
               </span>
             </p>
             <p class="rounded-lg bg-success-bg px-3 py-2 break-words text-fg-secondary">
               <span class="text-xs text-fg-muted">正确答案：</span>
-              {{ formatText(a.correct) }}
+              <span v-html="renderMathText(a.correct)"></span>
             </p>
           </div>
 
@@ -137,7 +137,7 @@ onMounted(() => load(1))
           </p>
           <details v-if="a.analysis" class="mt-2 text-sm">
             <summary class="cursor-pointer text-xs text-fg-secondary">查看解析</summary>
-            <p class="mt-2 whitespace-pre-wrap leading-6 text-fg-secondary">{{ formatText(a.analysis) }}</p>
+            <p class="mt-2 whitespace-pre-wrap leading-6 text-fg-secondary" v-html="renderMathText(a.analysis)"></p>
           </details>
         </li>
       </ul>

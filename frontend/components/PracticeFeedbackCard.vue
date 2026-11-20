@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // 判分结果卡：状态头 + 正确答案 + 解析 + AI 操作
-import { formatText } from '~/composables/format'
+import { renderMathText } from '~/utils/math'
 
 interface FeedbackState {
   is_correct: boolean
@@ -68,7 +68,7 @@ const emit = defineEmits<{
       <!-- 正确答案 -->
       <div v-if="review" class="rounded-xl border border-line-subtle bg-surface-muted/60 px-3 py-2.5">
         <p class="text-[11px] font-semibold uppercase tracking-wide text-fg-muted">正确答案</p>
-        <p class="mt-1 whitespace-pre-wrap break-words text-sm font-medium text-fg-primary">{{ formatText(review.correct) }}</p>
+        <p class="mt-1 whitespace-pre-wrap break-words text-sm font-medium text-fg-primary" v-html="renderMathText(review.correct)"></p>
       </div>
 
       <p v-if="review?.qcGrade === 'error'"
@@ -80,7 +80,7 @@ const emit = defineEmits<{
       <!-- 解析 -->
       <div v-if="review?.analysis" class="rounded-xl border border-line-subtle bg-surface-muted/50 px-3 py-2.5">
         <p class="text-[11px] font-semibold uppercase tracking-wide text-fg-muted">解析</p>
-        <p class="mt-1 whitespace-pre-wrap break-words text-sm leading-6 text-fg-secondary">{{ formatText(review.analysis) }}</p>
+        <p class="mt-1 whitespace-pre-wrap break-words text-sm leading-6 text-fg-secondary" v-html="renderMathText(review.analysis)"></p>
       </div>
 
       <div v-if="advancePending" class="flex items-center gap-2 text-xs text-success-fg">
