@@ -17,8 +17,13 @@ for u in "/api/health" "/api/chapters/tree?subject=4" "/api/courses" "/api/paper
 done
 
 echo "=== 三、认证与权限 ==="
+if [ -z "${QUIZ_TEST_USER:-}" ] || [ -z "${QUIZ_TEST_PASS:-}" ]; then
+  echo "  请先通过环境变量设置测试账号：QUIZ_TEST_USER / QUIZ_TEST_PASS"
+  exit 1
+fi
+LOGIN_BODY=$(python3 -c 'import json,os; print(json.dumps({"username":os.environ["QUIZ_TEST_USER"],"password":os.environ["QUIZ_TEST_PASS"]}))')
 TOKEN=$(curl -s -X POST $B/api/auth/login -H 'Content-Type: application/json' \
-  -d '{"username":"testuser01","password":"test123456"}' \
+  -d "$LOGIN_BODY" \
   | python3 -c 'import sys,json; print(json.load(sys.stdin).get("token",""))')
 echo "  登录 token 长度: ${#TOKEN}"
 printf '  未登录 /api/wrong     '; curl -s -o /dev/null -w '%{http_code}\n' "$B/api/wrong"

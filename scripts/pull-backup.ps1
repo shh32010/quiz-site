@@ -2,14 +2,15 @@
 # 数据库 dump 每天拉最新一份；图片包只在本地没有同名文件时拉取
 # 由 Windows 计划任务 QuizBackupPull 调用
 $ErrorActionPreference = 'Stop'
-$dest = 'D:\Backups\quiz-aliyun'
+$dest = if ($env:QUIZ_BACKUP_DEST) { $env:QUIZ_BACKUP_DEST } else { 'D:\Backups\quiz-aliyun' }
 $log = Join-Path $dest 'pull.log'
 $ssh = 'C:\Windows\System32\OpenSSH\ssh.exe'
 $scp = 'C:\Windows\System32\OpenSSH\scp.exe'
-$target = 'root@101.37.14.222'
-$hostIp = '101.37.14.222'
-$key = 'C:\Users\002\.ssh\aliyun.pem'
-$known = 'C:\Users\002\.ssh\known_hosts'
+$hostIp = if ($env:QUIZ_BACKUP_HOST) { $env:QUIZ_BACKUP_HOST } else { '101.37.14.222' }
+$sshUser = if ($env:QUIZ_BACKUP_USER) { $env:QUIZ_BACKUP_USER } else { 'root' }
+$target = "$sshUser@$hostIp"
+$key = if ($env:QUIZ_BACKUP_KEY) { $env:QUIZ_BACKUP_KEY } else { Join-Path $env:USERPROFILE '.ssh\aliyun.pem' }
+$known = if ($env:QUIZ_BACKUP_KNOWN_HOSTS) { $env:QUIZ_BACKUP_KNOWN_HOSTS } else { Join-Path $env:USERPROFILE '.ssh\known_hosts' }
 $sshArgs = @('-i', $key, '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=15',
     '-o', 'StrictHostKeyChecking=accept-new', '-o', "UserKnownHostsFile=$known")
 

@@ -8,7 +8,7 @@ const api = useApi()
 const route = useRoute()
 const sessionId = computed(() => Number(route.params.id))
 const session = ref<any>(null)
-const rows = ref<any[]>([])
+const rows = ref<Array<Record<string, any> & { images: string[] }>>([])
 const total = ref(0)
 const page = ref(1)
 const size = 50

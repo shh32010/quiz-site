@@ -26,6 +26,7 @@ export default defineNuxtConfig({
       '/compose': { ssr: false },
       '/favorites': { ssr: false },
       '/history/**': { ssr: false },
+      '/me': { ssr: false },
       '/report': { ssr: false },
       '/wrong': { ssr: false },
     },

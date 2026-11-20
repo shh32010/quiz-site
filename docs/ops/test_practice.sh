@@ -4,8 +4,13 @@ set -u
 B=http://127.0.0.1:8080
 
 echo "=== 1. 登录 ==="
+if [ -z "${QUIZ_TEST_USER:-}" ] || [ -z "${QUIZ_TEST_PASS:-}" ]; then
+  echo "请先通过环境变量设置测试账号：QUIZ_TEST_USER / QUIZ_TEST_PASS"
+  exit 1
+fi
+LOGIN_BODY=$(python3 -c 'import json,os; print(json.dumps({"username":os.environ["QUIZ_TEST_USER"],"password":os.environ["QUIZ_TEST_PASS"]}))')
 TOKEN=$(curl -s -X POST $B/api/auth/login -H 'Content-Type: application/json' \
-  -d '{"username":"testuser01","password":"test123456"}' \
+  -d "$LOGIN_BODY" \
   | python3 -c 'import sys,json; print(json.load(sys.stdin).get("token",""))')
 echo "token 长度: ${#TOKEN}"
 if [ -z "$TOKEN" ]; then echo "登录失败"; exit 1; fi

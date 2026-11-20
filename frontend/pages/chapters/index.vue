@@ -51,7 +51,7 @@ function toggle(id: number) {
   open.value[id] = !open.value[id]
 }
 
-function sortByCode(nodes: Node[]): Node[] {
+function sortByCode<T extends Node>(nodes: T[]): T[] {
   return [...nodes].sort((a, b) =>
     (a.code ?? '').localeCompare(b.code ?? '', 'en', { numeric: true }))
 }

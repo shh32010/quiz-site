@@ -38,3 +38,5 @@ playwright-report/
 # 调试与临时目录
 .playwright-mcp/
 scratch/
+.claude/
+.pytest_cache/

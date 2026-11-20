@@ -4,8 +4,26 @@ import { TYPE_LABEL, TYPE_TABS } from '~/utils/constants'
 import { WRONG_STATUS_TABS, buildWrongPracticeUrl, filterWrongRows, fmtReviewDue, type WrongStatusFilter } from '~/utils/wrong'
 
 definePageMeta({ middleware: 'auth' })
+interface WrongRow {
+  questionId: number
+  questionType: number
+  wrongCount: number
+  resolved: boolean
+  nextReviewAt?: string | null
+  available?: boolean
+  stem: string
+  kps?: string
+}
+
+interface WrongResponse {
+  total: number
+  pending: number
+  unavailable?: number
+  rows: WrongRow[]
+}
+
 const api = useApi()
-const data = ref<any>(null)
+const data = ref<WrongResponse | null>(null)
 const loading = ref(true)
 const error = ref('')
 

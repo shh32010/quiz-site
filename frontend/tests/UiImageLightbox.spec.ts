@@ -4,7 +4,7 @@ import { mount, type VueWrapper } from '@vue/test-utils'
 import UiImageLightbox from '../components/ui/UiImageLightbox.vue'
 import UiModal from '../components/ui/UiModal.vue'
 
-function mountLightbox(props: Record<string, unknown>) {
+function mountLightbox(props: { modelValue: boolean; images: string[]; startIndex?: number }) {
   return mount(UiImageLightbox, {
     props,
     global: { stubs: { teleport: true } },
