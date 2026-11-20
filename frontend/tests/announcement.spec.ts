@@ -41,10 +41,10 @@ describe('announcement daily marker', () => {
       }
     }
     const history = ANNOUNCEMENT.history ?? []
-    expect(history.length).toBe(18)
-    expect(history[0].date).toBe('2026-11-19')
-    expect(history[1].date).toBe('2026-11-17')
-    expect(history[2].date).toBe('2026-11-14')
+    expect(history.length).toBe(19)
+    expect(history[0].date).toBe('2026-11-20')
+    expect(history[1].date).toBe('2026-11-19')
+    expect(history[2].date).toBe('2026-11-17')
     const seenDates = new Set<string>()
     for (let i = 0; i < history.length; i++) {
       const item = history[i]
