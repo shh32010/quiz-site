@@ -1,6 +1,0 @@
-[
-  {"id": 343080, "verdict": "ok", "issue_type": "none", "note": "PowerPoint 超链接可指向本文档其他幻灯片、其他演示文稿的幻灯片、Word 等文件及网址，ABCD 均正确，解析一致。"},
-  {"id": 343155, "verdict": "ok", "issue_type": "none", "note": "题干问错误叙述，A 为正确叙述，B、C、D 均与事实相反，答案 B,C,D 正确，解析一致。"},
-  {"id": 353218, "verdict": "ok", "issue_type": "none", "note": "支付宝、花呗、微信支付、京东支付均属移动互联网金融应用，ABCD 正确，解析一致。"},
-  {"id": 348947, "verdict": "ok", "issue_type": "none", "note": "EPC 即电子产品代码，四项描述均符合其编码体系与实物互联网目标，答案 ABCD 正确，解析一致。"}
-]

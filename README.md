@@ -14,7 +14,7 @@
 ## 目录
 
 ```
-quiz-v2/
+quiz-site/
 ├── backend/        Spring Boot 后端（端口 8080）
 │   └── src/main/java/com/quiz/
 │       ├── auth/         注册登录（JWT + BCrypt）
@@ -29,12 +29,12 @@ quiz-v2/
 │       ├── announcement/ 站内公告
 │       ├── admin/  stats/  report/  ai/
 │       └── common/ config/  公共与配置
-├── frontend/       Nuxt 3 前端（端口 3100）
+├── frontend/       Nuxt 3 前端（本地开发 3000 / 生产 3100）
 │   ├── pages/            首页、章节、练习、知识库（course/kp/section）、搜索、错题、收藏、组卷、报告、账户与管理
 │   ├── components/       知识块渲染、练习/反馈、导航与 UI
 │   ├── public/kb-assets/ 讲义图片与重绘资源
 │   └── nuxt.config.ts    /api 反代到后端
-├── docs/           规范（KNOWLEDGE_STANDARD）、SQL、Nginx/运维与历史归档（archive/）
+├── docs/           规范（KNOWLEDGE_STANDARD）、SQL、Nginx/运维与历史归档（archive/ 仅保留 md 说明，一次性数据文件在本机 private/archive-data/）
 ├── docs/project/   本机项目文档（Git 忽略）
 ├── docs/reference/ 大纲与真题（Git 忽略）
 ├── private/        本机原始资料与工作区（Git 忽略；agy-context 见其 README）
@@ -98,3 +98,4 @@ npm run dev          # http://localhost:3000
 - 密钥只走环境变量，仓库不含任何凭据
 - 中文注释，代码风格见 `CLAUDE.md`
 - Git 只提交代码、SQL 迁移和脚本；`docs/project/`、`docs/reference/`、`private/` 为本机资料，已忽略
+- `docs/archive/` 仅保留各次数据修复的 Markdown 说明；一次性 SQL、结果 CSV/JSON/JSONL 与处理脚本存放于本机 `private/archive-data/`，不入库

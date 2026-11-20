@@ -1,7 +1,0 @@
-[
-  {"id":341618,"verdict":"ok","issue_type":"none","note":"答案是“移动娱乐”，与题干“移动互联网在娱乐行业的渗透”的界定一致，解析表述无误。"},
-  {"id":345134,"verdict":"ok","issue_type":"none","note":"MPEG-1 Audio Layer 3 即 MP3，采用有损压缩，答案与解析一致。"},
-  {"id":353451,"verdict":"ok","issue_type":"none","note":"两空顺序正确：非核心应用放在公有云，核心程序及敏感数据放在私有云，解析与答案一致。"},
-  {"id":353137,"verdict":"ok","issue_type":"none","note":"毫米波穿透与绕射能力弱，高楼林立城区靠部署微基站（小基站）补盲覆盖，答案与解析契合。"},
-  {"id":353452,"verdict":"issue","issue_type":"blank_count","note":"题干有两条空线“____和____”，但 blank_count=1 且答案合并为“公有云和私有云”，解析也自述只有一个空，建议改 blank_count 为 2 并拆成“公有云；私有云”。"}
-]
